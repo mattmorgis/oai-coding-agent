@@ -1,9 +1,9 @@
 import asyncio
+import os
 
-from agents import Agent, Runner, gen_trace_id, trace, RunHooks
+from agents import Agent, RunHooks, Runner, gen_trace_id, trace
 from agents.mcp import MCPServerStdio
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
@@ -19,8 +19,9 @@ class LoggingRunHooks(RunHooks):
         print(f"🔧 Invoking tool: {tool.name}", flush=True)
 
     async def on_tool_end(self, context, agent, tool, result):
-        print(f"✅ Tool {tool.name} finished. Result:\n{result}\n{'-' * 50}", flush=True)
-
+        print(
+            f"✅ Tool {tool.name} finished. Result:\n{result}\n{'-' * 50}", flush=True
+        )
 
 
 async def main():
