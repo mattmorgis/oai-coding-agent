@@ -45,7 +45,7 @@ async def main():
                     history + [{"role": "user", "content": user_input}],
                     max_turns=50,
                 )
-                history.extend(result.to_input_list())
+                history = result.to_input_list()
 
                 print(result.final_output)
 
