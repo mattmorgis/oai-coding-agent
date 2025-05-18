@@ -1,15 +1,38 @@
 import asyncio
-
-from agents import Agent, Runner, gen_trace_id, trace, RunHooks
-from agents.mcp import MCPServerStdio
-from dotenv import load_dotenv
+import base64
 import os
 
+import logfire
+import nest_asyncio
+from agents import Agent, RunHooks, Runner, gen_trace_id, trace
+from agents.mcp import MCPServerStdio
+from dotenv import load_dotenv
+
 load_dotenv()
+nest_asyncio.apply()
 
 MOUNT_PATH = os.getenv("MOUNT_PATH")
 if not MOUNT_PATH:
     raise RuntimeError("Please set MOUNT_PATH in your .env file")
+
+# Build Basic Auth header.
+LANGFUSE_AUTH = base64.b64encode(
+    f"{os.environ.get('LANGFUSE_PUBLIC_KEY')}:{os.environ.get('LANGFUSE_SECRET_KEY')}".encode()
+).decode()
+
+# Configure OpenTelemetry endpoint & headers
+os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = (
+    os.environ.get("LANGFUSE_HOST") + "/api/public/otel"
+)
+os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {LANGFUSE_AUTH}"
+
+# Configure logfire instrumentation.
+logfire.configure(
+    service_name="oai-coding-agent-service",
+    send_to_logfire=False,
+    scrubbing=False,
+)
+logfire.instrument_openai_agents()
 
 
 class LoggingRunHooks(RunHooks):
@@ -19,8 +42,9 @@ class LoggingRunHooks(RunHooks):
         print(f"🔧 Invoking tool: {tool.name}", flush=True)
 
     async def on_tool_end(self, context, agent, tool, result):
-        print(f"✅ Tool {tool.name} finished. Result:\n{result}\n{'-' * 50}", flush=True)
-
+        print(
+            f"✅ Tool {tool.name} finished. Result:\n{result}\n{'-' * 50}", flush=True
+        )
 
 
 async def main():
@@ -64,7 +88,7 @@ async def main():
                     hooks=hooks,
                 )
                 history = result.to_input_list()
-
+                logfire.force_flush()
                 print(result.final_output)
 
 
