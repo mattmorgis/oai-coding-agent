@@ -26,6 +26,10 @@ Run the interactive coding agent:
 uv run main.py
 ```
 
+The app now uses **prompt-toolkit** for an interactive prompt and **rich** to
+render markdown responses. Tool activity and other internal logs are displayed
+in a side panel while you chat.
+
 This will:
 
 1. Launch an MCP filesystem server (via `npx @modelcontextprotocol/server-filesystem`) pointed at your local directory.

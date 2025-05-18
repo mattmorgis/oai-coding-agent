@@ -1,9 +1,16 @@
 import asyncio
+import os
 
-from agents import Agent, Runner, gen_trace_id, trace, RunHooks
+from agents import Agent, Runner, RunHooks, gen_trace_id, trace
 from agents.mcp import MCPServerStdio
 from dotenv import load_dotenv
-import os
+from prompt_toolkit import PromptSession
+from prompt_toolkit.patch_stdout import patch_stdout
+from rich.console import Console
+from rich.layout import Layout
+from rich.live import Live
+from rich.markdown import Markdown
+from rich.panel import Panel
 
 load_dotenv()
 
@@ -13,13 +20,23 @@ if not MOUNT_PATH:
 
 
 class LoggingRunHooks(RunHooks):
-    """Logs tool invocations as they start and end."""
+    """Collects tool invocation logs and updates the UI panel."""
+
+    def __init__(self, layout: Layout):
+        self.layout = layout
+        self.logs: list[str] = []
+
+    def _refresh(self) -> None:
+        panel = Panel("\n".join(self.logs[-20:]), title="Agent Thoughts")
+        self.layout["logs"].update(panel)
 
     async def on_tool_start(self, context, agent, tool):
-        print(f"🔧 Invoking tool: {tool.name}", flush=True)
+        self.logs.append(f"🔧 {tool.name}")
+        self._refresh()
 
     async def on_tool_end(self, context, agent, tool, result):
-        print(f"✅ Tool {tool.name} finished. Result:\n{result}\n{'-' * 50}", flush=True)
+        self.logs.append(f"✅ {tool.name} finished")
+        self._refresh()
 
 
 
@@ -45,27 +62,36 @@ async def main():
                 mcp_servers=[server],
             )
 
-            hooks = LoggingRunHooks()
+            console = Console()
+            session = PromptSession()
+            layout = Layout()
+            layout.split_row(Layout(name="output"), Layout(name="logs", ratio=0.4))
+
+            hooks = LoggingRunHooks(layout)
             history = []
-            while True:
-                user_input = input("You: ")
 
-                # Check for exit command
-                if user_input.lower() in ["exit", "quit", "bye"]:
-                    print("\nGoodbye!")
-                    break
+            with Live(layout, console=console, refresh_per_second=4, screen=True):
+                while True:
+                    with patch_stdout():
+                        user_input = await session.prompt_async("You: ")
 
-                print("\n" + "-" * 50)
+                    if user_input.lower() in ["exit", "quit", "bye"]:
+                        console.print("\nGoodbye!")
+                        break
 
-                result = await Runner.run(
-                    agent,
-                    history + [{"role": "user", "content": user_input}],
-                    max_turns=50,
-                    hooks=hooks,
-                )
-                history = result.to_input_list()
+                    layout["output"].update(Panel("Thinking...", title="Assistant"))
 
-                print(result.final_output)
+                    result = await Runner.run(
+                        agent,
+                        history + [{"role": "user", "content": user_input}],
+                        max_turns=50,
+                        hooks=hooks,
+                    )
+
+                    history = result.to_input_list()
+                    layout["output"].update(
+                        Panel(Markdown(result.final_output), title="Assistant")
+                    )
 
 
 if __name__ == "__main__":
