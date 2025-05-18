@@ -3,8 +3,13 @@ import asyncio
 from agents import Agent, Runner, gen_trace_id, trace
 from agents.mcp import MCPServerStdio
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
+
+MOUNT_PATH = os.getenv("MOUNT_PATH")
+if not MOUNT_PATH:
+    raise RuntimeError("Please set MOUNT_PATH in your .env file")
 
 
 async def main():
@@ -15,7 +20,7 @@ async def main():
             "args": [
                 "-y",
                 "@modelcontextprotocol/server-filesystem",
-                "/Users/matt/Developer/",
+                MOUNT_PATH,
             ],
         },
         cache_tools_list=True,
