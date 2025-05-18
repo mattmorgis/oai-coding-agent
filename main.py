@@ -1,9 +1,10 @@
-from __future__ import annotations
-
 import asyncio
 
 from agents import Agent, Runner, gen_trace_id, trace
 from agents.mcp import MCPServerStdio
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 async def main():
@@ -45,7 +46,7 @@ async def main():
                     max_turns=50,
                 )
                 history.extend(result.to_input_list())
-                print(history)
+
                 print(result.final_output)
 
 

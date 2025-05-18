@@ -37,3 +37,11 @@ Once running, you can type your question or command at the `You:` prompt. Be sur
 ## Customization
 
 - **Mounted directory**: By default, `main.py` mounts `/Users/matt/Developer/`. Edit the `MCPServerStdio` parameters in `main.py` to point to your own code folder.
+
+## Environment Variables
+
+This project uses the `.env` file for configuration. Copy the example file:
+
+```bash
+cp .env-example .env
+```
