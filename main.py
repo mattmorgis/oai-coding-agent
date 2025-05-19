@@ -46,8 +46,7 @@ async def main():
                 mcp_servers=[server],
             )
 
-            hooks = LoggingRunHooks()
-            history = []
+            previous_response_id = ""
             while True:
                 user_input = input("You: ")
 
@@ -60,11 +59,14 @@ async def main():
 
                 result = await Runner.run(
                     agent,
-                    history + [{"role": "user", "content": user_input}],
+                    user_input,
+                    previous_response_id=previous_response_id
+                    if previous_response_id
+                    else None,
                     max_turns=50,
                     hooks=hooks,
                 )
-                history = result.to_input_list()
+                previous_response_id = result.last_response_id
 
                 print(result.final_output)
 
