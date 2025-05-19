@@ -4,6 +4,11 @@ import os
 from agents import Agent, ModelSettings, Runner, gen_trace_id, trace
 from agents.mcp import MCPServerStdio
 from dotenv import load_dotenv
+from openai.types.responses import (
+    ResponseReasoningSummaryTextDeltaEvent,
+    ResponseReasoningSummaryTextDoneEvent,
+    ResponseTextDeltaEvent,
+)
 
 load_dotenv()
 
@@ -48,7 +53,7 @@ async def main():
 
                 print("\n" + "-" * 50)
 
-                result = await Runner.run(
+                result = Runner.run_streamed(
                     agent,
                     user_input,
                     previous_response_id=previous_response_id
@@ -56,9 +61,31 @@ async def main():
                     else None,
                     max_turns=50,
                 )
-                previous_response_id = result.last_response_id
-
-                print(result.final_output)
+                async for event in result.stream_events():
+                    if event.type == "run_item_stream_event":
+                        if event.name == "tool_called":
+                            print(
+                                f"-- Tool {event.item.raw_item.name} was called with args: {event.item.raw_item.arguments} "
+                            )
+                        # elif event.name == "reasoning_item_created":
+                        #     print(
+                        #         f"-- Reasoning item created: {event.item.raw_item.summary}"
+                        #     )
+                        else:
+                            pass  # Ignore other event types
+                    elif event.type == "raw_response_event" and isinstance(
+                        event.data, ResponseReasoningSummaryTextDeltaEvent
+                    ):
+                        print(event.data.delta, end="", flush=True)
+                    elif event.type == "raw_response_event" and isinstance(
+                        event.data, ResponseReasoningSummaryTextDoneEvent
+                    ):
+                        print("\n")
+                    elif event.type == "raw_response_event" and isinstance(
+                        event.data, ResponseTextDeltaEvent
+                    ):
+                        print(event.data.delta, end="", flush=True)
+                print("\n")
 
 
 if __name__ == "__main__":
