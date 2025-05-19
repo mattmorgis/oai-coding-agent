@@ -1,7 +1,7 @@
 import asyncio
 import os
 
-from agents import Agent, RunHooks, Runner, gen_trace_id, trace
+from agents import Agent, ModelSettings, Runner, gen_trace_id, trace
 from agents.mcp import MCPServerStdio
 from dotenv import load_dotenv
 
@@ -10,18 +10,6 @@ load_dotenv()
 MOUNT_PATH = os.getenv("MOUNT_PATH")
 if not MOUNT_PATH:
     raise RuntimeError("Please set MOUNT_PATH in your .env file")
-
-
-class LoggingRunHooks(RunHooks):
-    """Logs tool invocations as they start and end."""
-
-    async def on_tool_start(self, context, agent, tool):
-        print(f"🔧 Invoking tool: {tool.name}", flush=True)
-
-    async def on_tool_end(self, context, agent, tool, result):
-        print(
-            f"✅ Tool {tool.name} finished. Result:\n{result}\n{'-' * 50}", flush=True
-        )
 
 
 async def main():
@@ -67,7 +55,6 @@ async def main():
                     if previous_response_id
                     else None,
                     max_turns=50,
-                    hooks=hooks,
                 )
                 previous_response_id = result.last_response_id
 
