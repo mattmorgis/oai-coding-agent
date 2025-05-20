@@ -85,6 +85,7 @@ async def main():
                         event.data, ResponseTextDeltaEvent
                     ):
                         print(event.data.delta, end="", flush=True)
+                previous_response_id = result.last_response_id
                 print("\n")
 
 
