@@ -37,7 +37,7 @@ async def main():
                 instructions="You are a helpful agent that can answer questions and help with tasks. Use the tools to navigate and read the codebase, and answer questions based on those files. When exploring repositories, avoid using directory_tree on the root directory. Instead, use list_directory to explore one level at a time and search_files to find relevant files matching patterns. If you need to understand a specific subdirectory structure, use directory_tree only on that targeted directory.",
                 model="codex-mini-latest",
                 model_settings=ModelSettings(
-                    reasoning={"summary": "auto", "effort": "medium"}
+                    reasoning={"summary": "auto", "effort": "high"}
                 ),
                 mcp_servers=[server],
             )
