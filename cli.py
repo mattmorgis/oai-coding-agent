@@ -1,4 +1,5 @@
 import os
+import asyncio
 from enum import Enum
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from rich.table import Table
 from typing_extensions import Annotated
 
 from tui import ChatApp
+import rich_tui
 
 console = Console()
 
@@ -37,8 +39,11 @@ def config_table(model: ModelChoice, repo_path: Path) -> Table:
     return table
 
 
-def main(
-    openai_api_key: Annotated[str, typer.Argument(envvar="OPENAI_API_KEY")],
+app = typer.Typer()
+
+@app.command()
+def config(
+    openai_api_key: Annotated[str, typer.Option(envvar="OPENAI_API_KEY")],
     model: Annotated[
         ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
     ] = ModelChoice.o3,
@@ -49,8 +54,47 @@ def main(
         ),
     ] = Path.cwd(),
 ):
+    """Show configuration information."""
+    table = config_table(model, repo_path)
+    console.print(table)
 
+@app.command()
+def tui(
+    openai_api_key: Annotated[str, typer.Option(envvar="OPENAI_API_KEY")],
+    model: Annotated[
+        ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
+    ] = ModelChoice.o3,
+    repo_path: Annotated[
+        Path,
+        typer.Option(
+            help="Path to the repository. This path (and it's subdirectories) are the only files the agent has permission to access"
+        ),
+    ] = Path.cwd(),
+):
+    """Launch the Textual TUI interface."""
+    console.print(f"Launching TUI with model {model.value} on repo {repo_path}")
+    chat_app = ChatApp()
+    chat_app.run()
 
+@app.command()
+def chat(
+    openai_api_key: Annotated[str, typer.Option(envvar="OPENAI_API_KEY")],
+    model: Annotated[
+        ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
+    ] = ModelChoice.o3,
+    repo_path: Annotated[
+        Path,
+        typer.Option(
+            help="Path to the repository. This path (and it's subdirectories) are the only files the agent has permission to access"
+        ),
+    ] = Path.cwd(),
+):
+    """Start a Rich-based native terminal chat interface."""
+    console.print(f"Starting chat with model {model.value} on repo {repo_path}")
+    try:
+        asyncio.run(rich_tui.main())
+    except KeyboardInterrupt:
+        console.print("\nExiting...")
 
 if __name__ == "__main__":
-    typer.run(main)
+    app()
