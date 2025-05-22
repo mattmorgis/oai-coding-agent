@@ -1,12 +1,40 @@
 import asyncio
 import random
 
+from rich.markdown import Markdown
 from textual.app import App, ComposeResult
-from textual.containers import ScrollableContainer, Vertical
+from textual.containers import Vertical, ScrollableContainer
 from textual.widgets import Footer, Input, Static
 
 
 class ChatApp(App):
+    CSS = """
+    .message {
+        margin: 1 0;
+    }
+
+    .user-message {
+        color: #5f9cf7;
+    }
+
+    .assistant-message {
+        color: #28a745;
+    }
+
+    .thinking {
+        color: #6c757d;
+        text-style: italic;
+    }
+
+    .markdown {
+        margin-left: 2;
+    }
+
+    #chat-view {
+        height: 1fr;
+    }
+    """
+
     def compose(self) -> ComposeResult:
         # yield Header()
         with Vertical():
@@ -46,19 +74,44 @@ class ChatApp(App):
         if sender == "user":
             prefix = "You: "
             message_class = "user-message"
+            # User messages don't need markdown rendering
+            message_content = f"{prefix}{content}"
         elif sender == "thinking":
             prefix = ""
             message_class = "thinking"
+            message_content = content
         else:  # assistant
             prefix = "Assistant: "
             message_class = "assistant-message"
+            # Render assistant responses as markdown
+            # We'll keep the prefix as plain text
+            message_content = f"{prefix}{content}"
+            if "```" in content or "*" in content or "#" in content:
+                # Use markdown rendering for code blocks and formatting
+                message_content = f"{prefix}"
+                message_widget = Static(
+                    message_content, classes=f"message {message_class}"
+                )
+                chat_view.mount(message_widget)
+                # Add markdown content as a separate widget
+                markdown_widget = Static(
+                    Markdown(content), classes=f"markdown {message_class}"
+                )
+                chat_view.mount(markdown_widget)
+                # Scroll to the bottom
+                chat_view.scroll_end()
+                return message_widget
 
-        message_widget = Static(
-            f"{prefix}{content}", classes=f"message {message_class}"
-        )
+        message_widget = Static(message_content, classes=f"message {message_class}")
         chat_view.mount(message_widget)
+        # Scroll to the bottom
         chat_view.scroll_end()
         return message_widget
+
+    def auto_scroll(self):
+        """Scroll chat view to the bottom."""
+        chat_view = self.query_one("#chat-view")
+        chat_view.scroll_end(animate=False)
 
     async def get_ai_response(self, user_message: str, thinking_widget: Static) -> None:
         """Mock AI response with realistic delay and varied responses."""
@@ -107,7 +160,28 @@ This function takes a name parameter and returns a greeting. Pretty straightforw
             word in user_lower
             for word in ["how", "help", "explain", "what is", "tell me"]
         ):
-            return "Great question! I'd be happy to help explain that. In a real implementation, I'd provide a detailed explanation with examples and break down complex concepts into digestible parts."
+            return """# Great question!
+
+I'd be happy to help explain that. Here's a breakdown:
+
+## Key Concepts
+- First important point
+- Second important point
+- Third important point
+
+### Example
+Here's a practical example that illustrates the concept:
+
+```python
+def example_function():
+    \"""This demonstrates the concept we're discussing\"""
+    result = [x for x in range(10) if x % 2 == 0]
+    return result
+
+# This would return: [0, 2, 4, 6, 8]
+```
+
+Hope this helps! *Let me know* if you need **more details**."""
 
         # Short responses for greetings
         elif any(
