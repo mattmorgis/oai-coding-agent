@@ -4,11 +4,7 @@ import os
 from agents import Agent, ModelSettings, Runner, gen_trace_id, trace
 from agents.mcp import MCPServerStdio
 from dotenv import load_dotenv
-from openai.types.responses import (
-    ResponseReasoningSummaryTextDeltaEvent,
-    ResponseReasoningSummaryTextDoneEvent,
-    ResponseTextDeltaEvent,
-)
+from rich import print
 
 load_dotenv()
 
@@ -67,26 +63,18 @@ async def main():
                             print(
                                 f"-- Tool {event.item.raw_item.name} was called with args: {event.item.raw_item.arguments} "
                             )
-                        # elif event.name == "reasoning_item_created":
-                        #     print(
-                        #         f"-- Reasoning item created: {event.item.raw_item.summary}"
-                        #     )
+                        elif event.name == "reasoning_item_created":
+                            summary = event.item.raw_item.summary
+                            if summary:
+                                # there’s at least one summary part
+                                text = summary[0].text
+                                print(f"-- Reasoning item created: {text}")
+                                print("--")
+                        elif event.name == "message_output_created":
+                            print(event.item.raw_item.content[0].text)
                         else:
                             pass  # Ignore other event types
-                    elif event.type == "raw_response_event" and isinstance(
-                        event.data, ResponseReasoningSummaryTextDeltaEvent
-                    ):
-                        print(event.data.delta, end="", flush=True)
-                    elif event.type == "raw_response_event" and isinstance(
-                        event.data, ResponseReasoningSummaryTextDoneEvent
-                    ):
-                        print("\n")
-                    elif event.type == "raw_response_event" and isinstance(
-                        event.data, ResponseTextDeltaEvent
-                    ):
-                        print(event.data.delta, end="", flush=True)
                 previous_response_id = result.last_response_id
-                print("\n")
 
 
 if __name__ == "__main__":
