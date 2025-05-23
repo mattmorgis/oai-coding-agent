@@ -169,7 +169,7 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
             buffer.complete_next()
 
     history_file = os.path.expanduser("~/.ai_chat_history")
-    prompt_session = PromptSession(
+    prompt_session: PromptSession = PromptSession(
         history=FileHistory(history_file),
         auto_suggest=AutoSuggestFromHistory(),
         enable_history_search=True,
