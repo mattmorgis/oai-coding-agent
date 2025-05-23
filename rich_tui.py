@@ -62,7 +62,6 @@ def render_messages():
                 content,
                 code_theme="nord",
                 hyperlinks=True,
-                inline_code_lexer="python",
             )
             console.print(md)
             console.print()

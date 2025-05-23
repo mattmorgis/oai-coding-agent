@@ -74,7 +74,7 @@ def chat(
         ),
     ] = Path.cwd(),
 ):
-    """Start a Rich-based native terminal chat interface."""
+    """Start a chat session"""
     console.print(f"Starting chat with model {model.value} on repo {repo_path}")
     try:
         asyncio.run(rich_tui.main())
@@ -101,11 +101,8 @@ def main(
     """
     Start chatting with your codebase.
     """
-    try:
-        if ctx.invoked_subcommand is None:
-            asyncio.run(ctx.invoke(chat(os.environ["OPENAI_API_KEY"])))
-    except KeyboardInterrupt:
-        console.print("\nExiting...")
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(chat, openai_api_key, model, repo_path)
 
 
 if __name__ == "__main__":
