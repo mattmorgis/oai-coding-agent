@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import AsyncIterator, Optional
 
@@ -21,15 +21,15 @@ INSTRUCTIONS = (
 class AgentSession:
     """Manage a long-lived agent session for streaming responses."""
 
-    _server_ctx: MCPServerStdio
-    _server: MCPServerStdio
-    _trace_ctx: Trace
-    _agent: Agent
-
     repo_path: Path
     model: str
     openai_api_key: str
     max_turns: int = 50
+
+    _server_ctx: Optional[MCPServerStdio] = field(init=False, default=None)
+    _server: Optional[MCPServerStdio] = field(init=False, default=None)
+    _agent: Optional[Agent] = field(init=False, default=None)
+    _trace_ctx: Optional[Trace] = field(init=False, default=None)
 
     async def __aenter__(self) -> "AgentSession":
         # Ensure API key is set

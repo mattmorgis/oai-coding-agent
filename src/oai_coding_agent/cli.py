@@ -78,7 +78,7 @@ def chat(
     """Start a chat session"""
     console.print(f"Starting chat with model {model.value} on repo {repo_path}")
     try:
-        asyncio.run(rich_tui.main())
+        asyncio.run(rich_tui.main(repo_path, model.value, openai_api_key))
     except KeyboardInterrupt:
         console.print("\nExiting...")
 
