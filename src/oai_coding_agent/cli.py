@@ -13,7 +13,7 @@ from . import rich_tui
 
 console = Console()
 
-# Only check for OPENAI_API_KEY in .env file without loading all variables
+# Only ensure OPENAI_API_KEY is set in .env before loading other variables.    
 env_values = dotenv_values()
 if "OPENAI_API_KEY" in env_values and env_values["OPENAI_API_KEY"] is not None:
     os.environ["OPENAI_API_KEY"] = str(env_values["OPENAI_API_KEY"])
