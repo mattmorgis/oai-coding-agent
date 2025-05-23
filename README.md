@@ -63,3 +63,16 @@ cp .env-example .env
 Required variables:
 
 - `OPENAI_API_KEY`: Your OpenAI API key
+
+## Development
+
+Install development dependencies and set up pre-commit hooks to automatically
+format staged files with `ruff`:
+
+```bash
+uv sync --dev
+pre-commit install
+```
+
+Running `pre-commit install` ensures that every commit formats staged Python
+files using `ruff`.
