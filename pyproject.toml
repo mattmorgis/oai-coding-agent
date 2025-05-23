@@ -17,3 +17,9 @@ oai = "oai_coding_agent.cli:app"
 
 [tool.uv]
 package = true
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
+]
