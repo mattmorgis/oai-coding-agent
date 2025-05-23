@@ -139,6 +139,7 @@ def handle_slash_command(text: str) -> bool:
 
 async def main(repo_path: Path, model: str, openai_api_key: str):
     """Main application loop."""
+    clear_terminal()
 
     register_slash_commands()
 

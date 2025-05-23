@@ -32,7 +32,7 @@ class AgentSession:
     repo_path: Path
     model: str
     openai_api_key: str
-    max_turns: int = 50
+    max_turns: int = 100
 
     _server_ctx: Optional[MCPServerStdio] = field(init=False, default=None)
     _server: Optional[MCPServerStdio] = field(init=False, default=None)
@@ -64,10 +64,16 @@ class AgentSession:
         self._trace_ctx = trace(workflow_name="OAI Coding Agent", trace_id=trace_id)
         self._trace_ctx.__enter__()
 
+        # Build a dynamic system prompt that includes the repo path for extra context
+        dynamic_instructions = (
+            f"{INSTRUCTIONS}\n\n"
+            f"The repository root path you can access is: {self.repo_path}\n"
+        )
+
         # Instantiate the agent
         self._agent = Agent(
             name="Coding Agent",
-            instructions=INSTRUCTIONS,
+            instructions=dynamic_instructions,
             model=self.model,
             model_settings=ModelSettings(
                 reasoning=Reasoning(summary="auto", effort="high")

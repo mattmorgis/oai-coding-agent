@@ -21,9 +21,9 @@ if "OPENAI_API_KEY" in env_values and env_values["OPENAI_API_KEY"] is not None:
 
 
 class ModelChoice(str, Enum):
+    codex_mini_latest = "codex-mini-latest"
     o3 = "o3"
     o4_mini = "o4-mini"
-    codex_mini_latest = "codex-mini-latest"
 
 
 def config_table(model: ModelChoice, repo_path: Path) -> Table:
