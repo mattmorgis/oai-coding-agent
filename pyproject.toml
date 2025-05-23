@@ -11,3 +11,9 @@ dependencies = [
     "textual>=3.2.0",
     "typer>=0.15.4",
 ]
+
+[project.scripts]
+oai = "oai_coding_agent.cli:app"
+
+[tool.uv]
+package = true
