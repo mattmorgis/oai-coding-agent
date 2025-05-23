@@ -90,24 +90,64 @@ class AgentSession:
         if self._server_ctx:
             await self._server_ctx.__aexit__(exc_type, exc_val, exc_tb)
 
+    def _map_sdk_event(self, event) -> Optional[Dict[str, Any]]:
+        """Translate low-level SDK stream events into high-level UI messages."""
+        evt_type = getattr(event, "type", None)
+        evt_name = getattr(event, "name", None)
+
+        # Tool calls
+        if evt_type == "run_item_stream_event" and evt_name == "tool_called":
+            return {
+                "role": "tool",
+                "content": f"{event.item.raw_item.name}({event.item.raw_item.arguments})",
+            }
+        # Reasoning items (thoughts)
+        if evt_name == "reasoning_item_created":
+            summary = event.item.raw_item.summary
+            if summary:
+                text = summary[0].text
+                return {"role": "thought", "content": f"💭 {text}"}
+        # Assistant messages
+        if evt_name == "message_output_created":
+            return {
+                "role": "assistant",
+                "content": event.item.raw_item.content[0].text,
+            }
+        return None  # ignore everything else
+
     async def run_step(
         self,
         user_input: str,
         previous_response_id: Optional[str] = None,
-    ) -> tuple[AsyncIterator, RunResultStreaming]:
+    ) -> tuple[AsyncIterator[Dict[str, Any]], RunResultStreaming]:
         """
-        Send one user message to the agent and return an async iterator of events plus the result.
-
-        Usage:
-            events, result = await session.run_step(user_input, prev_id)
-            async for event in events:
-                handle event
-            prev_id = result.last_response_id
+        Send one user message to the agent and return an async iterator of *UI
+        messages* plus the underlying RunResultStreaming.
         """
+        # Kick off the streamed run in the SDK.
         result = Runner.run_streamed(
             self._agent,
             user_input,
             previous_response_id=previous_response_id,
             max_turns=self.max_turns,
         )
-        return result.stream_events(), result
+        sdk_events = result.stream_events()
+
+        # We produce an async generator that merges retry notifications and
+        # mapped SDK events.
+        async def _ui_stream() -> AsyncIterator[Dict[str, Any]]:
+            # Iterate over SDK events; after each one flush any queued retry msgs.
+            async for evt in sdk_events:
+                # # Yield any retry notifications waiting.
+                # while not self._retry_queue.empty():
+                #     yield await self._retry_queue.get()
+
+                msg = self._map_sdk_event(evt)
+                if msg:
+                    yield msg
+
+            # # After SDK stream ends, drain any remaining retry messages.
+            # while not self._retry_queue.empty():
+            #     yield await self._retry_queue.get()
+
+        return _ui_stream(), result

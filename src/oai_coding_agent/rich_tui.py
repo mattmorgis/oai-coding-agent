@@ -155,9 +155,14 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
         else:
             buffer.complete_next()
 
-    history_file = os.path.expanduser("~/.ai_chat_history")
+    # ------------------------------------------------------------------
+    # Store history alongside logs/config in ~/.oai_coding_agent
+    # ------------------------------------------------------------------
+    history_path = Path.home() / ".oai_coding_agent" / "prompt_history"
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+
     prompt_session: PromptSession = PromptSession(
-        history=FileHistory(history_file),
+        history=FileHistory(str(history_path)),
         auto_suggest=AutoSuggestFromHistory(),
         enable_history_search=True,
         complete_while_typing=True,
@@ -206,42 +211,11 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
                 messages.append(user_msg)
                 # No need to render user message, already shown in Panel
 
-                events, result = await session_agent.run_step(user_input, prev_id)
+                ui_stream, result = await session_agent.run_step(user_input, prev_id)
 
-                async for event in events:
-                    evt_type = getattr(event, "type", None)
-                    evt_name = getattr(event, "name", None)
-
-                    # Handle tool calls
-                    if (
-                        evt_type == "run_item_stream_event"
-                        and evt_name == "tool_called"
-                    ):
-                        tool_msg = {
-                            "role": "tool",
-                            "content": f"{event.item.raw_item.name}({event.item.raw_item.arguments})",
-                        }
-                        messages.append(tool_msg)
-                        render_message(tool_msg)
-                    # Handle reasoning items
-                    elif evt_name == "reasoning_item_created":
-                        summary = event.item.raw_item.summary
-                        if summary:
-                            text = summary[0].text
-                            thought_msg = {
-                                "role": "thought",
-                                "content": f"💭 {text}",
-                            }
-                            messages.append(thought_msg)
-                            render_message(thought_msg)
-                    # Handle message outputs
-                    elif evt_name == "message_output_created":
-                        assistant_msg = {
-                            "role": "assistant",
-                            "content": event.item.raw_item.content[0].text,
-                        }
-                        messages.append(assistant_msg)
-                        render_message(assistant_msg)
+                async for msg in ui_stream:
+                    messages.append(msg)
+                    render_message(msg)
 
                 # Update prev_id for next iteration
                 prev_id = result.last_response_id
