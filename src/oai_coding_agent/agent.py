@@ -1,81 +1,98 @@
-import asyncio
 import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import AsyncIterator, Optional
 
-from agents import Agent, ModelSettings, Runner, gen_trace_id, trace
+from agents import Agent, ModelSettings, Runner, Trace, gen_trace_id, trace
 from agents.mcp import MCPServerStdio
-from dotenv import load_dotenv
-from rich import print
+from openai.types.shared.reasoning import Reasoning
 
-load_dotenv()
+# Instructions for the agent's behavior in the codebase
+INSTRUCTIONS = (
+    "You are a helpful agent that can answer questions and help with tasks. "
+    "Use the tools to navigate and read the codebase, and answer questions based on those files. "
+    "When exploring repositories, avoid using directory_tree on the root directory. "
+    "Instead, use list_directory to explore one level at a time and search_files to find relevant files matching patterns. "
+    "If you need to understand a specific subdirectory structure, use directory_tree only on that targeted directory."
+)
 
-MOUNT_PATH = os.getenv("MOUNT_PATH")
-if not MOUNT_PATH:
-    raise RuntimeError("Please set MOUNT_PATH in your .env file")
 
+@dataclass
+class AgentSession:
+    """Manage a long-lived agent session for streaming responses."""
 
-async def main():
-    async with MCPServerStdio(
-        name="file-system-mcp",
-        params={
-            "command": "npx",
-            "args": [
-                "-y",
-                "@modelcontextprotocol/server-filesystem",
-                MOUNT_PATH,
-            ],
-        },
-        cache_tools_list=True,
-    ) as server:
+    _server_ctx: MCPServerStdio
+    _server: MCPServerStdio
+    _trace_ctx: Trace
+    _agent: Agent
+
+    repo_path: Path
+    model: str
+    openai_api_key: str
+    max_turns: int = 50
+
+    async def __aenter__(self) -> "AgentSession":
+        # Ensure API key is set
+        os.environ["OPENAI_API_KEY"] = self.openai_api_key
+
+        # Start the MCP filesystem server
+        self._server_ctx = MCPServerStdio(
+            name="file-system-mcp",
+            params={
+                "command": "npx",
+                "args": [
+                    "-y",
+                    "@modelcontextprotocol/server-filesystem",
+                    str(self.repo_path),
+                ],
+            },
+            client_session_timeout_seconds=30,
+            cache_tools_list=True,
+        )
+        self._server = await self._server_ctx.__aenter__()
+
+        # Begin tracing
         trace_id = gen_trace_id()
-        with trace(workflow_name="OAI Coding Agent", trace_id=trace_id):
-            agent = Agent(
-                name="Coding Agent",
-                instructions="You are a helpful agent that can answer questions and help with tasks. Use the tools to navigate and read the codebase, and answer questions based on those files. When exploring repositories, avoid using directory_tree on the root directory. Instead, use list_directory to explore one level at a time and search_files to find relevant files matching patterns. If you need to understand a specific subdirectory structure, use directory_tree only on that targeted directory.",
-                model="codex-mini-latest",
-                model_settings=ModelSettings(
-                    reasoning={"summary": "auto", "effort": "high"}
-                ),
-                mcp_servers=[server],
-            )
+        self._trace_ctx = trace(workflow_name="OAI Coding Agent", trace_id=trace_id)
+        self._trace_ctx.__enter__()
 
-            previous_response_id = ""
-            while True:
-                user_input = input("You: ")
+        # Instantiate the agent
+        self._agent = Agent(
+            name="Coding Agent",
+            instructions=INSTRUCTIONS,
+            model=self.model,
+            model_settings=ModelSettings(
+                reasoning=Reasoning(summary="auto", effort="high")
+            ),
+            mcp_servers=[self._server],
+        )
 
-                # Check for exit command
-                if user_input.lower() in ["exit", "quit", "bye"]:
-                    print("\nGoodbye!")
-                    break
+        return self
 
-                print("\n" + "-" * 50)
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        # End tracing and shut down server
+        if self._trace_ctx:
+            self._trace_ctx.__exit__(exc_type, exc_val, exc_tb)
+        if self._server_ctx:
+            await self._server_ctx.__aexit__(exc_type, exc_val, exc_tb)
 
-                result = Runner.run_streamed(
-                    agent,
-                    user_input,
-                    previous_response_id=previous_response_id
-                    if previous_response_id
-                    else None,
-                    max_turns=50,
-                )
-                async for event in result.stream_events():
-                    if event.type == "run_item_stream_event":
-                        if event.name == "tool_called":
-                            print(
-                                f"-- Tool {event.item.raw_item.name} was called with args: {event.item.raw_item.arguments} "
-                            )
-                        elif event.name == "reasoning_item_created":
-                            summary = event.item.raw_item.summary
-                            if summary:
-                                # there’s at least one summary part
-                                text = summary[0].text
-                                print(f"-- Reasoning item created: {text}")
-                                print("--")
-                        elif event.name == "message_output_created":
-                            print(event.item.raw_item.content[0].text)
-                        else:
-                            pass  # Ignore other event types
-                previous_response_id = result.last_response_id
+    async def run_step(
+        self,
+        user_input: str,
+        previous_response_id: Optional[str] = None,
+    ) -> tuple[AsyncIterator, Optional[str]]:
+        """
+        Send one user message to the agent and return an async iterator of events plus the new response ID.
 
-
-if __name__ == "__main__":
-    asyncio.run(main())
+        Usage:
+            events, last_id = await session.run_step(user_input, prev_id)
+            async for event in events:
+                handle event
+        """
+        runner = Runner.run_streamed(
+            self._agent,
+            user_input,
+            previous_response_id=previous_response_id,
+            max_turns=self.max_turns,
+        )
+        return runner.stream_events(), runner.last_response_id
