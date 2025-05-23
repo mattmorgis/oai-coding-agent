@@ -15,6 +15,7 @@ from rich.markdown import Heading, Markdown
 from rich.panel import Panel
 
 
+# Classes to override the hideous default Markdown renderer
 class PlainHeading(Heading):
     """Left-aligned, no panel."""
 
@@ -23,7 +24,6 @@ class PlainHeading(Heading):
         yield self.text  # just emit the raw Text
 
 
-# Plug the new class into a custom Markdown renderer
 class PlainMarkdown(Markdown):
     elements = Markdown.elements.copy()
     elements["heading_open"] = PlainHeading  # swap it in
@@ -31,12 +31,11 @@ class PlainMarkdown(Markdown):
 
 Markdown.elements["heading_open"] = PlainHeading
 
-# Initialize Rich console
 console = Console()
+
 messages: List[dict] = []
 thinking_active = False
 
-# Slash commands
 slash_commands: Dict[str, Callable] = {}
 
 
@@ -273,10 +272,10 @@ async def main():
 
     # Register slash commands
     register_slash_commands()
-    
+
     # Create custom key bindings to handle suggestion acceptance with Tab
     kb = KeyBindings()
-    
+
     @kb.add(Keys.Tab)
     def _(event):
         """Accept auto-suggestion with tab key."""
