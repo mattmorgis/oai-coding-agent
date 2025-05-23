@@ -12,36 +12,54 @@ An interactive coding assistant built with the OpenAI Agents SDK and Model Conte
 
 ## Installation
 
-Install the runtime dependencies listed in `pyproject.toml`:
+Install the package and its dependencies:
 
 ```bash
 uv sync
 ```
 
+This installs the `oai` command-line tool.
+
 ## Usage
 
-Run the interactive coding agent:
+### Command-Line Interface
+
+The main entry point is the `oai` command:
 
 ```bash
-uv run main.py
+# Start interactive chat (default command)
+oai
+
+# Start chat with specific model
+oai --model o3
+
+# Start chat with specific repository path
+oai --repo-path /path/to/your/repo
+
+# Show configuration
+oai config
 ```
 
-This will:
+Available models:
 
-1. Launch an MCP filesystem server (via `npx @modelcontextprotocol/server-filesystem`) pointed at your local directory.
-2. Start an interactive REPL where you can ask questions and issue commands to explore your code.
-3. Automatically manage conversation history across turns.
+- `o3` (default)
+- `o4-mini`
+- `codex-mini-latest`
 
-Once running, you can type your question or command at the `You:` prompt. Be sure to enter your local repo path. Enter `exit`, `quit`, or `bye` to end the session.
+The chat interface provides:
 
-## Customization
-
-- **Mounted directory**: Set the `MOUNT_PATH` variable in your `.env` file to the path of your code folder.
+1. An MCP filesystem server (via `npx @modelcontextprotocol/server-filesystem`) for accessing your codebase
+2. An interactive chat UI with syntax highlighting and markdown rendering
+3. Automatic conversation history management
 
 ## Environment Variables
 
-This project uses the `.env` file for configuration. Copy the example file:
+Set your OpenAI API key in a `.env` file:
 
 ```bash
 cp .env-example .env
 ```
+
+Required variables:
+
+- `OPENAI_API_KEY`: Your OpenAI API key
