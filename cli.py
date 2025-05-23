@@ -1,5 +1,5 @@
-import os
 import asyncio
+import os
 from enum import Enum
 from pathlib import Path
 
@@ -9,7 +9,6 @@ from rich.console import Console
 from rich.table import Table
 from typing_extensions import Annotated
 
-from tui import ChatApp
 import rich_tui
 
 console = Console()
@@ -41,6 +40,7 @@ def config_table(model: ModelChoice, repo_path: Path) -> Table:
 
 app = typer.Typer()
 
+
 @app.command()
 def config(
     openai_api_key: Annotated[str, typer.Option(envvar="OPENAI_API_KEY")],
@@ -58,27 +58,12 @@ def config(
     table = config_table(model, repo_path)
     console.print(table)
 
-@app.command()
-def tui(
-    openai_api_key: Annotated[str, typer.Option(envvar="OPENAI_API_KEY")],
-    model: Annotated[
-        ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
-    ] = ModelChoice.o3,
-    repo_path: Annotated[
-        Path,
-        typer.Option(
-            help="Path to the repository. This path (and it's subdirectories) are the only files the agent has permission to access"
-        ),
-    ] = Path.cwd(),
-):
-    """Launch the Textual TUI interface."""
-    console.print(f"Launching TUI with model {model.value} on repo {repo_path}")
-    chat_app = ChatApp()
-    chat_app.run()
 
 @app.command()
 def chat(
-    openai_api_key: Annotated[str, typer.Option(envvar="OPENAI_API_KEY")],
+    openai_api_key: Annotated[
+        str, typer.Option(envvar="OPENAI_API_KEY", help="OpenAI API key")
+    ],
     model: Annotated[
         ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
     ] = ModelChoice.o3,
@@ -95,6 +80,33 @@ def chat(
         asyncio.run(rich_tui.main())
     except KeyboardInterrupt:
         console.print("\nExiting...")
+
+
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    openai_api_key: Annotated[
+        str, typer.Option(envvar="OPENAI_API_KEY", help="OpenAI API key")
+    ],
+    model: Annotated[
+        ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
+    ] = ModelChoice.o3,
+    repo_path: Annotated[
+        Path,
+        typer.Option(
+            help="Path to the repository. This path (and it's subdirectories) are the only files the agent has permission to access"
+        ),
+    ] = Path.cwd(),
+):
+    """
+    Start chatting with your codebase.
+    """
+    try:
+        if ctx.invoked_subcommand is None:
+            asyncio.run(ctx.invoke(chat(os.environ["OPENAI_API_KEY"])))
+    except KeyboardInterrupt:
+        console.print("\nExiting...")
+
 
 if __name__ == "__main__":
     app()
