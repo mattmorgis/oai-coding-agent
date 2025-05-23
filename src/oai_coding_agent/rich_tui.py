@@ -238,11 +238,6 @@ def handle_slash_command(command_text):
     cmd = parts[0].lower() if parts else ""
     args = parts[1] if len(parts) > 1 else ""
 
-    # Debug info
-    console.print(f"[dim]DEBUG: Command '{cmd}' with args '{args}'[/dim]")
-    console.print(
-        f"[dim]DEBUG: Available commands: {list(slash_commands.keys())}[/dim]"
-    )
 
     if cmd in slash_commands:
         try:
@@ -328,16 +323,22 @@ async def main():
             # Use prompt_toolkit with a simple '>' prompt
             user_input = await asyncio.to_thread(lambda: session.prompt("› "))
 
-            # Show the input with a border
-            console.print(Panel(user_input, border_style="cyan", expand=False))
-
             if not user_input.strip():
                 continue
+
+            # Handle exit/quit with or without slash (before showing input)
+            if user_input.strip().lower() in ["exit", "quit", "/exit", "/quit"]:
+                continue_loop = slash_commands["exit"]()
+                continue
+
+            # Show the input with a border
+            console.print(Panel(user_input, border_style="cyan", expand=False))
 
             # Handle slash commands
             if user_input.startswith("/"):
                 continue_loop = handle_slash_command(user_input)
-                render_messages()
+                if continue_loop:  # Only render if not exiting
+                    render_messages()
                 continue
 
             # Add user message
