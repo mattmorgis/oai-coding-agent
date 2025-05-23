@@ -3,7 +3,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import AsyncIterator, Optional
 
-from agents import Agent, ModelSettings, Runner, Trace, gen_trace_id, trace
+from agents import (
+    Agent,
+    ModelSettings,
+    Runner,
+    RunResultStreaming,
+    Trace,
+    gen_trace_id,
+    trace,
+)
 from agents.mcp import MCPServerStdio
 from openai.types.shared.reasoning import Reasoning
 
@@ -80,19 +88,20 @@ class AgentSession:
         self,
         user_input: str,
         previous_response_id: Optional[str] = None,
-    ) -> tuple[AsyncIterator, Optional[str]]:
+    ) -> tuple[AsyncIterator, RunResultStreaming]:
         """
-        Send one user message to the agent and return an async iterator of events plus the new response ID.
+        Send one user message to the agent and return an async iterator of events plus the result.
 
         Usage:
-            events, last_id = await session.run_step(user_input, prev_id)
+            events, result = await session.run_step(user_input, prev_id)
             async for event in events:
                 handle event
+            prev_id = result.last_response_id
         """
-        runner = Runner.run_streamed(
+        result = Runner.run_streamed(
             self._agent,
             user_input,
             previous_response_id=previous_response_id,
             max_turns=self.max_turns,
         )
-        return runner.stream_events(), runner.last_response_id
+        return result.stream_events(), result

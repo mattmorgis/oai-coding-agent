@@ -36,7 +36,6 @@ Markdown.elements["heading_open"] = PlainHeading
 console = Console()
 
 messages: List[dict] = []
-thinking_active = False
 
 slash_commands: Dict[str, Callable] = {}
 
@@ -46,40 +45,23 @@ def clear_terminal():
     os.system("cls" if os.name == "nt" else "clear")
 
 
-def render_messages():
-    """Render all messages in the chat history."""
-    clear_terminal()
-    for msg in messages:
-        role = msg.get("role")
-        content = msg.get("content", "")
-        if role == "user":
-            console.print(f"[bold blue]You:[/bold blue] {content}\n")
-        elif role == "assistant":
-            console.print("[bold green]Assistant:[/bold green]")
-            md = Markdown(content, code_theme="nord", hyperlinks=True)
-            console.print(md)
-            console.print()
-        elif role == "thinking":
-            console.print(f"[yellow]{content}[/yellow]\n")
-        elif role == "system":
-            console.print(
-                f"[dim yellow]System:[/dim yellow] [yellow]{content}[/yellow]\n"
-            )
-
-
-async def animate_thinking():
-    """Animate the thinking indicator."""
-    global thinking_active
-    states = ["🤔 Thinking.", "🤔 Thinking..", "🤔 Thinking..."]
-    idx = 0
-    while thinking_active:
-        for i, m in enumerate(messages):
-            if m.get("role") == "thinking":
-                messages[i]["content"] = states[idx]
-                break
-        idx = (idx + 1) % len(states)
-        render_messages()
-        await asyncio.sleep(0.5)
+def render_message(msg: dict):
+    """Render a single message."""
+    role = msg.get("role")
+    content = msg.get("content", "")
+    if role == "user":
+        console.print(f"[bold blue]You:[/bold blue] {content}\n")
+    elif role == "assistant":
+        console.print("[bold green]Assistant:[/bold green]")
+        md = Markdown(content, code_theme="nord", hyperlinks=True)
+        console.print(md)
+        console.print()
+    elif role == "system":
+        console.print(f"[dim yellow]System:[/dim yellow] [yellow]{content}[/yellow]\n")
+    elif role == "thought":
+        console.print(f"[italic dim]{content}[/italic dim]\n")
+    elif role == "tool":
+        console.print(f"[cyan]Tool: {content}[/cyan]\n")
 
 
 def register_slash_commands():
@@ -93,14 +75,19 @@ def register_slash_commands():
         for cmd, func in slash_commands.items():
             doc = func.__doc__ or "No description available"
             help_text += f"/{cmd} - {doc}\n"
-        messages.append({"role": "system", "content": help_text})
+        msg = {"role": "system", "content": help_text}
+        messages.append(msg)
+        render_message(msg)
         return True
 
     def cmd_clear(args=""):
         """Clear the chat history."""
         global messages
         messages = []
-        messages.append({"role": "system", "content": "Chat history has been cleared."})
+        msg = {"role": "system", "content": "Chat history has been cleared."}
+        messages.append(msg)
+        clear_terminal()
+        render_message(msg)
         return True
 
     def cmd_exit(args=""):
@@ -110,12 +97,12 @@ def register_slash_commands():
 
     def cmd_version(args=""):
         """Show version information."""
-        messages.append(
-            {
-                "role": "system",
-                "content": "CLI Chat Version: 0.1.0\nBuilt with Rich and prompt-toolkit",
-            }
-        )
+        msg = {
+            "role": "system",
+            "content": "CLI Chat Version: 0.1.0\nBuilt with Rich and prompt-toolkit",
+        }
+        messages.append(msg)
+        render_message(msg)
         return True
 
     slash_commands["help"] = cmd_help
@@ -136,23 +123,22 @@ def handle_slash_command(text: str) -> bool:
         try:
             return slash_commands[cmd](args)
         except Exception as e:
-            messages.append(
-                {"role": "system", "content": f"Error executing /{cmd}: {e}"}
-            )
+            msg = {"role": "system", "content": f"Error executing /{cmd}: {e}"}
+            messages.append(msg)
+            render_message(msg)
             return True
     else:
-        messages.append(
-            {
-                "role": "system",
-                "content": f"Unknown command: /{cmd}\nType /help to see available commands.",
-            }
-        )
+        msg = {
+            "role": "system",
+            "content": f"Unknown command: /{cmd}\nType /help to see available commands.",
+        }
+        messages.append(msg)
+        render_message(msg)
         return True
 
 
 async def main(repo_path: Path, model: str, openai_api_key: str):
     """Main application loop."""
-    global thinking_active
 
     register_slash_commands()
 
@@ -183,13 +169,12 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
     )
 
     # Welcome message
-    messages.append(
-        {
-            "role": "assistant",
-            "content": "Hello! I'm your AI coding assistant. How can I help you today?\n\nType `/help` to see available commands.",
-        }
-    )
-    render_messages()
+    welcome_msg = {
+        "role": "assistant",
+        "content": "Hello! I'm your AI coding assistant. How can I help you today?\n\nType `/help` to see available commands.",
+    }
+    messages.append(welcome_msg)
+    render_message(welcome_msg)
 
     async with AgentSession(
         repo_path=repo_path, model=model, openai_api_key=openai_api_key
@@ -214,19 +199,15 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
 
                 if user_input.startswith("/"):
                     continue_loop = handle_slash_command(user_input)
-                    if continue_loop:
-                        render_messages()
                     continue
 
-                messages.append({"role": "user", "content": user_input})
-                messages.append({"role": "thinking", "content": "🤔 Thinking..."})
-                thinking_active = True
-                thinking_task = asyncio.create_task(animate_thinking())
+                user_msg = {"role": "user", "content": user_input}
+                messages.append(user_msg)
+                # No need to render user message, already shown in Panel
 
-                events, prev_id = await session_agent.run_step(user_input, prev_id)
+                events, result = await session_agent.run_step(user_input, prev_id)
 
                 async for event in events:
-                    thinking_active = False
                     evt_type = getattr(event, "type", None)
                     evt_name = getattr(event, "name", None)
 
@@ -235,38 +216,34 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
                         evt_type == "run_item_stream_event"
                         and evt_name == "tool_called"
                     ):
-                        messages.append(
-                            {
-                                "role": "system",
-                                "content": f"-- Tool {event.item.raw_item.name} was called with args: {event.item.raw_item.arguments}",
-                            }
-                        )
+                        tool_msg = {
+                            "role": "tool",
+                            "content": f"{event.item.raw_item.name}({event.item.raw_item.arguments})",
+                        }
+                        messages.append(tool_msg)
+                        render_message(tool_msg)
                     # Handle reasoning items
                     elif evt_name == "reasoning_item_created":
                         summary = event.item.raw_item.summary
                         if summary:
                             text = summary[0].text
-                            messages.append(
-                                {
-                                    "role": "system",
-                                    "content": f"-- Reasoning item created: {text}",
-                                }
-                            )
-                            messages.append({"role": "system", "content": "--"})
+                            thought_msg = {
+                                "role": "thought",
+                                "content": f"💭 {text}",
+                            }
+                            messages.append(thought_msg)
+                            render_message(thought_msg)
                     # Handle message outputs
                     elif evt_name == "message_output_created":
-                        messages.append(
-                            {
-                                "role": "assistant",
-                                "content": event.item.raw_item.content[0].text,
-                            }
-                        )
-                    # Unknown events can be ignored or logged here
-                    render_messages()
+                        assistant_msg = {
+                            "role": "assistant",
+                            "content": event.item.raw_item.content[0].text,
+                        }
+                        messages.append(assistant_msg)
+                        render_message(assistant_msg)
 
-                thinking_active = False
-                await thinking_task
-                messages.pop()
+                # Update prev_id for next iteration
+                prev_id = result.last_response_id
 
             except (KeyboardInterrupt, EOFError):
                 continue_loop = False
