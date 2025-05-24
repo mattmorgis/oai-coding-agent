@@ -13,7 +13,6 @@ from prompt_toolkit.styles import Style
 from rich.console import Console
 from rich.markdown import Heading, Markdown
 
-
 from .agent import AgentSession
 
 
@@ -155,6 +154,24 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
         else:
             buffer.complete_next()
 
+    # Override default multiline behavior:
+    # - Enter: submits
+    # - Alt+Enter, Ctrl+J, Esc+Enter: insert newline
+    @kb.add(Keys.Enter)
+    def _(event):
+        """Handle Enter - submit the prompt."""
+        event.current_buffer.validate_and_handle()
+
+    @kb.add(Keys.Escape, Keys.Enter)
+    def _(event):
+        """Handle Alt+Enter (Esc+Enter) - insert newline."""
+        event.current_buffer.insert_text("\n")
+
+    @kb.add("c-j")
+    def _(event):
+        """Handle Ctrl+J - insert newline."""
+        event.current_buffer.insert_text("\n")
+
     # ------------------------------------------------------------------
     # Store history alongside logs/config in ~/.oai_coding_agent
     # ------------------------------------------------------------------
@@ -172,6 +189,8 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
         style=Style.from_dict(
             {"prompt": "ansicyan bold", "auto-suggestion": "#888888"}
         ),
+        erase_when_done=True,
+        multiline=True,
     )
 
     # Welcome message
@@ -207,7 +226,7 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
 
                 user_msg = {"role": "user", "content": user_input}
                 messages.append(user_msg)
-                render_message(user_msg)
+                console.print(f"[dim]› {user_input}[/dim]\n")
 
                 ui_stream, result = await session_agent.run_step(user_input, prev_id)
 
