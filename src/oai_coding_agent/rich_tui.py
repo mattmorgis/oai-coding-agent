@@ -12,7 +12,7 @@ from prompt_toolkit.keys import Keys
 from prompt_toolkit.styles import Style
 from rich.console import Console
 from rich.markdown import Heading, Markdown
-
+from rich.panel import Panel
 
 from .agent import AgentSession
 
@@ -52,7 +52,7 @@ def render_message(msg: dict):
     if role == "user":
         console.print(f"[bold blue]You:[/bold blue] {content}\n")
     elif role == "assistant":
-        console.print("[bold green]Assistant:[/bold green]")
+        console.print("[bold cyan]oai:[/bold cyan]", end=" ")
         md = Markdown(content, code_theme="nord", hyperlinks=True)
         console.print(md)
         console.print()
@@ -61,7 +61,7 @@ def render_message(msg: dict):
     elif role == "thought":
         console.print(f"[italic dim]{content}[/italic dim]\n")
     elif role == "tool":
-        console.print(f"[cyan]Tool: {content}[/cyan]\n")
+        console.print(f"[dim green]Tool: {content}[/dim green]\n")
 
 
 def register_slash_commands():
@@ -143,6 +143,16 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
 
     register_slash_commands()
 
+    # Display welcome panel with configuration info
+    console.print(
+        Panel(
+            f"[bold cyan]╭─ OAI CODING AGENT ─╮[/bold cyan]\n\n"
+            f"[dim]Current Directory:[/dim] [dim cyan]{repo_path}[/dim cyan]\n"
+            f"[dim]Model:[/dim] [dim cyan]{model}[/dim cyan]",
+            width=int(console.size.width * 0.30),
+        )
+    )
+
     # Set up prompt toolkit with custom key bindings
     kb = KeyBindings()
 
@@ -173,14 +183,6 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
             {"prompt": "ansicyan bold", "auto-suggestion": "#888888"}
         ),
     )
-
-    # Welcome message
-    welcome_msg = {
-        "role": "assistant",
-        "content": "Hello! I'm your AI coding assistant. How can I help you today?\n\nType `/help` to see available commands.",
-    }
-    messages.append(welcome_msg)
-    render_message(welcome_msg)
 
     async with AgentSession(
         repo_path=repo_path, model=model, openai_api_key=openai_api_key
