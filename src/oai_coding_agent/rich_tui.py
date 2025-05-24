@@ -12,7 +12,7 @@ from prompt_toolkit.keys import Keys
 from prompt_toolkit.styles import Style
 from rich.console import Console
 from rich.markdown import Heading, Markdown
-from rich.panel import Panel
+
 
 from .agent import AgentSession
 
@@ -201,15 +201,13 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
                     continue_loop = slash_commands["exit"]()
                     continue
 
-                console.print(Panel(user_input, border_style="cyan", expand=False))
-
                 if user_input.startswith("/"):
                     continue_loop = handle_slash_command(user_input)
                     continue
 
                 user_msg = {"role": "user", "content": user_input}
                 messages.append(user_msg)
-                # No need to render user message, already shown in Panel
+                render_message(user_msg)
 
                 ui_stream, result = await session_agent.run_step(user_input, prev_id)
 
