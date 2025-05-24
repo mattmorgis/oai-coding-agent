@@ -13,7 +13,6 @@ from prompt_toolkit.styles import Style
 from rich.console import Console
 from rich.markdown import Heading, Markdown
 
-
 from .agent import AgentSession
 
 
@@ -172,6 +171,7 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
         style=Style.from_dict(
             {"prompt": "ansicyan bold", "auto-suggestion": "#888888"}
         ),
+        erase_when_done=True,
     )
 
     # Welcome message
@@ -207,7 +207,7 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
 
                 user_msg = {"role": "user", "content": user_input}
                 messages.append(user_msg)
-                render_message(user_msg)
+                console.print(f"[dim]› {user_input}[/dim]\n")
 
                 ui_stream, result = await session_agent.run_step(user_input, prev_id)
 
