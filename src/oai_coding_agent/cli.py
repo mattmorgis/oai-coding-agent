@@ -47,7 +47,7 @@ def config(
     openai_api_key: Annotated[str, typer.Option(envvar="OPENAI_API_KEY")],
     model: Annotated[
         ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
-    ] = ModelChoice.o3,
+    ] = ModelChoice.codex_mini_latest,
     repo_path: Annotated[
         Path,
         typer.Option(
@@ -67,7 +67,7 @@ def chat(
     ],
     model: Annotated[
         ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
-    ] = ModelChoice.o3,
+    ] = ModelChoice.codex_mini_latest,
     repo_path: Annotated[
         Path,
         typer.Option(
@@ -91,7 +91,7 @@ def main(
     ],
     model: Annotated[
         ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
-    ] = ModelChoice.o3,
+    ] = ModelChoice.codex_mini_latest,
     repo_path: Annotated[
         Path,
         typer.Option(
