@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from enum import Enum
 from pathlib import Path
@@ -13,6 +14,7 @@ from . import rich_tui
 from .logger import setup_logging
 
 setup_logging()
+logger = logging.getLogger(__name__)
 
 console = Console()
 
@@ -79,7 +81,7 @@ def chat(
     ] = Path.cwd(),
 ):
     """Start a chat session"""
-    console.print(f"Starting chat with model {model.value} on repo {repo_path}")
+    logger.info(f"Starting chat with model {model.value} on repo {repo_path}")
     try:
         asyncio.run(rich_tui.main(repo_path, model.value, openai_api_key))
     except KeyboardInterrupt:

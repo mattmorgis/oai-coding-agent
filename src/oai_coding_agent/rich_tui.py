@@ -55,7 +55,6 @@ def render_message(msg: dict):
         console.print("[bold cyan]oai:[/bold cyan]", end=" ")
         md = Markdown(content, code_theme="nord", hyperlinks=True)
         console.print(md)
-        console.print()
     elif role == "system":
         console.print(f"[dim yellow]System:[/dim yellow] [yellow]{content}[/yellow]\n")
     elif role == "thought":
@@ -211,7 +210,6 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
         continue_loop = True
         while continue_loop:
             try:
-                console.print()
                 user_input = await asyncio.to_thread(
                     lambda: prompt_session.prompt("› ")
                 )
