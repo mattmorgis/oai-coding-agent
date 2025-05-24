@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "concurrent-log-handler>=0.9.26",
     "openai-agents[litellm]>=0.0.15",
     "prompt-toolkit>=3.0.51",
     "python-dotenv>=1.0.0",

@@ -10,6 +10,9 @@ from rich.table import Table
 from typing_extensions import Annotated
 
 from . import rich_tui
+from .logger import setup_logging
+
+setup_logging()
 
 console = Console()
 

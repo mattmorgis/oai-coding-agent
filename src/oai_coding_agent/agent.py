@@ -1,3 +1,4 @@
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -13,7 +14,19 @@ from agents import (
     trace,
 )
 from agents.mcp import MCPServerStdio
+from mcp.client.stdio import stdio_client
 from openai.types.shared.reasoning import Reasoning
+
+logger = logging.getLogger(__name__)
+
+
+class QuietMCPServerStdio(MCPServerStdio):
+    """Variant of MCPServerStdio that silences child‐process stderr."""
+
+    def create_streams(self):
+        # Redirect any console.err from the server process into the void
+        return stdio_client(self.params, errlog=open(os.devnull, "w"))
+
 
 # Instructions for the agent's behavior in the codebase
 INSTRUCTIONS = (
@@ -44,7 +57,7 @@ class AgentSession:
         os.environ["OPENAI_API_KEY"] = self.openai_api_key
 
         # Start the MCP filesystem server
-        self._server_ctx = MCPServerStdio(
+        self._server_ctx = QuietMCPServerStdio(
             name="file-system-mcp",
             params={
                 "command": "npx",
@@ -94,6 +107,9 @@ class AgentSession:
         """Translate low-level SDK stream events into high-level UI messages."""
         evt_type = getattr(event, "type", None)
         evt_name = getattr(event, "name", None)
+        logger.debug(
+            f"SDK event received: type={evt_type}, name={evt_name}, event={event!r}"
+        )
 
         # Tool calls
         if evt_type == "run_item_stream_event" and evt_name == "tool_called":
