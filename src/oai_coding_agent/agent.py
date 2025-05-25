@@ -47,8 +47,10 @@ class AgentSession:
     openai_api_key: str
     max_turns: int = 100
 
-    _server_ctx: Optional[MCPServerStdio] = field(init=False, default=None)
+    _server_ctx: Optional[QuietMCPServerStdio] = field(init=False, default=None)
     _server: Optional[MCPServerStdio] = field(init=False, default=None)
+    _cli_server_ctx: Optional[QuietMCPServerStdio] = field(init=False, default=None)
+    _cli_server: Optional[MCPServerStdio] = field(init=False, default=None)
     _agent: Optional[Agent] = field(init=False, default=None)
     _trace_ctx: Optional[Trace] = field(init=False, default=None)
 
@@ -72,6 +74,34 @@ class AgentSession:
         )
         self._server = await self._server_ctx.__aenter__()
 
+        # List to collect all MCP servers
+        mcp_servers = [self._server]
+
+        # Optionally start the CLI MCP server for grep functionality
+        if os.getenv("ENABLE_CLI_TOOLS", "true").lower() == "true":
+            try:
+                self._cli_server_ctx = QuietMCPServerStdio(
+                    name="cli-mcp-server",
+                    params={
+                        "command": "cli-mcp-server",
+                        "env": {
+                            "ALLOWED_DIR": str(self.repo_path),
+                            "ALLOWED_COMMANDS": "grep,rg,find,ls,cat,head,tail,wc,pwd,echo,sed,awk,sort,uniq,fzf,bat,git,uv,pip,pipdeptree,xargs",
+                            "ALLOWED_FLAGS": "-r,-R,-n,-i,-v,-l,-c,-h,-H,-o,-E,-F,-w,-x,-e,-C,-P,-A,-B,--help,--version,--context,--after-context,--before-context,--perl-regexp,--regexp,--line-number,--type",
+                            "ALLOW_SHELL_OPERATORS": "true",
+                            "COMMAND_TIMEOUT": "120",
+                        },
+                    },
+                    client_session_timeout_seconds=120,
+                    cache_tools_list=True,
+                )
+                self._cli_server = await self._cli_server_ctx.__aenter__()
+                mcp_servers.append(self._cli_server)
+                logger.info("CLI MCP server started successfully")
+            except Exception as e:
+                logger.warning(f"Failed to start CLI MCP server: {e}")
+                logger.warning("Grep functionality will not be available")
+
         # Begin tracing
         trace_id = gen_trace_id()
         self._trace_ctx = trace(workflow_name="OAI Coding Agent", trace_id=trace_id)
@@ -83,6 +113,13 @@ class AgentSession:
             f"The repository root path you can access is: {self.repo_path}\n"
         )
 
+        # Add grep instructions if CLI tools are available
+        if len(mcp_servers) > 1:
+            dynamic_instructions += (
+                "\nYou also have access to CLI tools including grep for powerful text searching. "
+                "Use 'run_command' with grep or rg (ripgrep) for efficient code searching."
+            )
+
         # Instantiate the agent
         self._agent = Agent(
             name="Coding Agent",
@@ -91,15 +128,17 @@ class AgentSession:
             model_settings=ModelSettings(
                 reasoning=Reasoning(summary="auto", effort="high")
             ),
-            mcp_servers=[self._server],
+            mcp_servers=mcp_servers,
         )
 
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        # End tracing and shut down server
+        # End tracing and shut down servers
         if self._trace_ctx:
             self._trace_ctx.__exit__(exc_type, exc_val, exc_tb)
+        if self._cli_server_ctx:
+            await self._cli_server_ctx.__aexit__(exc_type, exc_val, exc_tb)
         if self._server_ctx:
             await self._server_ctx.__aexit__(exc_type, exc_val, exc_tb)
 

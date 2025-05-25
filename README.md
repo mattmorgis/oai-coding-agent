@@ -49,8 +49,9 @@ Available models:
 The chat interface provides:
 
 1. An MCP filesystem server (via `npx @modelcontextprotocol/server-filesystem`) for accessing your codebase
-2. An interactive chat UI with syntax highlighting and markdown rendering
-3. Automatic conversation history management
+2. CLI tools including grep for powerful code searching (via `cli-mcp-server`)
+3. An interactive chat UI with syntax highlighting and markdown rendering
+4. Automatic conversation history management
 
 ## Environment Variables
 
@@ -63,6 +64,28 @@ cp .env-example .env
 Required variables:
 
 - `OPENAI_API_KEY`: Your OpenAI API key
+
+Optional variables:
+
+- `ENABLE_CLI_TOOLS`: Set to "false" to disable grep/CLI tools (default: "true")
+- `CLI_ALLOW_ALL_FLAGS`: Set to "true" to allow all command flags (default: "false", uses a curated list of common flags)
+
+## Using Grep and CLI Tools
+
+When `ENABLE_CLI_TOOLS` is set to "true" (default), the agent has access to powerful command-line tools including:
+
+- `grep` - Search for patterns in files
+- `rg` (ripgrep) - Fast recursive grep
+- `find` - Find files and directories
+- `ls`, `cat`, `head`, `tail`, `wc` - Basic file operations
+
+Example queries you can ask:
+- "Search for all occurrences of 'AgentSession' in the codebase"
+- "Find all Python files that import 'asyncio'"
+- "Use grep to find TODO comments"
+- "Search for functions that handle errors"
+
+The CLI tools are sandboxed to only operate within your specified repository path for security.
 
 ## Development
 
