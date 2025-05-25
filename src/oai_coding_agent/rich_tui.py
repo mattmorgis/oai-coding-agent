@@ -164,24 +164,6 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
         else:
             buffer.complete_next()
 
-    # Override default multiline behavior:
-    # - Enter: submits
-    # - Alt+Enter, Ctrl+J, Esc+Enter: insert newline
-    @kb.add(Keys.Enter)
-    def _(event):
-        """Handle Enter - submit the prompt."""
-        event.current_buffer.validate_and_handle()
-
-    @kb.add(Keys.Escape, Keys.Enter)
-    def _(event):
-        """Handle Alt+Enter (Esc+Enter) - insert newline."""
-        event.current_buffer.insert_text("\n")
-
-    @kb.add("c-j")
-    def _(event):
-        """Handle Ctrl+J - insert newline."""
-        event.current_buffer.insert_text("\n")
-
     # ------------------------------------------------------------------
     # Store history alongside logs/config in ~/.oai_coding_agent
     # ------------------------------------------------------------------
@@ -200,7 +182,6 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
             {"prompt": "ansicyan bold", "auto-suggestion": "#888888"}
         ),
         erase_when_done=True,
-        multiline=True,
     )
 
     async with AgentSession(
