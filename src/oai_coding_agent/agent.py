@@ -77,30 +77,27 @@ class AgentSession:
         # List to collect all MCP servers
         mcp_servers = [self._server]
 
-        # Optionally start the CLI MCP server for grep functionality
-        if os.getenv("ENABLE_CLI_TOOLS", "true").lower() == "true":
-            try:
-                self._cli_server_ctx = QuietMCPServerStdio(
-                    name="cli-mcp-server",
-                    params={
-                        "command": "cli-mcp-server",
-                        "env": {
-                            "ALLOWED_DIR": str(self.repo_path),
-                            "ALLOWED_COMMANDS": "grep,rg,find,ls,cat,head,tail,wc,pwd,echo,sed,awk,sort,uniq,fzf,bat,git,uv,pip,pipdeptree,xargs",
-                            "ALLOWED_FLAGS": "-r,-R,-n,-i,-v,-l,-c,-h,-H,-o,-E,-F,-w,-x,-e,-C,-P,-A,-B,--help,--version,--context,--after-context,--before-context,--perl-regexp,--regexp,--line-number,--type",
-                            "ALLOW_SHELL_OPERATORS": "true",
-                            "COMMAND_TIMEOUT": "120",
-                        },
+        try:
+            self._cli_server_ctx = QuietMCPServerStdio(
+                name="cli-mcp-server",
+                params={
+                    "command": "cli-mcp-server",
+                    "env": {
+                        "ALLOWED_DIR": str(self.repo_path),
+                        "ALLOWED_COMMANDS": "grep,rg,find,ls,cat,head,tail,wc,pwd,echo,sed,awk,sort,uniq,fzf,bat,git,uv,pip,pipdeptree,xargs,which",
+                        "ALLOWED_FLAGS": "-r,-R,-n,-i,-v,-l,-c,-h,-H,-o,-E,-F,-w,-x,-e,-C,-P,-A,-B,--help,--version,--context,--after-context,--before-context,--perl-regexp,--regexp,--line-number,--type",
+                        "ALLOW_SHELL_OPERATORS": "true",
+                        "COMMAND_TIMEOUT": "120",
                     },
-                    client_session_timeout_seconds=120,
-                    cache_tools_list=True,
-                )
-                self._cli_server = await self._cli_server_ctx.__aenter__()
-                mcp_servers.append(self._cli_server)
-                logger.info("CLI MCP server started successfully")
-            except Exception as e:
-                logger.warning(f"Failed to start CLI MCP server: {e}")
-                logger.warning("Grep functionality will not be available")
+                },
+                client_session_timeout_seconds=120,
+                cache_tools_list=True,
+            )
+            self._cli_server = await self._cli_server_ctx.__aenter__()
+            mcp_servers.append(self._cli_server)
+            logger.info("CLI MCP server started successfully")
+        except Exception as e:
+            logger.warning(f"Failed to start CLI MCP server: {e}")
 
         # Begin tracing
         trace_id = gen_trace_id()
