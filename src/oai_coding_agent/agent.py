@@ -85,7 +85,7 @@ class AgentSession:
                     "env": {
                         "ALLOWED_DIR": str(self.repo_path),
                         "ALLOWED_COMMANDS": "grep,rg,find,ls,cat,head,tail,wc,pwd,echo,sed,awk,sort,uniq,fzf,bat,git,uv,pip,pipdeptree,xargs,which",
-                        "ALLOWED_FLAGS": "-r,-R,-n,-i,-v,-l,-c,-h,-H,-o,-E,-F,-w,-x,-e,-C,-P,-A,-B,--help,--version,--context,--after-context,--before-context,--perl-regexp,--regexp,--line-number,--type",
+                        "ALLOWED_FLAGS": "-r,-R,-n,-i,-v,-l,-c,-h,-H,-o,-E,-F,-w,-x,-e,-C,-P,-A,-B,-f,--filter,--help,--version,--context,--after-context,--before-context,--perl-regexp,--regexp,--line-number,--type",
                         "ALLOW_SHELL_OPERATORS": "true",
                         "COMMAND_TIMEOUT": "120",
                     },
