@@ -148,7 +148,7 @@ async def main(repo_path: Path, model: str, openai_api_key: str):
             f"[bold cyan]╭─ OAI CODING AGENT ─╮[/bold cyan]\n\n"
             f"[dim]Current Directory:[/dim] [dim cyan]{repo_path}[/dim cyan]\n"
             f"[dim]Model:[/dim] [dim cyan]{model}[/dim cyan]",
-            width=int(console.size.width * 0.30),
+            expand=False,
         )
     )
 
