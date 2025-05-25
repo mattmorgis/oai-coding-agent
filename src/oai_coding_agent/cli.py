@@ -7,7 +7,6 @@ from pathlib import Path
 import typer
 from dotenv import dotenv_values
 from rich.console import Console
-from rich.table import Table
 from typing_extensions import Annotated
 
 from . import rich_tui
@@ -19,7 +18,8 @@ logger = logging.getLogger(__name__)
 console = Console()
 
 # Ensure OPENAI_API_KEY is loaded from .env if present
-
+# This is a convenience method, most developers will be launching this from their own projects.
+# We only want to load OPENAI_API_KEY and not read any other their other variables.
 env_values = dotenv_values()
 if "OPENAI_API_KEY" in env_values and env_values["OPENAI_API_KEY"] is not None:
     os.environ["OPENAI_API_KEY"] = str(env_values["OPENAI_API_KEY"])
@@ -31,37 +31,7 @@ class ModelChoice(str, Enum):
     o4_mini = "o4-mini"
 
 
-def config_table(model: ModelChoice, repo_path: Path) -> Table:
-    table = Table()
-    table.show_header = False
-    table.show_lines = True
-    table.add_row(
-        "Model",
-        model.value,
-    )
-    table.add_row("Repo Path", str(repo_path))
-
-    return table
-
-
 app = typer.Typer()
-
-
-@app.command()
-def config(
-    model: Annotated[
-        ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
-    ] = ModelChoice.codex_mini_latest,
-    repo_path: Annotated[
-        Path,
-        typer.Option(
-            help="Path to the repository. This path (and its subdirectories) are the only files the agent has permission to access"
-        ),
-    ] = Path.cwd(),
-):
-    """Show configuration information."""
-    table = config_table(model, repo_path)
-    console.print(table)
 
 
 @app.command()
@@ -104,7 +74,7 @@ def main(
     ] = Path.cwd(),
 ):
     """
-    Start chatting with your codebase.
+    OAI CODING AGENT - starts an interactive session by default, use -p/--prompt for non-interactive output
     """
     if ctx.invoked_subcommand is None:
         ctx.invoke(chat, openai_api_key, model, repo_path)
