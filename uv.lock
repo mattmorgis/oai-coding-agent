@@ -187,6 +187,18 @@ wheels = [
 ]
 
 [[package]]
+name = "cli-mcp-server"
+version = "0.2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mcp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d0/a0/779c58396af0e7863b781a98dd9cec91aebc1d13691a18021812414600d6/cli_mcp_server-0.2.4.tar.gz", hash = "sha256:928d46985b74a9c5f3745378cabe88f0642e7eeadccdea87a4949e05f25c47fc", size = 23742 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/a9/367c502c4c80fb289db04d38c5885da67b8877db9259b284c8240f1c04c4/cli_mcp_server-0.2.4-py3-none-any.whl", hash = "sha256:907f7007114324b422e3d4ba4a8e879f48954ae64c50dc54c8f40a89a40310e9", size = 10256 },
+]
+
+[[package]]
 name = "click"
 version = "8.1.8"
 source = { registry = "https://pypi.org/simple" }
@@ -767,6 +779,7 @@ name = "oai-coding-agent"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "cli-mcp-server" },
     { name = "concurrent-log-handler" },
     { name = "openai-agents", extra = ["litellm"] },
     { name = "prompt-toolkit" },
@@ -785,6 +798,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cli-mcp-server", specifier = ">=0.1.0" },
     { name = "concurrent-log-handler", specifier = ">=0.9.26" },
     { name = "openai-agents", extras = ["litellm"], specifier = ">=0.0.15" },
     { name = "prompt-toolkit", specifier = ">=3.0.51" },
