@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 console = Console()
 
-# Only ensure OPENAI_API_KEY is set in .env before loading other variables.  # Testing ruff-format hook.
-# Testing trailing whitespace.
+# Ensure OPENAI_API_KEY is loaded from .env if present
+
 env_values = dotenv_values()
 if "OPENAI_API_KEY" in env_values and env_values["OPENAI_API_KEY"] is not None:
     os.environ["OPENAI_API_KEY"] = str(env_values["OPENAI_API_KEY"])
@@ -49,14 +49,13 @@ app = typer.Typer()
 
 @app.command()
 def config(
-    openai_api_key: Annotated[str, typer.Option(envvar="OPENAI_API_KEY")],
     model: Annotated[
         ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
     ] = ModelChoice.codex_mini_latest,
     repo_path: Annotated[
         Path,
         typer.Option(
-            help="Path to the repository. This path (and it's subdirectories) are the only files the agent has permission to access"
+            help="Path to the repository. This path (and its subdirectories) are the only files the agent has permission to access"
         ),
     ] = Path.cwd(),
 ):
