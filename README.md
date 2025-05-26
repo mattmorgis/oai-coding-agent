@@ -46,6 +46,9 @@ Available models:
 - `o4-mini`
 - `codex-mini-latest` (default)
 
+While chatting, use `/config` to view or change settings. Currently only Vim mode
+can be toggled via `/config vim on|off`.
+
 The chat interface provides:
 
 1. An MCP filesystem server (via `npx @modelcontextprotocol/server-filesystem`) for accessing your codebase

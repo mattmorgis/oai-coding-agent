@@ -25,7 +25,7 @@ def record_console(monkeypatch):
 def test_register_slash_commands_populates_commands():
     state = UIState()
     register_slash_commands(state)
-    expected = {"help", "clear", "exit", "quit", "version"}
+    expected = {"help", "clear", "exit", "quit", "version", "config"}
     assert expected.issubset(set(state.slash_commands.keys()))
 
 
@@ -64,3 +64,23 @@ def test_handle_unknown_command_appends_unknown(record_console):
     assert cont is True
     msg = state.messages[-1]
     assert "Unknown command: /nonexistent" in msg["content"]
+
+
+def test_config_command_lists_options(record_console):
+    state = UIState()
+    register_slash_commands(state)
+    cont = handle_slash_command(state, "/config")
+    assert cont is True
+    msg = state.messages[-1]
+    assert "Current configuration:" in msg["content"]
+    assert "vim_mode" in msg["content"]
+
+
+def test_config_vim_toggle(record_console):
+    state = UIState()
+    register_slash_commands(state)
+    cont = handle_slash_command(state, "/config vim on")
+    assert cont is True
+    assert state.config["vim_mode"] is True
+    msg = state.messages[-1]
+    assert "Vim mode enabled" in msg["content"]

@@ -42,12 +42,61 @@ def register_slash_commands(state: UIState) -> None:
         render_message(msg)
         return True
 
+    def cmd_config(args: str = "") -> bool:
+        """Show or modify configuration."""
+        parts = args.split()
+        if not parts:
+            cfg_lines = ["Current configuration:\n"]
+            for k, v in state.config.items():
+                cfg_lines.append(f"{k}: {'ON' if v else 'OFF'}")
+            cfg_lines.append("\nUse /config vim [on|off] to toggle Vim mode.")
+            msg = {"role": "system", "content": "\n".join(cfg_lines)}
+            state.messages.append(msg)
+            render_message(msg)
+            return True
+
+        opt = parts[0].lower()
+        val = parts[1].lower() if len(parts) > 1 else None
+        if opt == "vim":
+            if val in ("on", "off"):
+                state.config["vim_mode"] = val == "on"
+            else:
+                state.config["vim_mode"] = not state.config.get("vim_mode", False)
+
+            if state.prompt_session is not None:
+                from prompt_toolkit.enums import EditingMode
+
+                state.prompt_session.app.editing_mode = (
+                    EditingMode.VI
+                    if state.config["vim_mode"]
+                    else EditingMode.EMACS
+                )
+
+            msg = {
+                "role": "system",
+                "content": (
+                    "Vim mode enabled." if state.config["vim_mode"] else "Vim mode disabled."
+                ),
+            }
+            state.messages.append(msg)
+            render_message(msg)
+            return True
+
+        msg = {
+            "role": "system",
+            "content": f"Unknown config option: {opt}",
+        }
+        state.messages.append(msg)
+        render_message(msg)
+        return True
+
     # Register commands
     state.slash_commands["help"] = cmd_help
     state.slash_commands["clear"] = cmd_clear
     state.slash_commands["exit"] = cmd_exit
     state.slash_commands["quit"] = cmd_exit
     state.slash_commands["version"] = cmd_version
+    state.slash_commands["config"] = cmd_config
 
 
 def handle_slash_command(state: UIState, text: str) -> bool:

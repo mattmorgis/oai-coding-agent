@@ -20,8 +20,6 @@ async def main(repo_path: Path, model: str, openai_api_key: str) -> None:
     state = UIState()
     clear_terminal()
 
-    register_slash_commands(state)
-
     console.print(
         Panel(
             f"[bold cyan]╭─ OAI CODING AGENT ─╮[/bold cyan]\n\n"
@@ -42,14 +40,20 @@ async def main(repo_path: Path, model: str, openai_api_key: str) -> None:
         auto_suggest=AutoSuggestFromHistory(),
         enable_history_search=True,
         complete_while_typing=True,
-        completer=WordCompleter([f"/{c}" for c in state.slash_commands]),
+        completer=WordCompleter([f"/{c}" for c in []]),
         complete_in_thread=True,
         key_bindings=kb,
         style=Style.from_dict(
             {"prompt": "ansicyan bold", "auto-suggestion": "#888888"}
         ),
         erase_when_done=True,
+        vi_mode=state.config.get("vim_mode", False),
     )
+
+    state.prompt_session = prompt_session
+    register_slash_commands(state)
+    # Update completer with registered commands
+    prompt_session.completer = WordCompleter([f"/{c}" for c in state.slash_commands])
 
     async with AgentSession(
         repo_path=repo_path, model=model, openai_api_key=openai_api_key
