@@ -35,7 +35,7 @@ app = typer.Typer()
 
 
 @app.command()
-def chat(
+def main(
     openai_api_key: Annotated[
         str, typer.Option(envvar="OPENAI_API_KEY", help="OpenAI API key")
     ],
@@ -45,39 +45,18 @@ def chat(
     repo_path: Annotated[
         Path,
         typer.Option(
-            help="Path to the repository. This path (and it's subdirectories) are the only files the agent has permission to access"
+            help="Path to the repository. This path (and its subdirectories) are the only files the agent has permission to access"
         ),
     ] = Path.cwd(),
 ):
-    """Start a chat session"""
+    """
+    OAI CODING AGENT - starts an interactive session
+    """
     logger.info(f"Starting chat with model {model.value} on repo {repo_path}")
     try:
         asyncio.run(rich_tui.main(repo_path, model.value, openai_api_key))
     except KeyboardInterrupt:
         console.print("\nExiting...")
-
-
-@app.callback(invoke_without_command=True)
-def main(
-    ctx: typer.Context,
-    openai_api_key: Annotated[
-        str, typer.Option(envvar="OPENAI_API_KEY", help="OpenAI API key")
-    ],
-    model: Annotated[
-        ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
-    ] = ModelChoice.codex_mini_latest,
-    repo_path: Annotated[
-        Path,
-        typer.Option(
-            help="Path to the repository. This path (and it's subdirectories) are the only files the agent has permission to access"
-        ),
-    ] = Path.cwd(),
-):
-    """
-    OAI CODING AGENT - starts an interactive session by default, use -p/--prompt for non-interactive output
-    """
-    if ctx.invoked_subcommand is None:
-        ctx.invoke(chat, openai_api_key, model, repo_path)
 
 
 if __name__ == "__main__":
