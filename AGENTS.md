@@ -1,4 +1,4 @@
-# AGENT.md
+# AGENTS.md
 
 This file provides guidance to the OAI coding agent (oai-coding-agent CLI) when working with code in this repository.
 
