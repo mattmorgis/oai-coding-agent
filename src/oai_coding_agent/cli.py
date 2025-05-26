@@ -7,7 +7,7 @@ from rich.console import Console
 from typing_extensions import Annotated
 
 from .config import Config, ModelChoice
-from . import rich_tui
+from .console.repl import main as console_main
 from .logger import setup_logging
 
 setup_logging()
@@ -40,7 +40,7 @@ def main(
 
     logger.info(f"Starting chat with model {cfg.model.value} on repo {cfg.repo_path}")
     try:
-        asyncio.run(rich_tui.main(cfg.repo_path, cfg.model.value, cfg.openai_api_key))
+        asyncio.run(console_main(cfg.repo_path, cfg.model.value, cfg.openai_api_key))
     except KeyboardInterrupt:
         console.print("\nExiting...")
 
