@@ -1,1 +1,2 @@
 Added ruff formatting and pre-commit hook.
+Updated README to make codex-mini-latest the default model.

@@ -42,9 +42,9 @@ oai config
 
 Available models:
 
-- `o3` (default)
+- `o3`
 - `o4-mini`
-- `codex-mini-latest`
+- `codex-mini-latest` (default)
 
 The chat interface provides:
 
