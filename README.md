@@ -51,8 +51,6 @@ The chat interface provides:
 1. An MCP filesystem server (via `npx @modelcontextprotocol/server-filesystem`) for accessing your codebase
 2. CLI tools including grep for powerful code searching (via `cli-mcp-server`)
 3. An interactive chat UI with syntax highlighting and markdown rendering
-4. Automatic conversation history management
-5. Multi-line input support: use Alt+Enter (or Ctrl+J) to insert newline without submitting input
 
 ## Environment Variables
 
