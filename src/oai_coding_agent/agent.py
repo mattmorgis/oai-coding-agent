@@ -73,7 +73,7 @@ class _AgentSession:
     model: str
     openai_api_key: str
     max_turns: int = 100
-    mode: str = "default"
+    mode: str = "async"
 
     _exit_stack: AsyncExitStack = field(init=False, repr=False)
     _agent: Agent = field(init=False, repr=False)
