@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 console = Console()
 
-app = typer.Typer()
+app = typer.Typer(rich_markup_mode=None)
 
 
 @app.command()
