@@ -34,3 +34,7 @@ dev = [
 [tool.ruff]
 target-version = "py311"
 line-length = 88
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+addopts = "--cov=oai_coding_agent --cov-report=term-missing"
