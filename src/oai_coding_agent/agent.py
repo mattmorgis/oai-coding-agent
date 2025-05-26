@@ -57,7 +57,7 @@ ALLOWED_CLI_COMMANDS = [
 
 ALLOWED_CLI_FLAGS = ["all"]
 
-_DEFAULT_MODE = "async"
+_DEFAULT_MODE = "default"
 
 
 class QuietMCPServerStdio(MCPServerStdio):
