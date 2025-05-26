@@ -57,6 +57,8 @@ ALLOWED_CLI_COMMANDS = [
 
 ALLOWED_CLI_FLAGS = ["all"]
 
+_DEFAULT_MODE = "async"
+
 
 class QuietMCPServerStdio(MCPServerStdio):
     """Variant of MCPServerStdio that silences child-process stderr."""
@@ -73,7 +75,7 @@ class _AgentSession:
     model: str
     openai_api_key: str
     max_turns: int = 100
-    mode: str = "async"
+    mode: str = _DEFAULT_MODE
 
     _exit_stack: AsyncExitStack = field(init=False, repr=False)
     _agent: Agent = field(init=False, repr=False)
@@ -229,7 +231,7 @@ async def AgentSession(
     model: str,
     openai_api_key: str,
     max_turns: int = 100,
-    mode: str = "default",
+    mode: str = _DEFAULT_MODE,
 ) -> AsyncIterator[_AgentSession]:
     """
     Async context manager for setting up and tearing down an agent session.
