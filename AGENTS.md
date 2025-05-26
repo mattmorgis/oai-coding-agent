@@ -1,6 +1,10 @@
-### Project Overview
+# AGENTS.md
 
-This is a Python-based project
+This file provides guidance coding agents when working with code in this repository.
+
+## Project Overview
+
+This is an interactive coding agent built with the OpenAI Agents SDK and Model Context Protocol (MCP) for exploring and interacting with a local codebase. The agent is implemented as an interactive command line interface (CLI).
 
 ### Package Management
 
@@ -12,14 +16,14 @@ This project uses `uv` for project management.
 `uv sync`: Sync the project's dependencies with the environment.
 `uv lock`: Create a lockfile for the project's dependencies.
 `uv run`: Run a command in the project environment.
-Example: `uv run data_acquisition/main.py --email your.email@example.com`
+Example: `uv run script.py`
 `uv tree`: View the dependency tree for the project.
 
 ### Running Tests
 
-# Run tests for a specific module
-
+```bash
 uv run pytest
+```
 
 ### Test Fixtures
 
@@ -31,48 +35,25 @@ Otherwise, add them to conftest.py for reuse across test files.
 
 ### Build and Test Requirements
 
-IMPORTANT:
-
-### DO NOT CREATE **init**.py FILES ANYWHERE IN THIS PROJECT
-
-1. Test-Driven Development (TDD) Workflow:
-
-   - Always check for and update corresponding test files first
-   - Follow Red-Green-Refactor pattern:
-     - Write/update tests first (Red)
-     - Implement code to make tests pass (Green)
-     - Refactor while keeping tests green
-   - Test files should mirror source file structure in tests/ directory
-
-2. After ALL code changes:
+1. After ALL code changes:
 
    - Run tests for the specific module you modified:
      ```
-     uv run pytest <module_directory>
+     uv run pytest
      ```
    - Fix any test errors (warnings can be ignored)
    - If tests pass, proceed with commit
    - If tests fail, fix issues and rerun tests
 
-3. Documentation:
+2. Documentation:
 
    - Update relevant documentation if API changes
    - Add docstrings for new functions/classes
    - Update domain model if entity relationships change
 
-4. Code Style:
+3. Code Style:
 
    - Follow .editorconfig rules
    - Use type hints for all new code
    - Add comments for complex logic
    - Keep functions focused and small
-
-5. After completing ANY task:
-   - Run tests for the specific module you worked on:
-     ```
-     uv run pytest <module_directory>
-     ```
-   - Add a one-line summary to .cursor-updates in markdown
-   - Report test status to user
-
-If you forget, the user can type the command "finish" and you will run the tests for the appropriate module and update `.cursor-updates`.
