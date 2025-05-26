@@ -4,10 +4,10 @@ AgentSession context manager for streaming OAI agent interactions with a local c
 
 import logging
 import os
-import textwrap
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from typing import Any, AsyncIterator, Dict, Optional
 
 from agents import (
@@ -24,6 +24,12 @@ from mcp.client.stdio import stdio_client
 from openai.types.shared.reasoning import Reasoning
 
 logger = logging.getLogger(__name__)
+
+TEMPLATE_ENV = Environment(
+    loader=FileSystemLoader(Path(__file__).parent / "templates"),
+    autoescape=False,
+    keep_trailing_newline=True,
+)
 
 ALLOWED_CLI_COMMANDS = [
     "grep",
@@ -83,18 +89,6 @@ ALLOWED_CLI_FLAGS = [
     "--type",
 ]
 
-INSTRUCTIONS = textwrap.dedent(
-    """
-    You are a helpful agent that can answer questions and help with tasks.
-    Use the tools to navigate and read the codebase, and answer questions based on those files.
-    When exploring repositories, avoid using directory_tree on the root directory.
-    Instead, use list_directory to explore one level at a time and search_files to find
-    relevant files matching patterns.
-    If you need to understand a specific subdirectory structure, use directory_tree only on
-    that targeted directory.
-    """
-).strip()
-
 
 class QuietMCPServerStdio(MCPServerStdio):
     """Variant of MCPServerStdio that silences child-process stderr."""
@@ -111,6 +105,7 @@ class _AgentSession:
     model: str
     openai_api_key: str
     max_turns: int = 100
+    mode: str = "default"
 
     _exit_stack: AsyncExitStack = field(init=False, repr=False)
     _agent: Agent = field(init=False, repr=False)
@@ -172,7 +167,7 @@ class _AgentSession:
         self._exit_stack.callback(trace_ctx.__exit__, None, None, None)
 
         # Build instructions and instantiate the Agent
-        dynamic_instructions = self._build_instructions(has_cli=len(mcp_servers) > 1)
+        dynamic_instructions = self._build_instructions()
         self._agent = Agent(
             name="Coding Agent",
             instructions=dynamic_instructions,
@@ -186,14 +181,12 @@ class _AgentSession:
     async def _cleanup(self) -> None:
         await self._exit_stack.__aexit__(None, None, None)
 
-    def _build_instructions(self, has_cli: bool) -> str:
-        base = f"{INSTRUCTIONS}\n\nThe repository root path you can access is: {self.repo_path}"
-        if has_cli:
-            base += (
-                "\nYou also have access to CLI tools including grep for powerful text searching. "
-                "Use 'run_command' with grep or rg (ripgrep) for efficient code searching."
-            )
-        return base
+    def _build_instructions(self) -> str:
+        try:
+            template = TEMPLATE_ENV.get_template(f"prompt_{self.mode}.jinja2")
+        except TemplateNotFound:
+            template = TEMPLATE_ENV.get_template("prompt_default.jinja2")
+        return template.render(repo_path=str(self.repo_path), mode=self.mode)
 
     def _map_sdk_event(self, event: Any) -> Optional[Dict[str, Any]]:
         evt_type = getattr(event, "type", None)
@@ -247,7 +240,11 @@ class _AgentSession:
 
 @asynccontextmanager
 async def AgentSession(
-    repo_path: Path, model: str, openai_api_key: str, max_turns: int = 100
+    repo_path: Path,
+    model: str,
+    openai_api_key: str,
+    max_turns: int = 100,
+    mode: str = "default",
 ) -> AsyncIterator[_AgentSession]:
     """
     Async context manager for setting up and tearing down an agent session.
@@ -257,6 +254,7 @@ async def AgentSession(
         model=model,
         openai_api_key=openai_api_key,
         max_turns=max_turns,
+        mode=mode,
     )
     await session._startup()
     try:
