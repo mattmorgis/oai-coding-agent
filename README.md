@@ -80,6 +80,7 @@ When `ENABLE_CLI_TOOLS` is set to "true" (default), the agent has access to powe
 - `ls`, `cat`, `head`, `tail`, `wc` - Basic file operations
 
 Example queries you can ask:
+
 - "Search for all occurrences of 'AgentSession' in the codebase"
 - "Find all Python files that import 'asyncio'"
 - "Use grep to find TODO comments"
@@ -100,12 +101,10 @@ pre-commit install
 Running `pre-commit install` ensures that every commit formats staged Python
 files using `ruff`.
 
-## Running Tests with Coverage
-
-If you'd like to see code coverage reports, ensure the `pytest-cov` plugin is installed (it's already included as a dev dependency). Then run:
+## Running Tests
 
 ```bash
-uv run pytest --cov=oai_coding_agent --cov-report=term-missing
+uv run pytest
 ```
 
 This will output a coverage summary in the terminal. For an HTML report, use `--cov-report html`.
