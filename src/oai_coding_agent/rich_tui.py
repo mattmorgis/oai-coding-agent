@@ -50,17 +50,19 @@ def render_message(msg: dict):
     role = msg.get("role")
     content = msg.get("content", "")
     if role == "user":
-        console.print(f"[bold blue]You:[/bold blue] {content}\n")
+        console.print(f"[bold blue]You:[/bold blue] {content}")
     elif role == "assistant":
         console.print("[bold cyan]oai:[/bold cyan]", end=" ")
         md = Markdown(content, code_theme="nord", hyperlinks=True)
         console.print(md)
     elif role == "system":
-        console.print(f"[dim yellow]System:[/dim yellow] [yellow]{content}[/yellow]\n")
+        console.print(f"[dim yellow]System:[/dim yellow] [yellow]{content}[/yellow]")
     elif role == "thought":
-        console.print(f"[italic dim]{content}[/italic dim]\n")
+        console.print(f"[italic dim]{content}[/italic dim]")
     elif role == "tool":
-        console.print(f"[dim green]Tool: {content}[/dim green]\n")
+        console.print(f"[dim green]Tool: {content}[/dim green]")
+
+    console.print()
 
 
 def register_slash_commands():
