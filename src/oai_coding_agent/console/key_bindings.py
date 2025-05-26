@@ -21,6 +21,12 @@ def get_key_bindings() -> KeyBindings:
         """Insert newline on Ctrl+J (recommended Shift+Enter mapping in terminal)."""
         event.current_buffer.insert_text("\n")
 
+    # Support Alt+Enter for newline without submission.
+    @kb.add(Keys.Escape, Keys.Enter, eager=True)
+    def _(event):
+        """Insert newline on Alt+Enter."""
+        event.current_buffer.insert_text("\n")
+
     # Enter submits input
     @kb.add(Keys.Enter, eager=True)
     def _(event):
