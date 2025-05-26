@@ -9,7 +9,7 @@ import oai_coding_agent.console.rendering as rendering
 
 class DummyPromptSession:
     def __init__(self, *args, **kwargs):
-        pass
+        self.kwargs = kwargs
 
     def prompt(self, prompt_str):
         # Immediately exit on slash command
@@ -50,15 +50,21 @@ def setup_repl(monkeypatch, tmp_path):
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     # Monkeypatch prompt session and agent session
-    monkeypatch.setattr(repl_module, "PromptSession", DummyPromptSession)
+    created = {}
+
+    def _prompt_factory(*args, **kwargs):
+        created['kwargs'] = kwargs
+        return DummyPromptSession(*args, **kwargs)
+
+    monkeypatch.setattr(repl_module, "PromptSession", _prompt_factory)
     monkeypatch.setattr(repl_module, "AgentSession", DummyAgentSession)
 
-    return recorder
+    return recorder, created
 
 
 @pytest.mark.asyncio
 async def test_repl_main_exits_on_exit_and_prints_header(setup_repl, tmp_path):
-    recorder = setup_repl
+    recorder, created = setup_repl
     await repl_module.main(tmp_path, "model-x", "APIKEY")
 
     output = recorder.export_text()
@@ -69,3 +75,4 @@ async def test_repl_main_exits_on_exit_and_prints_header(setup_repl, tmp_path):
     # Ensure history directory was created under tmp_path
     history_dir = tmp_path / ".oai_coding_agent"
     assert history_dir.is_dir(), "History directory should be created"
+    assert created["kwargs"]["vi_mode"] is False

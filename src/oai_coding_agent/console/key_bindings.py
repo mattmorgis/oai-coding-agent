@@ -1,9 +1,12 @@
 from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.key_binding.defaults import load_key_bindings
+from prompt_toolkit.key_binding.key_bindings import KeyBindingsBase, merge_key_bindings
 from prompt_toolkit.keys import Keys
 
 
-def get_key_bindings() -> KeyBindings:
-    """Return the custom KeyBindings (e.g. Tab behaviour)."""
+def get_key_bindings() -> KeyBindingsBase:
+    """Return default key bindings merged with our custom ones."""
+    default_bindings = load_key_bindings()
     kb = KeyBindings()
 
     @kb.add(Keys.Tab)
@@ -33,4 +36,5 @@ def get_key_bindings() -> KeyBindings:
         """Submit input on Enter"""
         event.current_buffer.validate_and_handle()
 
-    return kb
+    # Merge with default bindings so editing mode changes take effect.
+    return merge_key_bindings([default_bindings, kb])
