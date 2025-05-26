@@ -7,7 +7,6 @@ import os
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from typing import Any, AsyncIterator, Dict, Optional
 
 from agents import (
@@ -15,11 +14,11 @@ from agents import (
     ModelSettings,
     Runner,
     RunResultStreaming,
-    Trace,
     gen_trace_id,
     trace,
 )
 from agents.mcp import MCPServerStdio
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from mcp.client.stdio import stdio_client
 from openai.types.shared.reasoning import Reasoning
 
@@ -56,38 +55,7 @@ ALLOWED_CLI_COMMANDS = [
     "which",
 ]
 
-ALLOWED_CLI_FLAGS = [
-    "-r",
-    "-R",
-    "-n",
-    "-i",
-    "-v",
-    "-l",
-    "-c",
-    "-h",
-    "-H",
-    "-o",
-    "-E",
-    "-F",
-    "-w",
-    "-x",
-    "-e",
-    "-C",
-    "-P",
-    "-A",
-    "-B",
-    "-f",
-    "--filter",
-    "--help",
-    "--version",
-    "--context",
-    "--after-context",
-    "--before-context",
-    "--perl-regexp",
-    "--regexp",
-    "--line-number",
-    "--type",
-]
+ALLOWED_CLI_FLAGS = ["all"]
 
 
 class QuietMCPServerStdio(MCPServerStdio):
@@ -159,6 +127,23 @@ class _AgentSession:
             logger.info("CLI MCP server started successfully")
         except OSError:
             logger.exception("Failed to start CLI MCP server")
+
+        # Attempt to start Git MCP server
+        try:
+            git_ctx = QuietMCPServerStdio(
+                name="mcp-server-git",
+                params={
+                    "command": "mcp-server-git",
+                },
+                client_session_timeout_seconds=120,
+                cache_tools_list=True,
+            )
+            git_server = await git_ctx.__aenter__()
+            self._exit_stack.push_async_callback(git_ctx.__aexit__, None, None, None)
+            mcp_servers.append(git_server)
+            logger.info("Git MCP server started successfully")
+        except OSError:
+            logger.exception("Failed to start Git MCP server")
 
         # Begin tracing
         trace_id = gen_trace_id()
