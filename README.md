@@ -99,3 +99,13 @@ pre-commit install
 
 Running `pre-commit install` ensures that every commit formats staged Python
 files using `ruff`.
+
+## Running Tests with Coverage
+
+If you'd like to see code coverage reports, ensure the `pytest-cov` plugin is installed (it's already included as a dev dependency). Then run:
+
+```bash
+uv run pytest --cov=oai_coding_agent --cov-report=term-missing
+```
+
+This will output a coverage summary in the terminal. For an HTML report, use `--cov-report html`.
