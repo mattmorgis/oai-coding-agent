@@ -44,6 +44,9 @@ oai --mode async
 
 # Start chat in planning mode
 oai --mode plan
+
+# Run a one-off prompt in non-interactive mode
+oai --prompt "<some task>"
 ```
 
 Available models:
