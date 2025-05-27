@@ -1,13 +1,14 @@
 """
 Launch and register cleanup for filesystem, CLI & Git MCP servers via AsyncExitStack.
 """
+
 import logging
 import os
 from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import List
 
-from agents.mcp import MCPServerStdio
+from agents.mcp import MCPServer, MCPServerStdio
 from mcp.client.stdio import stdio_client
 
 logger = logging.getLogger(__name__)
@@ -48,13 +49,15 @@ class QuietMCPServerStdio(MCPServerStdio):
         return stdio_client(self.params, errlog=open(os.devnull, "w"))
 
 
-async def start_mcp_servers(repo_path: Path, exit_stack: AsyncExitStack) -> List[MCPServerStdio]:
+async def start_mcp_servers(
+    repo_path: Path, exit_stack: AsyncExitStack
+) -> List[MCPServer]:
     """
     Start filesystem, CLI, and Git MCP servers, registering cleanup on the provided exit_stack.
 
     Returns a list of connected MCPServerStdio instances.
     """
-    servers: List[MCPServerStdio] = []
+    servers: List[MCPServer] = []
 
     # Filesystem MCP server
     fs_ctx = QuietMCPServerStdio(

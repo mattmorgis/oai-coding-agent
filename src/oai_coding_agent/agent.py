@@ -17,13 +17,11 @@ from agents import (
     gen_trace_id,
     trace,
 )
-from agents.mcp import MCPServerStdio
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+from openai.types.shared.reasoning import Reasoning
+
 from .mcp_servers import start_mcp_servers
 from .mcp_tool_selector import get_filtered_function_tools
-
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
-
-from openai.types.shared.reasoning import Reasoning
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +33,6 @@ TEMPLATE_ENV = Environment(
 
 
 _DEFAULT_MODE = "default"
-
 
 
 @dataclass
