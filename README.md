@@ -45,10 +45,10 @@ oai --mode async
 # Start chat in planning mode
 oai --mode plan
 
-# Run a one-off prompt in non-interactive mode
+# Run a one-off prompt in non-interactive (async) mode
 oai --prompt "<some task>"
 
-# Passing a file as a prompt
+# Passing a file as a prompt (async mode)
 oai --prompt <task.md>  # the contents of task.md will be used as the prompt
 ```
 

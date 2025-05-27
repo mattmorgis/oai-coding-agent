@@ -49,7 +49,7 @@ def test_cli_prompt_invokes_batch_main(monkeypatch, rich_tui_calls, tmp_path):
     runner = CliRunner()
     result = runner.invoke(app, ["--prompt", "Do awesome things"])
     assert result.exit_code == 0
-    assert calls == [(tmp_path, "codex-mini-latest", "ENVKEY", "default", "Do awesome things")]
+    assert calls == [(tmp_path, "codex-mini-latest", "ENVKEY", "async", "Do awesome things")]
     assert rich_tui_calls == []
 
 
@@ -74,7 +74,7 @@ def test_cli_prompt_file_invokes_batch_main(monkeypatch, rich_tui_calls, tmp_pat
             tmp_path,
             "codex-mini-latest",
             "ENVKEY",
-            "default",
+            "async",
             "Please summarize this project.",
         )
     ]

@@ -84,14 +84,16 @@ def main(
         prompt_path = Path(prompt)
         if prompt_path.is_file():
             prompt_text = prompt_path.read_text()
-        logger.info(f"Running prompt in batch mode: {prompt}")
+        # Force async mode for one-off prompt runs
+        mode_value = ModeChoice.async_.value
+        logger.info(f"Running prompt in batch mode (async): {prompt}")
         try:
             asyncio.run(
                 batch_main(
                     cfg.repo_path,
                     cfg.model.value,
                     cfg.openai_api_key,
-                    cfg.mode.value,
+                    mode_value,
                     prompt_text,
                 )
             )
