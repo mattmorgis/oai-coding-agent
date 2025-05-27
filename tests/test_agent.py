@@ -4,12 +4,8 @@ import asyncio
 from pathlib import Path
 
 import oai_coding_agent.agent as agent_module
-from oai_coding_agent.agent import (
-    _AgentSession,
-    QuietMCPServerStdio,
-    ALLOWED_CLI_COMMANDS,
-    ALLOWED_CLI_FLAGS,
-)
+from oai_coding_agent.agent import _AgentSession
+from oai_coding_agent.mcp_servers import QuietMCPServerStdio, ALLOWED_CLI_COMMANDS, ALLOWED_CLI_FLAGS
 
 
 def test_allowed_cli_vars():
@@ -29,7 +25,8 @@ def test_quiet_mcp_server_stdio_create_streams(monkeypatch):
         captured["errlog"] = errlog
         return "fake_streams"
 
-    monkeypatch.setattr(agent_module, "stdio_client", fake_stdio_client)
+    import oai_coding_agent.mcp_servers as mcp_servers_module
+    monkeypatch.setattr(mcp_servers_module, "stdio_client", fake_stdio_client)
 
     params = {"command": "test", "args": []}
     quiet = QuietMCPServerStdio(
