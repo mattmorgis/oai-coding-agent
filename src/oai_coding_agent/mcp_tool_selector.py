@@ -25,7 +25,30 @@ def _filter_tools_for_mode(server_name: str, tools: List[Tool], mode: str) -> Li
             allowed = {"clone_repo", "list_branches"}
             return [t for t in tools if t.name in allowed]
 
-    # No filtering by default
+    # GitHub MCP server: restrict to a whitelist of allowed tools
+    if server_name == "github-mcp-server":
+        allowed = {
+            "get_issue",
+            "get_issue_comments",
+            "create_issue",
+            "add_issue_comment",
+            "list_issues",
+            "update_issue",
+            "search_issues",
+            "get_pull_request",
+            "list_pull_requests",
+            "get_pull_request_files",
+            "get_pull_request_status",
+            "update_pull_request_branch",
+            "get_pull_request_comments",
+            "get_pull_request_reviews",
+            "create_pull_request",
+            "add_pull_request_review_comment",
+            "update_pull_request",
+        }
+        return [t for t in tools if t.name in allowed]
+
+# No filtering by default
     return tools
 
 
