@@ -12,6 +12,7 @@ from .console.rendering import console as rich_console
 from .console.repl import main as console_main
 from .headless import headless_main
 from .logger import setup_logging
+from .preflight import run_preflight_checks
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -68,13 +69,15 @@ def main(
         repo_path,
         mode,
     )
+    run_preflight_checks(cfg.repo_path)
 
     if prompt:
         # If prompt refers to an existing file, load its content
-        prompt_text: str = prompt
-        # prompt_path = Path(prompt)
-        # if prompt_path.is_file():
-        #     prompt_text = prompt_path.read_text()
+        prompt_path = Path(prompt)
+        if prompt_path.is_file():
+            prompt_text = prompt_path.read_text()
+        else:
+            prompt_text = prompt
         # Force async mode for one-off prompt runs
         mode_value = ModeChoice.async_.value
         logger.info(f"Running prompt in headless (async): {prompt}")
