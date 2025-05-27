@@ -65,8 +65,10 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_PERSONAL_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          uv run oai --prompt "${{ github.event.issue.body }}"
+          # Safely pass the raw issue body (with backticks/quotes/newlines) as $1
+          bash -c 'uv run oai --prompt "$1"' -- "${{ github.event.issue.body }}"
 
       - name: Push branch back to origin
         run: |
