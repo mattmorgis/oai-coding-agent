@@ -79,6 +79,11 @@ def main(
     cfg = Config.from_cli(openai_api_key, model, repo_path, mode)
 
     if prompt:
+        # If prompt refers to an existing file, load its content
+        prompt_text: str = prompt
+        prompt_path = Path(prompt)
+        if prompt_path.is_file():
+            prompt_text = prompt_path.read_text()
         logger.info(f"Running prompt in batch mode: {prompt}")
         try:
             asyncio.run(
@@ -87,7 +92,7 @@ def main(
                     cfg.model.value,
                     cfg.openai_api_key,
                     cfg.mode.value,
-                    prompt,
+                    prompt_text,
                 )
             )
         except KeyboardInterrupt:

@@ -47,6 +47,9 @@ oai --mode plan
 
 # Run a one-off prompt in non-interactive mode
 oai --prompt "<some task>"
+
+# Passing a file as a prompt
+oai --prompt <task.md>  # the contents of task.md will be used as the prompt
 ```
 
 Available models:
