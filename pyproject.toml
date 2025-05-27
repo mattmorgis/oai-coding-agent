@@ -3,7 +3,7 @@ name = "oai-coding-agent"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
     "concurrent-log-handler>=0.9.26",
     "openai-agents[litellm]>=0.0.15",
@@ -32,7 +32,7 @@ dev = [
 ]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py313"
 line-length = 88
 
 [tool.isort]
@@ -40,7 +40,7 @@ profile = "black"
 line_length = 88
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
