@@ -26,6 +26,12 @@ cp .env-example .env
 # Edit .env and set OPENAI_API_KEY and GITHUB_PERSONAL_ACCESS_TOKEN (and other variables as needed)
 ```
 
+> **Tip:** Instead of creating a new token on GitHub.com, you can quickly export one with:
+
+```bash
+export GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token)
+```
+
 ### 3. Install dependencies
 
 Using `uv` (recommended):
