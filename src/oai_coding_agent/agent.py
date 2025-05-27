@@ -18,8 +18,11 @@ from agents import (
     trace,
 )
 from agents.mcp import MCPServerStdio
+from .mcp_servers import start_mcp_servers
+from .mcp_tool_selector import get_filtered_function_tools
+
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
-from mcp.client.stdio import stdio_client
+
 from openai.types.shared.reasoning import Reasoning
 
 logger = logging.getLogger(__name__)
@@ -30,41 +33,9 @@ TEMPLATE_ENV = Environment(
     keep_trailing_newline=True,
 )
 
-ALLOWED_CLI_COMMANDS = [
-    "grep",
-    "rg",
-    "find",
-    "ls",
-    "cat",
-    "head",
-    "tail",
-    "wc",
-    "pwd",
-    "echo",
-    "sed",
-    "awk",
-    "sort",
-    "uniq",
-    "fzf",
-    "bat",
-    "git",
-    "uv",
-    "pip",
-    "pipdeptree",
-    "xargs",
-    "which",
-]
-
-ALLOWED_CLI_FLAGS = ["all"]
 
 _DEFAULT_MODE = "default"
 
-
-class QuietMCPServerStdio(MCPServerStdio):
-    """Variant of MCPServerStdio that silences child-process stderr."""
-
-    def create_streams(self):
-        return stdio_client(self.params, errlog=open(os.devnull, "w"))
 
 
 @dataclass
@@ -88,64 +59,8 @@ class _AgentSession:
         # Ensure API key is set for OpenAI SDK
         os.environ["OPENAI_API_KEY"] = self.openai_api_key
 
-        # Start filesystem MCP server
-        fs_ctx = QuietMCPServerStdio(
-            name="file-system-mcp",
-            params={
-                "command": "npx",
-                "args": [
-                    "-y",
-                    "@modelcontextprotocol/server-filesystem",
-                    str(self.repo_path),
-                ],
-            },
-            client_session_timeout_seconds=30,
-            cache_tools_list=True,
-        )
-        fs_server = await fs_ctx.__aenter__()
-        self._exit_stack.push_async_callback(fs_ctx.__aexit__, None, None, None)
-        mcp_servers = [fs_server]
-
-        # Attempt to start CLI MCP server
-        try:
-            cli_ctx = QuietMCPServerStdio(
-                name="cli-mcp-server",
-                params={
-                    "command": "cli-mcp-server",
-                    "env": {
-                        "ALLOWED_DIR": str(self.repo_path),
-                        "ALLOWED_COMMANDS": ",".join(ALLOWED_CLI_COMMANDS),
-                        "ALLOWED_FLAGS": ",".join(ALLOWED_CLI_FLAGS),
-                        "ALLOW_SHELL_OPERATORS": "true",
-                        "COMMAND_TIMEOUT": "120",
-                    },
-                },
-                client_session_timeout_seconds=120,
-                cache_tools_list=True,
-            )
-            cli_server = await cli_ctx.__aenter__()
-            self._exit_stack.push_async_callback(cli_ctx.__aexit__, None, None, None)
-            mcp_servers.append(cli_server)
-            logger.info("CLI MCP server started successfully")
-        except OSError:
-            logger.exception("Failed to start CLI MCP server")
-
-        # Attempt to start Git MCP server
-        try:
-            git_ctx = QuietMCPServerStdio(
-                name="mcp-server-git",
-                params={
-                    "command": "mcp-server-git",
-                },
-                client_session_timeout_seconds=120,
-                cache_tools_list=True,
-            )
-            git_server = await git_ctx.__aenter__()
-            self._exit_stack.push_async_callback(git_ctx.__aexit__, None, None, None)
-            mcp_servers.append(git_server)
-            logger.info("Git MCP server started successfully")
-        except OSError:
-            logger.exception("Failed to start Git MCP server")
+        # Start MCP servers (filesystem, CLI, Git) and register cleanup
+        mcp_servers = await start_mcp_servers(self.repo_path, self._exit_stack)
 
         # Begin tracing
         trace_id = gen_trace_id()
@@ -153,8 +68,11 @@ class _AgentSession:
         trace_ctx.__enter__()
         self._exit_stack.callback(trace_ctx.__exit__, None, None, None)
 
-        # Build instructions and instantiate the Agent
+        # Build instructions and fetch filtered MCP function-tools
         dynamic_instructions = self._build_instructions()
+        function_tools = await get_filtered_function_tools(mcp_servers, self.mode)
+
+        # Instantiate the Agent with the filtered function-tools
         self._agent = Agent(
             name="Coding Agent",
             instructions=dynamic_instructions,
@@ -162,7 +80,7 @@ class _AgentSession:
             model_settings=ModelSettings(
                 reasoning=Reasoning(summary="auto", effort="high")
             ),
-            mcp_servers=mcp_servers,
+            tools=function_tools,
         )
 
     async def _cleanup(self) -> None:
