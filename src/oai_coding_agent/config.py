@@ -18,6 +18,11 @@ _key = _env.get("OPENAI_API_KEY")
 if _key:
     os.environ["OPENAI_API_KEY"] = str(_key)
 
+# Load GITHUB_PERSONAL_ACCESS_TOKEN from .env if present
+_github_key = _env.get("GITHUB_PERSONAL_ACCESS_TOKEN")
+if _github_key:
+    os.environ["GITHUB_PERSONAL_ACCESS_TOKEN"] = str(_github_key)
+
 
 class ModelChoice(str, Enum):
     """Supported OpenAI model choices."""
@@ -41,19 +46,23 @@ class Config:
 
     Attributes:
         openai_api_key: The OpenAI API key to use.
-        model: The model identifier.
+        github_personal_access_token: The GitHub Personal Access Token to use for the GitHub MCP server.
+        model: The OpenAI model identifier.
         repo_path: Path to the repository to work on.
+        mode: The agent mode to use.
         (Additional fields can be added as needed.)
     """
 
     def __init__(
         self,
         openai_api_key: str,
+        github_personal_access_token: str,
         model: ModelChoice,
         repo_path: Optional[Path] = None,
         mode: ModeChoice = ModeChoice.default,
     ):
         self.openai_api_key = openai_api_key
+        self.github_personal_access_token = github_personal_access_token
         self.model = model
         self.repo_path = repo_path or Path.cwd()
         self.mode = mode
@@ -62,6 +71,7 @@ class Config:
     def from_cli(
         cls,
         openai_api_key: str,
+        github_personal_access_token: str,
         model: ModelChoice,
         repo_path: Optional[Path] = None,
         mode: ModeChoice = ModeChoice.default,
@@ -70,5 +80,9 @@ class Config:
         Build a Config object from CLI-supplied parameters.
         """
         return cls(
-            openai_api_key=openai_api_key, model=model, repo_path=repo_path, mode=mode
+            openai_api_key=openai_api_key,
+            github_personal_access_token=github_personal_access_token,
+            model=model,
+            repo_path=repo_path,
+            mode=mode,
         )

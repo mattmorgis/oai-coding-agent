@@ -17,17 +17,28 @@ def test_model_choice_enum_values():
 def test_config_init_defaults_repo_path(tmp_path, monkeypatch):
     # Default repo_path should be current working directory
     monkeypatch.chdir(tmp_path)
-    cfg = Config(openai_api_key="KEY", model=ModelChoice.o3)
+    cfg = Config(
+        openai_api_key="KEY",
+        github_personal_access_token="TOK",
+        model=ModelChoice.o3,
+    )
     assert cfg.openai_api_key == "KEY"
+    assert cfg.github_personal_access_token == "TOK"
     assert cfg.model == ModelChoice.o3
     assert cfg.repo_path == tmp_path
 
 
 def test_config_from_cli_sets_attributes():
     rp = Path("/somewhere")
-    cfg = Config.from_cli(openai_api_key="A", model=ModelChoice.o4_mini, repo_path=rp)
+    cfg = Config.from_cli(
+        openai_api_key="A",
+        github_personal_access_token="GH",
+        model=ModelChoice.o4_mini,
+        repo_path=rp,
+    )
     assert isinstance(cfg, Config)
     assert cfg.openai_api_key == "A"
+    assert cfg.github_personal_access_token == "GH"
     assert cfg.model == ModelChoice.o4_mini
     assert cfg.repo_path == rp
 
@@ -49,6 +60,32 @@ def test_dotenv_load_sets_env(monkeypatch):
 
     try:
         assert os.environ.get("OPENAI_API_KEY") == "FROM_ENV"
+    finally:
+        # Cleanup: restore real config module and dotenv
+        sys.modules["oai_coding_agent.config"] = config_module
+        importlib.reload(config_module)
+        # Remove fake dotenv
+        if sys.modules.get("dotenv") is fake_dotenv:
+            sys.modules.pop("dotenv")
+
+
+def test_dotenv_load_sets_github_token(monkeypatch):
+    # Ensure that config module uses dotenv_values to set GITHUB_PERSONAL_ACCESS_TOKEN
+    import sys, types
+
+    # Prepare fake dotenv module
+    fake_dotenv = types.ModuleType("dotenv")
+    fake_dotenv.dotenv_values = lambda: {"GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"}
+    # Patch sys.modules to inject fake dotenv
+    monkeypatch.setitem(sys.modules, "dotenv", fake_dotenv)
+
+    # Remove and reload config_module to apply fake dotenv
+    monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN", raising=False)
+    sys.modules.pop("oai_coding_agent.config", None)
+    new_config = importlib.import_module("oai_coding_agent.config")
+
+    try:
+        assert os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") == "GH_ENV"
     finally:
         # Cleanup: restore real config module and dotenv
         sys.modules["oai_coding_agent.config"] = config_module

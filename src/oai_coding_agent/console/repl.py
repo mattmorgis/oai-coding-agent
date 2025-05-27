@@ -16,7 +16,11 @@ from .key_bindings import get_key_bindings
 
 
 async def main(
-    repo_path: Path, model: str, openai_api_key: str, mode: str = "default"
+    repo_path: Path,
+    model: str,
+    openai_api_key: str,
+    github_personal_access_token: str,
+    mode: str = "default",
 ) -> None:
     """Main REPL loop for the console interface."""
     state = UIState()
@@ -55,7 +59,11 @@ async def main(
     )
 
     async with AgentSession(
-        repo_path=repo_path, model=model, openai_api_key=openai_api_key, mode=mode
+        repo_path=repo_path,
+        model=model,
+        openai_api_key=openai_api_key,
+        github_personal_access_token=github_personal_access_token,
+        mode=mode,
     ) as session_agent:
         prev_id = None
         continue_loop = True

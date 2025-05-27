@@ -23,7 +23,7 @@ Copy the example file and set your OpenAI API key:
 
 ```bash
 cp .env-example .env
-# Edit .env and set OPENAI_API_KEY (and other variables as needed)
+# Edit .env and set OPENAI_API_KEY and GITHUB_PERSONAL_ACCESS_TOKEN (and other variables as needed)
 ```
 
 ### 3. Install dependencies

@@ -42,6 +42,7 @@ class _AgentSession:
     repo_path: Path
     model: str
     openai_api_key: str
+    github_personal_access_token: str
     max_turns: int = 100
     mode: str = _DEFAULT_MODE
 
@@ -55,8 +56,10 @@ class _AgentSession:
 
         # Ensure API key is set for OpenAI SDK
         os.environ["OPENAI_API_KEY"] = self.openai_api_key
+        # Ensure GitHub token is set for GitHub MCP server
+        os.environ["GITHUB_PERSONAL_ACCESS_TOKEN"] = self.github_personal_access_token
 
-        # Start MCP servers (filesystem, CLI, Git) and register cleanup
+        # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
         mcp_servers = await start_mcp_servers(self.repo_path, self._exit_stack)
 
         # Begin tracing
@@ -145,6 +148,7 @@ async def AgentSession(
     repo_path: Path,
     model: str,
     openai_api_key: str,
+    github_personal_access_token: str,
     max_turns: int = 100,
     mode: str = _DEFAULT_MODE,
 ) -> AsyncIterator[_AgentSession]:
@@ -155,6 +159,7 @@ async def AgentSession(
         repo_path=repo_path,
         model=model,
         openai_api_key=openai_api_key,
+        github_personal_access_token=github_personal_access_token,
         max_turns=max_turns,
         mode=mode,
     )

@@ -8,6 +8,13 @@ import oai_coding_agent.cli as cli_module
 from oai_coding_agent.cli import app
 
 
+@pytest.fixture(autouse=True)
+def set_github_env(monkeypatch):
+    # Ensure GitHub token is set for CLI tests by default
+    monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "ENV_GH_TOKEN")
+    yield
+
+
 def test_cli_invokes_rich_tui_with_flags(rich_tui_calls, tmp_path):
     runner = CliRunner()
     result = runner.invoke(
@@ -15,6 +22,8 @@ def test_cli_invokes_rich_tui_with_flags(rich_tui_calls, tmp_path):
         [
             "--openai-api-key",
             "TESTKEY",
+            "--github-personal-access-token",
+            "GHKEY",
             "--model",
             "o3",
             "--repo-path",
@@ -26,9 +35,10 @@ def test_cli_invokes_rich_tui_with_flags(rich_tui_calls, tmp_path):
 
 
 def test_cli_uses_defaults(monkeypatch, rich_tui_calls, tmp_path):
-    # Simulate running from cwd and reading key from environment
+    # Simulate running from cwd and reading keys from environment
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
+    monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "ENVGH")
 
     runner = CliRunner()
     result = runner.invoke(app, [])
@@ -39,12 +49,13 @@ def test_cli_uses_defaults(monkeypatch, rich_tui_calls, tmp_path):
 def test_cli_prompt_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_path):
     # Monkeypatch headless_main to capture calls for headless (async) mode
     calls = []
-    async def fake_batch_main(repo_path, model, api_key, mode, prompt):
+    async def fake_batch_main(repo_path, model, api_key, gh_token, mode, prompt):
         calls.append((repo_path, model, api_key, mode, prompt))
     monkeypatch.setattr(cli_module, "headless_main", fake_batch_main)
-    # Simulate running from cwd and reading key from environment
+    # Simulate running from cwd and reading keys from environment
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
+    monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "ENVGH")
 
     runner = CliRunner()
     result = runner.invoke(app, ["--prompt", "Do awesome things"])
@@ -59,12 +70,13 @@ def test_cli_prompt_file_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_
     prompt_file.write_text("Please summarize this project.")
     # Monkeypatch headless_main to capture calls
     calls = []
-    async def fake_batch_main(repo_path, model, api_key, mode, prompt):
+    async def fake_batch_main(repo_path, model, api_key, gh_token, mode, prompt):
         calls.append((repo_path, model, api_key, mode, prompt))
     monkeypatch.setattr(cli_module, "headless_main", fake_batch_main)
-    # Simulate running from cwd and reading key from environment
+    # Simulate running from cwd and reading keys from environment
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
+    monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "ENVGH")
 
     runner = CliRunner()
     result = runner.invoke(app, ["--prompt", str(prompt_file)])

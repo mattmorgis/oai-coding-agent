@@ -59,7 +59,7 @@ def setup_repl(monkeypatch, tmp_path):
 @pytest.mark.asyncio
 async def test_repl_main_exits_on_exit_and_prints_header(setup_repl, tmp_path):
     recorder = setup_repl
-    await repl_module.main(tmp_path, "model-x", "APIKEY")
+    await repl_module.main(tmp_path, "model-x", "APIKEY", "GHTOKEN")
 
     output = recorder.export_text()
     # Header includes agent name and model
