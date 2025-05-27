@@ -75,7 +75,7 @@ jobs:
           echo "=== Issue Body ==="
           echo "${{ github.event.issue.body }}"
           echo "=== Agent Output ==="
-          uv run oai --repo-path . --prompt "${{ github.event.issue.body }}"
+          uv run oai --prompt "${{ github.event.issue.body }}"
 
       - name: Push branch back to origin
         run: |
