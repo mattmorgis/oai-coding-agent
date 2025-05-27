@@ -68,15 +68,16 @@ async def test_start_mcp_servers_all_success(monkeypatch):
     repo = Path("/some/repo")
 
     servers = await mcp_servers.start_mcp_servers(repo, exit_stack)
-    # Should start filesystem, CLI, and git servers
+    # Should start filesystem, CLI, git, and GitHub servers
     names = [s.name for s in servers]
     assert names == [
         "file-system-mcp",
         "cli-mcp-server",
         "mcp-server-git",
+        "github-mcp-server",
     ]
     # exit_stack should have a callback for each server
-    assert len(exit_stack.callbacks) == 3
+    assert len(exit_stack.callbacks) == 4
 
 
 @pytest.mark.asyncio
@@ -106,9 +107,9 @@ async def test_start_mcp_servers_skip_cli_on_error(monkeypatch):
 
     servers = await mcp_servers.start_mcp_servers(repo, exit_stack)
     names = [s.name for s in servers]
-    # Should skip CLI and include filesystem and git only
-    assert names == ["file-system-mcp", "mcp-server-git"]
-    assert len(exit_stack.callbacks) == 2
+    # Should skip CLI and include filesystem, git, and GitHub servers
+    assert names == ["file-system-mcp", "mcp-server-git", "github-mcp-server"]
+    assert len(exit_stack.callbacks) == 3
 
 
 @pytest.mark.asyncio
@@ -138,9 +139,9 @@ async def test_start_mcp_servers_skip_git_on_error(monkeypatch):
 
     servers = await mcp_servers.start_mcp_servers(repo, exit_stack)
     names = [s.name for s in servers]
-    # Should skip Git and include filesystem and CLI only
-    assert names == ["file-system-mcp", "cli-mcp-server"]
-    assert len(exit_stack.callbacks) == 2
+    # Should skip Git and include filesystem, CLI, and GitHub servers
+    assert names == ["file-system-mcp", "cli-mcp-server", "github-mcp-server"]
+    assert len(exit_stack.callbacks) == 3
 
 
 @pytest.mark.asyncio
@@ -170,6 +171,6 @@ async def test_start_mcp_servers_skip_cli_and_git_on_error(monkeypatch):
 
     servers = await mcp_servers.start_mcp_servers(repo, exit_stack)
     names = [s.name for s in servers]
-    # Only filesystem server should remain
-    assert names == ["file-system-mcp"]
-    assert len(exit_stack.callbacks) == 1
+    # Should skip CLI and Git and include filesystem and GitHub servers only
+    assert names == ["file-system-mcp", "github-mcp-server"]
+    assert len(exit_stack.callbacks) == 2

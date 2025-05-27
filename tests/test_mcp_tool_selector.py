@@ -64,9 +64,9 @@ async def test_plan_mode_git_filter(patch_get_function_tools):
 
 
 @pytest.mark.asyncio
-async def test_github_server_whitelist(patch_get_function_tools):
-    # Only the specified whitelist tools should be returned for github-mcp-server
-    allowed = {
+async def test_github_server_whitelist_default_mode(patch_get_function_tools):
+    # Only the specified whitelist tools (including create/update) should be returned for default mode
+    full_allowed = {
         "get_issue",
         "get_issue_comments",
         "create_issue",
@@ -85,13 +85,46 @@ async def test_github_server_whitelist(patch_get_function_tools):
         "add_pull_request_review_comment",
         "update_pull_request",
     }
-    names = list(allowed) + ["other_tool"]
+    names = list(full_allowed) + ["other_tool"]
     async def fake(server, convert_strict):
         return [DummyTool(name) for name in names]
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
     servers = [SimpleNamespace(name="github-mcp-server")]
 
-    for mode in ("default", "plan"):
-        tools = await get_filtered_function_tools(servers, mode=mode)
-        assert {t.name for t in tools} == allowed
+    tools = await get_filtered_function_tools(servers, mode="default")
+    assert {t.name for t in tools} == full_allowed
+
+@pytest.mark.asyncio
+async def test_github_server_plan_mode_readonly_filter(patch_get_function_tools):
+    # Only read-only tools should be returned for plan mode
+    readonly_allowed = {
+        "get_issue",
+        "get_issue_comments",
+        "list_issues",
+        "search_issues",
+        "get_pull_request",
+        "list_pull_requests",
+        "get_pull_request_files",
+        "get_pull_request_status",
+        "get_pull_request_comments",
+        "get_pull_request_reviews",
+    }
+    names = list(readonly_allowed) + [
+        "create_issue",
+        "add_issue_comment",
+        "update_issue",
+        "create_pull_request",
+        "add_pull_request_review_comment",
+        "update_pull_request",
+        "update_pull_request_branch",
+        "other_tool",
+    ]
+    async def fake_plan(server, convert_strict):
+        return [DummyTool(name) for name in names]
+
+    patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake_plan)
+    servers = [SimpleNamespace(name="github-mcp-server")]
+
+    tools = await get_filtered_function_tools(servers, mode="plan")
+    assert {t.name for t in tools} == readonly_allowed
