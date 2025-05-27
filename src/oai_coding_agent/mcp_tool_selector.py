@@ -27,6 +27,22 @@ def _filter_tools_for_mode(server_name: str, tools: List[Tool], mode: str) -> Li
 
     # GitHub MCP server: restrict to a whitelist of allowed tools
     if server_name == "github-mcp-server":
+        # Read-only commands only in plan mode
+        if mode == "plan":
+            readonly_allowed = {
+                "get_issue",
+                "get_issue_comments",
+                "list_issues",
+                "search_issues",
+                "get_pull_request",
+                "list_pull_requests",
+                "get_pull_request_files",
+                "get_pull_request_status",
+                "get_pull_request_comments",
+                "get_pull_request_reviews",
+            }
+            return [t for t in tools if t.name in readonly_allowed]
+        # Full whitelist including create/update in non-plan modes
         allowed = {
             "get_issue",
             "get_issue_comments",
