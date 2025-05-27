@@ -1,0 +1,175 @@
+import os
+from types import SimpleNamespace
+from pathlib import Path
+
+import pytest
+
+import oai_coding_agent.mcp_servers as mcp_servers
+
+
+class DummyExitStack:
+    """Dummy exit stack to capture pushed async callbacks."""
+
+    def __init__(self):
+        self.callbacks = []
+
+    def push_async_callback(self, func, *args):
+        self.callbacks.append((func, args))
+
+
+def test_create_streams_uses_stdio_client_and_devnull(monkeypatch):
+    """
+    QuietMCPServerStdio.create_streams should call stdio_client with the instance params
+    and an errlog pointing to os.devnull in write mode.
+    """
+    calls = []
+
+    def fake_stdio_client(params, errlog):
+        calls.append((params, errlog))
+        return "STREAMS"
+
+    monkeypatch.setattr(mcp_servers, 'stdio_client', fake_stdio_client)
+
+    params = {'command': 'dummy'}
+    ctx = mcp_servers.QuietMCPServerStdio(
+        name="test", params=params, client_session_timeout_seconds=1, cache_tools_list=False
+    )
+    streams = ctx.create_streams()
+
+    assert streams == "STREAMS"
+    assert len(calls) == 1
+    called_params, errlog = calls[0]
+    assert hasattr(called_params, "command") and called_params.command == params["command"]
+    assert hasattr(errlog, 'name')
+    assert errlog.name == os.devnull
+    assert errlog.mode == 'w'
+
+
+@pytest.mark.asyncio
+async def test_start_mcp_servers_all_success(monkeypatch):
+    """
+    All three MCP servers should be started successfully when no errors occur.
+    """
+    # Dummy context manager to replace QuietMCPServerStdio
+    class DummyCtx:
+        def __init__(self, name, params, client_session_timeout_seconds=None, cache_tools_list=None):
+            self.name = name
+            self.params = params
+
+        async def __aenter__(self):
+            return SimpleNamespace(name=self.name, params=self.params)
+
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+    monkeypatch.setattr(mcp_servers, 'QuietMCPServerStdio', DummyCtx)
+
+    exit_stack = DummyExitStack()
+    repo = Path("/some/repo")
+
+    servers = await mcp_servers.start_mcp_servers(repo, exit_stack)
+    # Should start filesystem, CLI, and git servers
+    names = [s.name for s in servers]
+    assert names == [
+        "file-system-mcp",
+        "cli-mcp-server",
+        "mcp-server-git",
+    ]
+    # exit_stack should have a callback for each server
+    assert len(exit_stack.callbacks) == 3
+
+
+@pytest.mark.asyncio
+async def test_start_mcp_servers_skip_cli_on_error(monkeypatch):
+    """
+    If the CLI MCP server raises OSError, it should be skipped and not added to the list.
+    """
+    fail_names = {"cli-mcp-server"}
+
+    class DummyCtx:
+        def __init__(self, name, params, client_session_timeout_seconds=None, cache_tools_list=None):
+            self.name = name
+            self.params = params
+
+        async def __aenter__(self):
+            if self.name in fail_names:
+                raise OSError("CLI failure")
+            return SimpleNamespace(name=self.name, params=self.params)
+
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+    monkeypatch.setattr(mcp_servers, 'QuietMCPServerStdio', DummyCtx)
+
+    exit_stack = DummyExitStack()
+    repo = Path("/repo")
+
+    servers = await mcp_servers.start_mcp_servers(repo, exit_stack)
+    names = [s.name for s in servers]
+    # Should skip CLI and include filesystem and git only
+    assert names == ["file-system-mcp", "mcp-server-git"]
+    assert len(exit_stack.callbacks) == 2
+
+
+@pytest.mark.asyncio
+async def test_start_mcp_servers_skip_git_on_error(monkeypatch):
+    """
+    If the Git MCP server raises OSError, it should be skipped and not added to the list.
+    """
+    fail_names = {"mcp-server-git"}
+
+    class DummyCtx:
+        def __init__(self, name, params, client_session_timeout_seconds=None, cache_tools_list=None):
+            self.name = name
+            self.params = params
+
+        async def __aenter__(self):
+            if self.name in fail_names:
+                raise OSError("Git failure")
+            return SimpleNamespace(name=self.name, params=self.params)
+
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+    monkeypatch.setattr(mcp_servers, 'QuietMCPServerStdio', DummyCtx)
+
+    exit_stack = DummyExitStack()
+    repo = Path("/repo")
+
+    servers = await mcp_servers.start_mcp_servers(repo, exit_stack)
+    names = [s.name for s in servers]
+    # Should skip Git and include filesystem and CLI only
+    assert names == ["file-system-mcp", "cli-mcp-server"]
+    assert len(exit_stack.callbacks) == 2
+
+
+@pytest.mark.asyncio
+async def test_start_mcp_servers_skip_cli_and_git_on_error(monkeypatch):
+    """
+    If both CLI and Git MCP servers raise OSError, only filesystem should start.
+    """
+    fail_names = {"cli-mcp-server", "mcp-server-git"}
+
+    class DummyCtx:
+        def __init__(self, name, params, client_session_timeout_seconds=None, cache_tools_list=None):
+            self.name = name
+            self.params = params
+
+        async def __aenter__(self):
+            if self.name in fail_names:
+                raise OSError("failure")
+            return SimpleNamespace(name=self.name, params=self.params)
+
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+    monkeypatch.setattr(mcp_servers, 'QuietMCPServerStdio', DummyCtx)
+
+    exit_stack = DummyExitStack()
+    repo = Path("/repo")
+
+    servers = await mcp_servers.start_mcp_servers(repo, exit_stack)
+    names = [s.name for s in servers]
+    # Only filesystem server should remain
+    assert names == ["file-system-mcp"]
+    assert len(exit_stack.callbacks) == 1
