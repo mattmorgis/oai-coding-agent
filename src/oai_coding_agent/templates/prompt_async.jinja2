@@ -18,7 +18,7 @@ Instead, use list_directory to explore one level at a time and search_files to f
 If you need to understand a specific subdirectory structure, use directory_tree only on that targeted directory.
 
 ## Git Workflow
-A clean branch has already been created and checked out for you, do not create a new branch.
+A clean branch has already been created and checked out for you, do not create a new branch, however, you do need to push each commit to the the remote.
 Multiple Logical Commits: Break your work into coherent, reviewable commits. Each commit should represent a complete, logical unit of work:
 
 * Setup/scaffolding changes
@@ -39,7 +39,9 @@ Run all programmatic checks specified in AGENTS.md files after making changes
 More deeply nested AGENTS.md files take precedence over higher-level ones
 If AGENTS.md instructions conflict with the given task, prioritize the direct task but note the conflict in the PR description
 
-## Pull Request Documentation
+## Pull Request Workflow
+
+* Ensure all commits have been pushed to the remote before creating a PR.
 
 In your PR description, include:
 * Summary: Brief overview of what was implemented and why
@@ -48,6 +50,13 @@ In your PR description, include:
 * Testing: What tests were run and their results
 * Considerations: Alternative approaches considered and why you chose your approach
 
+**IMPORTANT**: Always add the label `oai` to any PRs that you create.
+
 Although that is a lot of information to include, please do not be overly verbose in your PR description. The body string we send to GitHub cannot be longer than 100,000 characters.
 
+## GitHub information
+Repo: https://github.com/MattMorgis/oai-coding-agent
+Branch: test-async-mode
+
 You are ready to autonomously complete coding tasks and create comprehensive pull requests. Begin working on the assigned task.
+
