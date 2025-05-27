@@ -15,7 +15,9 @@ from .slash_commands import register_slash_commands, handle_slash_command
 from .key_bindings import get_key_bindings
 
 
-async def main(repo_path: Path, model: str, openai_api_key: str) -> None:
+async def main(
+    repo_path: Path, model: str, openai_api_key: str, mode: str = "default"
+) -> None:
     """Main REPL loop for the console interface."""
     state = UIState()
     clear_terminal()
@@ -26,7 +28,8 @@ async def main(repo_path: Path, model: str, openai_api_key: str) -> None:
         Panel(
             f"[bold cyan]╭─ OAI CODING AGENT ─╮[/bold cyan]\n\n"
             f"[dim]Current Directory:[/dim] [dim cyan]{repo_path}[/dim cyan]\n"
-            f"[dim]Model:[/dim] [dim cyan]{model}[/dim cyan]",
+            f"[dim]Model:[/dim] [dim cyan]{model}[/dim cyan]\n"
+            f"[dim]Mode:[/dim] [dim cyan]{mode}[/dim cyan]",
             expand=False,
         )
     )
@@ -52,7 +55,7 @@ async def main(repo_path: Path, model: str, openai_api_key: str) -> None:
     )
 
     async with AgentSession(
-        repo_path=repo_path, model=model, openai_api_key=openai_api_key
+        repo_path=repo_path, model=model, openai_api_key=openai_api_key, mode=mode
     ) as session_agent:
         prev_id = None
         continue_loop = True
