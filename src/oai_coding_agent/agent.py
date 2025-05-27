@@ -4,6 +4,7 @@ AgentSession context manager for streaming OAI agent interactions with a local c
 
 import logging
 import os
+import subprocess
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -91,7 +92,52 @@ class _AgentSession:
             template = TEMPLATE_ENV.get_template(f"prompt_{self.mode}.jinja2")
         except TemplateNotFound:
             template = TEMPLATE_ENV.get_template("prompt_default.jinja2")
-        return template.render(repo_path=str(self.repo_path), mode=self.mode)
+
+        # Plug in the GitHub repo (owner/name) from the 'origin' remote URL
+        try:
+            raw = (
+                subprocess.check_output(
+                    ["git", "config", "--get", "remote.origin.url"],
+                    cwd=self.repo_path,
+                )
+                .decode()
+                .strip()
+            )
+            # Remove trailing ".git"
+            if raw.endswith(".git"):
+                raw = raw[:-4]
+            # SSH style: git@github.com:owner/repo
+            if raw.startswith("git@"):
+                _, path = raw.split(":", 1)
+                github_repo = path
+            # HTTPS style: https://github.com/owner/repo
+            elif "://" in raw:
+                github_repo = raw.split("://", 1)[1].split("/", 1)[1]
+            else:
+                github_repo = raw
+        except Exception:
+            github_repo = ""
+
+        # Derive the current branch name (local HEAD or fallback to GITHUB_REF)
+        try:
+            branch_name = (
+                subprocess.check_output(
+                    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                    cwd=self.repo_path,
+                )
+                .decode()
+                .strip()
+            )
+        except Exception:
+            ref = os.getenv("GITHUB_REF", "")
+            branch_name = ref.rsplit("/", 1)[-1] if "/" in ref else ref
+
+        return template.render(
+            repo_path=str(self.repo_path),
+            mode=self.mode,
+            github_repository=github_repo,
+            branch_name=branch_name,
+        )
 
     def _map_sdk_event(self, event: Any) -> Optional[Dict[str, Any]]:
         evt_type = getattr(event, "type", None)
