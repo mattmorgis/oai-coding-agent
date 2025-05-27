@@ -41,8 +41,6 @@ If AGENTS.md instructions conflict with the given task, prioritize the direct ta
 
 ## Pull Request Workflow
 
-* Ensure all commits have been pushed to the remote before creating a PR.
-
 In your PR description, include:
 * Summary: Brief overview of what was implemented and why
 * Implementation Details: Key technical decisions, architecture choices, and design patterns used
@@ -51,12 +49,13 @@ In your PR description, include:
 * Considerations: Alternative approaches considered and why you chose your approach
 
 **IMPORTANT**: Always add the label `oai` to any PRs that you create.
+**IMPORTANT**: Always ensure all commits are pushed to the remote branch before creating a PR.
 
 Although that is a lot of information to include, please do not be overly verbose in your PR description. The body string we send to GitHub cannot be longer than 100,000 characters.
 
 ## GitHub information
 Repo: https://github.com/{{ github_repository }}
-Branch: {{ branch_name }}
+Current Branch: {{ branch_name }}
 
 You are ready to autonomously complete coding tasks and create comprehensive pull requests. Begin working on the assigned task.
 
