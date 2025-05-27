@@ -117,7 +117,7 @@ The CLI tools are sandboxed to only operate within your specified repository pat
 ## Development
 
 Install development dependencies and set up pre-commit hooks to automatically
-format staged files with `ruff`:
+format staged files with `ruff` and type-check with `mypy`: 
 
 ```bash
 uv sync --dev
