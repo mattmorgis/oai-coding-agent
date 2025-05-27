@@ -72,7 +72,8 @@ class _AgentSession:
         dynamic_instructions = self._build_instructions()
         function_tools = await get_filtered_function_tools(mcp_servers, self.mode)
 
-        # Instantiate the Agent with the filtered function-tools
+        # Include the OpenAI Code Interpreter built-in tool alongside filtered function-tools
+        tools = [{"type": "code_interpreter"}, *function_tools]
         self._agent = Agent(
             name="Coding Agent",
             instructions=dynamic_instructions,
@@ -80,7 +81,7 @@ class _AgentSession:
             model_settings=ModelSettings(
                 reasoning=Reasoning(summary="auto", effort="high")
             ),
-            tools=function_tools,
+            tools=tools,
         )
 
     async def _cleanup(self) -> None:
