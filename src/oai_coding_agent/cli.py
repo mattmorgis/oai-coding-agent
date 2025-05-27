@@ -1,17 +1,16 @@
 import asyncio
 import logging
 from pathlib import Path
+from typing import Optional
 
 import typer
 from rich.console import Console
-from typing import Optional
 from typing_extensions import Annotated
 
-from .config import Config, ModelChoice, ModeChoice
+from .config import Config, ModeChoice, ModelChoice
+from .console.rendering import console as rich_console
 from .console.repl import main as console_main
 from .headless import headless_main
-from .agent import AgentSession
-from .console.rendering import console as rich_console, render_message
 from .logger import setup_logging
 
 setup_logging()
@@ -73,9 +72,9 @@ def main(
     if prompt:
         # If prompt refers to an existing file, load its content
         prompt_text: str = prompt
-        prompt_path = Path(prompt)
-        if prompt_path.is_file():
-            prompt_text = prompt_path.read_text()
+        # prompt_path = Path(prompt)
+        # if prompt_path.is_file():
+        #     prompt_text = prompt_path.read_text()
         # Force async mode for one-off prompt runs
         mode_value = ModeChoice.async_.value
         logger.info(f"Running prompt in headless (async): {prompt}")
