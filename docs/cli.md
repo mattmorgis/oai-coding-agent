@@ -3,8 +3,10 @@ flowchart TD
   subgraph CLI
     A[oai CLI entrypoint] -->|flags| B[main command]
   end
-  B --> C[prompt-toolkit REPL]
-  C -->|user message| D[Agent backend]
-  D -->|stream chunks| E[Rich Markdown renderer]
-  D -->|file operations / commands| F[Rich Live log panel]
+  B -->|--prompt / -p| H[Headless mode]
+  B -->|interactive| C[prompt-toolkit REPL]
+  H --> D[Agent backend]
+  C -->|user input| D
+  D -->|assistant messages| E[Rich Markdown renderer]
+  D -->|tool events| F[Inline tool output]
 ```
