@@ -1,0 +1,76 @@
+# .github/workflows/issue-agent.yml
+name: Issue Coding Agent
+
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  run-agent:
+    # Only proceed if:
+    #   - on opened: issue has @oai in body OR already labeled "oai"
+    #   - on labeled: the new label is exactly "oai"
+    #   - on comment: the comment body contains "@oai"
+    if: >-
+      (
+        github.event_name == 'issues' &&
+        (
+          (github.event.action == 'opened' &&
+            (
+              contains(github.event.issue.labels.*.name, 'oai') ||
+              contains(github.event.issue.body, '@oai')
+            )
+          ) ||
+          (github.event.action == 'labeled' && github.event.label.name == 'oai')
+        )
+      ) ||
+      (
+        github.event_name == 'issue_comment' &&
+        contains(github.event.comment.body, '@oai')
+      )
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # allow pushing back
+          persist-credentials: true
+
+      - name: Set up Python (>=3.13)
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.13
+          cache: pip
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Sync dependencies with uv
+        run: |
+          uv sync
+
+      - name: Create a fresh branch for the agent
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          BRANCH="oai/issue-${ISSUE_NUMBER}"
+          git checkout -b "$BRANCH"
+
+      - name: Run OAI coding agent in headless mode
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_PERSONAL_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "=== Issue Body ==="
+          echo "${{ github.event.issue.body }}"
+          echo "=== Agent Output ==="
+          uv run oai --repo-path . --prompt "${{ github.event.issue.body }}"
+
+      - name: Push branch back to origin
+        run: |
+          git push --set-upstream origin HEAD
