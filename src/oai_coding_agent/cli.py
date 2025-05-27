@@ -9,6 +9,7 @@ from typing_extensions import Annotated
 
 from .config import Config, ModelChoice, ModeChoice
 from .console.repl import main as console_main
+from .headless import headless_main
 from .agent import AgentSession
 from .console.rendering import console as rich_console, render_message
 from .logger import setup_logging
@@ -20,28 +21,6 @@ logger = logging.getLogger(__name__)
 console = Console()
 
 app = typer.Typer(rich_markup_mode=None)
-
-
-async def batch_main(
-    repo_path: Path,
-    model: str,
-    openai_api_key: str,
-    mode: str,
-    prompt: str,
-) -> None:
-    """
-    Run a single prompt in non-interactive mode.
-    """
-    rich_console.print(f"[bold cyan]Prompt:[/bold cyan] {prompt}")
-    async with AgentSession(
-        repo_path=repo_path,
-        model=model,
-        openai_api_key=openai_api_key,
-        mode=mode,
-    ) as session_agent:
-        ui_stream, result = await session_agent.run_step(prompt)
-        async for msg in ui_stream:
-            render_message(msg)
 
 
 @app.command()
@@ -86,10 +65,10 @@ def main(
             prompt_text = prompt_path.read_text()
         # Force async mode for one-off prompt runs
         mode_value = ModeChoice.async_.value
-        logger.info(f"Running prompt in batch mode (async): {prompt}")
+        logger.info(f"Running prompt in headless (async): {prompt}")
         try:
             asyncio.run(
-                batch_main(
+                headless_main(
                     cfg.repo_path,
                     cfg.model.value,
                     cfg.openai_api_key,

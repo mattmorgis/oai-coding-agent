@@ -36,12 +36,12 @@ def test_cli_uses_defaults(monkeypatch, rich_tui_calls, tmp_path):
     assert rich_tui_calls == [(tmp_path, "codex-mini-latest", "ENVKEY", "default")]
 
 
-def test_cli_prompt_invokes_batch_main(monkeypatch, rich_tui_calls, tmp_path):
-    # Monkeypatch batch_main to capture calls for non-interactive mode
+def test_cli_prompt_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_path):
+    # Monkeypatch headless_main to capture calls for headless (async) mode
     calls = []
     async def fake_batch_main(repo_path, model, api_key, mode, prompt):
         calls.append((repo_path, model, api_key, mode, prompt))
-    monkeypatch.setattr(cli_module, "batch_main", fake_batch_main)
+    monkeypatch.setattr(cli_module, "headless_main", fake_batch_main)
     # Simulate running from cwd and reading key from environment
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
@@ -53,15 +53,15 @@ def test_cli_prompt_invokes_batch_main(monkeypatch, rich_tui_calls, tmp_path):
     assert rich_tui_calls == []
 
 
-def test_cli_prompt_file_invokes_batch_main(monkeypatch, rich_tui_calls, tmp_path):
+def test_cli_prompt_file_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_path):
     # Create a markdown file for the prompt
     prompt_file = tmp_path / "task.md"
     prompt_file.write_text("Please summarize this project.")
-    # Monkeypatch batch_main to capture calls
+    # Monkeypatch headless_main to capture calls
     calls = []
     async def fake_batch_main(repo_path, model, api_key, mode, prompt):
         calls.append((repo_path, model, api_key, mode, prompt))
-    monkeypatch.setattr(cli_module, "batch_main", fake_batch_main)
+    monkeypatch.setattr(cli_module, "headless_main", fake_batch_main)
     # Simulate running from cwd and reading key from environment
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
