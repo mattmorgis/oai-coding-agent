@@ -35,6 +35,7 @@ ALLOWED_CLI_COMMANDS = [
     "uv",
     "pip",
     "pipdeptree",
+    "pre-commit",
     "xargs",
     "which",
 ]
