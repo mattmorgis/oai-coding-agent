@@ -4,15 +4,20 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from typing import Optional
 from typing_extensions import Annotated
 
 from .config import Config, ModelChoice, ModeChoice
 from .console.repl import main as console_main
+from .headless import headless_main
+from .agent import AgentSession
+from .console.rendering import console as rich_console, render_message
 from .logger import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
+# Local console for CLI messages (e.g., exit)
 console = Console()
 
 app = typer.Typer(rich_markup_mode=None)
@@ -32,14 +37,48 @@ def main(
     repo_path: Path = typer.Option(
         None,
         "--repo-path",
-        help="Path to the repository. This path (and its subdirectories) are the only files the agent has permission to access",
+        help=(
+            "Path to the repository. This path (and its subdirectories) "
+            "are the only files the agent has permission to access"
+        ),
     ),
+    prompt: Annotated[
+        Optional[str],
+        typer.Option(
+            "--prompt",
+            "-p",
+            help="Prompt to run in non-interactive mode",
+        ),
+    ] = None,
 ) -> None:
     """
-    OAI CODING AGENT - starts an interactive session
+    OAI CODING AGENT - starts an interactive or batch session
     """
     # Build a single config object from the CLI parameters
     cfg = Config.from_cli(openai_api_key, model, repo_path, mode)
+
+    if prompt:
+        # If prompt refers to an existing file, load its content
+        prompt_text: str = prompt
+        prompt_path = Path(prompt)
+        if prompt_path.is_file():
+            prompt_text = prompt_path.read_text()
+        # Force async mode for one-off prompt runs
+        mode_value = ModeChoice.async_.value
+        logger.info(f"Running prompt in headless (async): {prompt}")
+        try:
+            asyncio.run(
+                headless_main(
+                    cfg.repo_path,
+                    cfg.model.value,
+                    cfg.openai_api_key,
+                    mode_value,
+                    prompt_text,
+                )
+            )
+        except KeyboardInterrupt:
+            rich_console.print("\nExiting...")
+        return
 
     logger.info(f"Starting chat with model {cfg.model.value} on repo {cfg.repo_path}")
     try:

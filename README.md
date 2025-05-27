@@ -44,6 +44,20 @@ oai --mode async
 
 # Start chat in planning mode
 oai --mode plan
+
+# Run a one-off prompt in non-interactive (async) mode
+oai --prompt "<some task>"
+
+# Passing a file as a prompt (async mode)
+oai --prompt <task.md>  # the contents of task.md will be used as the prompt
+
+# Headless (async) mode examples
+# Running a literal prompt:
+oai --prompt "Summarize this repo" --repo-path .
+
+# Running a prompt from a file:
+echo "Summarize this repo" > prompt.txt
+oai --prompt prompt.txt --repo-path .
 ```
 
 Available models:
