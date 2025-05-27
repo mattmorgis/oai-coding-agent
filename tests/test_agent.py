@@ -55,6 +55,7 @@ def test_build_instructions_with_known_mode():
         repo_path=Path("repo"),
         model="model-x",
         openai_api_key="apikey",
+        github_personal_access_token="TOK",
         max_turns=5,
         mode="async",
     )
@@ -72,6 +73,7 @@ def test_build_instructions_with_unknown_mode_fallback():
         repo_path=Path("repo2"),
         model="model-y",
         openai_api_key="apikey",
+        github_personal_access_token="TOK",
         max_turns=5,
         mode="nonexistent_mode",
     )
@@ -178,7 +180,9 @@ async def test_run_step_streams_and_returns(monkeypatch):
     )
     # Initialize session and set dummy agent
     session = _AgentSession(
-        repo_path=Path("."), model="m", openai_api_key="k", max_turns=1, mode="async"
+        repo_path=Path("."), model="m", openai_api_key="k",
+        github_personal_access_token="TOK",
+        max_turns=1, mode="async"
     )
     session._agent = object()
 

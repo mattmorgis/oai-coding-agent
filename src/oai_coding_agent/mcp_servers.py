@@ -54,7 +54,7 @@ async def start_mcp_servers(
     repo_path: Path, exit_stack: AsyncExitStack
 ) -> List[MCPServer]:
     """
-    Start filesystem, CLI, and Git MCP servers, registering cleanup on the provided exit_stack.
+    Start filesystem, CLI, Git, and GitHub MCP servers, registering cleanup on the provided exit_stack.
 
     Returns a list of connected MCPServerStdio instances.
     """
@@ -119,5 +119,31 @@ async def start_mcp_servers(
         logger.info("Git MCP server started successfully")
     except OSError:
         logger.exception("Failed to start Git MCP server")
+
+    # GitHub MCP server
+    try:
+        gh_ctx = QuietMCPServerStdio(
+            name="github-mcp-server",
+            params={
+                "command": "docker",
+                "args": [
+                    "run",
+                    "-i",
+                    "--rm",
+                    "-e",
+                    "GITHUB_PERSONAL_ACCESS_TOKEN",
+                    "ghcr.io/github/github-mcp-server",
+                ],
+                "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": os.environ["GITHUB_PERSONAL_ACCESS_TOKEN"]},
+            },
+            client_session_timeout_seconds=120,
+            cache_tools_list=True,
+        )
+        gh = await gh_ctx.__aenter__()
+        exit_stack.push_async_callback(gh_ctx.__aexit__, None, None, None)
+        servers.append(gh)
+        logger.info("GitHub MCP server started successfully")
+    except OSError:
+        logger.exception("Failed to start GitHub MCP server")
 
     return servers

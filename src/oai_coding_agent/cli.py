@@ -28,6 +28,13 @@ def main(
     openai_api_key: Annotated[
         str, typer.Option(envvar="OPENAI_API_KEY", help="OpenAI API key")
     ],
+    github_personal_access_token: Annotated[
+        str,
+        typer.Option(
+            envvar="GITHUB_PERSONAL_ACCESS_TOKEN",
+            help="GitHub Personal Access Token",
+        ),
+    ],
     model: Annotated[
         ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
     ] = ModelChoice.codex_mini_latest,
@@ -55,7 +62,13 @@ def main(
     OAI CODING AGENT - starts an interactive or batch session
     """
     # Build a single config object from the CLI parameters
-    cfg = Config.from_cli(openai_api_key, model, repo_path, mode)
+    cfg = Config.from_cli(
+        openai_api_key,
+        github_personal_access_token,
+        model,
+        repo_path,
+        mode,
+    )
 
     if prompt:
         # If prompt refers to an existing file, load its content
@@ -72,6 +85,7 @@ def main(
                     cfg.repo_path,
                     cfg.model.value,
                     cfg.openai_api_key,
+                    cfg.github_personal_access_token,
                     mode_value,
                     prompt_text,
                 )
@@ -84,7 +98,11 @@ def main(
     try:
         asyncio.run(
             console_main(
-                cfg.repo_path, cfg.model.value, cfg.openai_api_key, cfg.mode.value
+                cfg.repo_path,
+                cfg.model.value,
+                cfg.openai_api_key,
+                cfg.github_personal_access_token,
+                cfg.mode.value,
             )
         )
     except KeyboardInterrupt:

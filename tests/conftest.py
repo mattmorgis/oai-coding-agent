@@ -10,7 +10,7 @@ def rich_tui_calls(monkeypatch):
     """
     calls = []
 
-    async def fake_main(repo_path, model, api_key, mode):
+    async def fake_main(repo_path, model, api_key, github_personal_access_token, mode):
         calls.append((repo_path, model, api_key, mode))
 
     monkeypatch.setattr(cli_module, "console_main", fake_main)

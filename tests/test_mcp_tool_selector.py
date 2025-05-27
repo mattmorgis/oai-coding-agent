@@ -61,3 +61,37 @@ async def test_plan_mode_git_filter(patch_get_function_tools):
     servers = [SimpleNamespace(name="mcp-server-git")]
     tools = await get_filtered_function_tools(servers, mode="plan")
     assert {t.name for t in tools} == {"clone_repo", "list_branches"}
+
+
+@pytest.mark.asyncio
+async def test_github_server_whitelist(patch_get_function_tools):
+    # Only the specified whitelist tools should be returned for github-mcp-server
+    allowed = {
+        "get_issue",
+        "get_issue_comments",
+        "create_issue",
+        "add_issue_comment",
+        "list_issues",
+        "update_issue",
+        "search_issues",
+        "get_pull_request",
+        "list_pull_requests",
+        "get_pull_request_files",
+        "get_pull_request_status",
+        "update_pull_request_branch",
+        "get_pull_request_comments",
+        "get_pull_request_reviews",
+        "create_pull_request",
+        "add_pull_request_review_comment",
+        "update_pull_request",
+    }
+    names = list(allowed) + ["other_tool"]
+    async def fake(server, convert_strict):
+        return [DummyTool(name) for name in names]
+
+    patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
+    servers = [SimpleNamespace(name="github-mcp-server")]
+
+    for mode in ("default", "plan"):
+        tools = await get_filtered_function_tools(servers, mode=mode)
+        assert {t.name for t in tools} == allowed
