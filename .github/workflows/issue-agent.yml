@@ -53,6 +53,11 @@ jobs:
         run: |
           uv sync
 
+      - name: Set up Node.js (latest LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
       - name: Create a fresh branch for the agent
         run: |
           git config user.name "github-actions[bot]"
