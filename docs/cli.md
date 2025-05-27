@@ -1,3 +1,11 @@
+# CLI Usage
+
+The `oai` command supports the following options:
+
+- `--model <model>`
+- `--mode <mode>` (default: default; choices: default, async, plan)
+- `--repo-path <path>`
+
 ```mermaid
 flowchart TD
   subgraph CLI

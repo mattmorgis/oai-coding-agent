@@ -38,6 +38,12 @@ oai --repo-path /path/to/your/repo
 
 # Show configuration
 oai config
+
+# Start chat in asynchronous autonomous mode
+oai --mode async
+
+# Start chat in planning mode
+oai --mode plan
 ```
 
 Available models:
@@ -45,6 +51,13 @@ Available models:
 - `o3`
 - `o4-mini`
 - `codex-mini-latest` (default)
+
+Available modes:
+
+- `default` (interactive collaborative mode)
+- `async` (autonomous asynchronous mode)
+- `plan` (architecture planning mode)
+
 
 The chat interface provides:
 
