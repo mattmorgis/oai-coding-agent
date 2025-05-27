@@ -76,6 +76,7 @@ async def start_mcp_servers(
     fs = await fs_ctx.__aenter__()
     exit_stack.push_async_callback(fs_ctx.__aexit__, None, None, None)
     servers.append(fs)
+    logger.info("Filesystem MCP server started successfully")
 
     # CLI MCP server
     try:
