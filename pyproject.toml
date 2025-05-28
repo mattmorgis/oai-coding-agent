@@ -6,14 +6,14 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "concurrent-log-handler>=0.9.26",
-    "openai-agents[litellm]>=0.0.15",
     "prompt-toolkit>=3.0.51",
     "python-dotenv>=1.0.0",
     "Jinja2>=3.0.0",
-    "textual>=3.2.0",
     "typer>=0.15.4",
     "cli-mcp-server>=0.1.0",
     "mcp-server-git>=2025.1.14",
+    "openai-agents>=0.0.16",
+    "rich>=14.0.0",
 ]
 
 [project.scripts]
