@@ -29,6 +29,7 @@ dev = [
     "pre-commit>=3.7.1",
     "ruff>=0.4.4",
     "pytest-cov>=6.1.1",
+    "types-jinja2",
 ]
 
 [tool.ruff]
@@ -40,6 +41,7 @@ profile = "black"
 line_length = 88
 
 [tool.mypy]
+mypy_path = ["typings"]
 python_version = "3.13"
 strict = true
 exclude = "^tests/"
