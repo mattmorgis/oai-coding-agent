@@ -72,12 +72,6 @@ def main(
     run_preflight_checks(cfg.repo_path)
 
     if prompt:
-        # If prompt refers to an existing file, load its content
-        prompt_path = Path(prompt)
-        if prompt_path.is_file():
-            prompt_text = prompt_path.read_text()
-        else:
-            prompt_text = prompt
         # Force async mode for one-off prompt runs
         mode_value = ModeChoice.async_.value
         logger.info(f"Running prompt in headless (async): {prompt}")
@@ -89,7 +83,7 @@ def main(
                     cfg.openai_api_key,
                     cfg.github_personal_access_token,
                     mode_value,
-                    prompt_text,
+                    prompt,
                 )
             )
         except KeyboardInterrupt:
