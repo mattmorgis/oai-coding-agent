@@ -14,6 +14,11 @@ def set_github_env(monkeypatch):
     monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "ENV_GH_TOKEN")
     yield
 
+@pytest.fixture(autouse=True)
+def stub_preflight(monkeypatch):
+    # Stub preflight checks for CLI tests to not block execution
+    monkeypatch.setattr(cli_module, "run_preflight_checks", lambda repo_path: None)
+
 
 def test_cli_invokes_rich_tui_with_flags(rich_tui_calls, tmp_path):
     runner = CliRunner()
