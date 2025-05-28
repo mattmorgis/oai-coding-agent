@@ -132,12 +132,13 @@ class _AgentSession:
             ref = os.getenv("GITHUB_REF", "")
             branch_name = ref.rsplit("/", 1)[-1] if "/" in ref else ref
 
-        return template.render(
+        rendered: str = template.render(
             repo_path=str(self.repo_path),
             mode=self.mode,
             github_repository=github_repo,
             branch_name=branch_name,
         )
+        return rendered
 
     def _map_sdk_event(self, event: Any) -> Optional[Dict[str, Any]]:
         evt_type = getattr(event, "type", None)

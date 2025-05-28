@@ -9,7 +9,9 @@ from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
 from ..agent import AgentSession
-from .state import UIState
+from typing import cast
+
+from .state import Message, UIState
 from .rendering import console, clear_terminal, render_message
 from .slash_commands import register_slash_commands, handle_slash_command
 from .key_bindings import get_key_bindings
@@ -83,14 +85,14 @@ async def main(
                     continue_loop = handle_slash_command(state, user_input)
                     continue
 
-                user_msg = {"role": "user", "content": user_input}
+                user_msg: Message = {"role": "user", "content": user_input}
                 state.messages.append(user_msg)
                 console.print(f"[dim]› {user_input}[/dim]\n")
 
                 ui_stream, result = await session_agent.run_step(user_input, prev_id)
                 async for msg in ui_stream:
-                    state.messages.append(msg)
-                    render_message(msg)
+                    state.messages.append(cast(Message, msg))
+                    render_message(cast(Message, msg))
 
                 prev_id = result.last_response_id
 

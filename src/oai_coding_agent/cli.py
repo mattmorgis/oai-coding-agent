@@ -23,7 +23,7 @@ console = Console()
 app = typer.Typer(rich_markup_mode=None)
 
 
-@app.command()
+@app.command()  # type: ignore[misc]
 def main(
     openai_api_key: Annotated[
         str, typer.Option(envvar="OPENAI_API_KEY", help="OpenAI API key")
@@ -74,6 +74,9 @@ def main(
     if prompt:
         # Force async mode for one-off prompt runs
         mode_value = ModeChoice.async_.value
+        prompt_text = (
+            Path(prompt).read_text() if Path(prompt).is_file() else prompt
+        )
         logger.info(f"Running prompt in headless (async): {prompt}")
         try:
             asyncio.run(
@@ -83,7 +86,7 @@ def main(
                     cfg.openai_api_key,
                     cfg.github_personal_access_token,
                     mode_value,
-                    prompt,
+                    prompt_text,
                 )
             )
         except KeyboardInterrupt:

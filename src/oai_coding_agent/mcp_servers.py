@@ -6,7 +6,7 @@ import logging
 import os
 from contextlib import AsyncExitStack
 from pathlib import Path
-from typing import List
+from typing import Any, List
 
 from agents.mcp import MCPServer, MCPServerStdio
 from mcp.client.stdio import stdio_client
@@ -43,10 +43,10 @@ ALLOWED_CLI_COMMANDS = [
 ALLOWED_CLI_FLAGS = ["all"]
 
 
-class QuietMCPServerStdio(MCPServerStdio):
+class QuietMCPServerStdio(MCPServerStdio):  # type: ignore[misc]
     """Variant of MCPServerStdio that silences child-process stderr."""
 
-    def create_streams(self):
+    def create_streams(self) -> Any:
         return stdio_client(self.params, errlog=open(os.devnull, "w"))
 
 
