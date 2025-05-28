@@ -1,6 +1,6 @@
 from typing import Callable
 
-from .state import UIState
+from .state import Message, UIState
 from .rendering import clear_terminal, render_message
 
 
@@ -14,7 +14,7 @@ def register_slash_commands(state: UIState) -> None:
         for cmd, func in state.slash_commands.items():
             doc = func.__doc__ or "No description available"
             help_text += f"/{cmd} - {doc}\n"
-        msg = {"role": "system", "content": help_text}
+        msg: Message = {"role": "system", "content": help_text}
         state.messages.append(msg)
         render_message(msg)
         return True
@@ -22,7 +22,7 @@ def register_slash_commands(state: UIState) -> None:
     def cmd_clear(args: str = "") -> bool:
         """Clear the chat history."""
         state.messages.clear()
-        msg = {"role": "system", "content": "Chat history has been cleared."}
+        msg: Message = {"role": "system", "content": "Chat history has been cleared."}
         state.messages.append(msg)
         clear_terminal()
         render_message(msg)
@@ -34,7 +34,7 @@ def register_slash_commands(state: UIState) -> None:
 
     def cmd_version(args: str = "") -> bool:
         """Show version information."""
-        msg = {
+        msg: Message = {
             "role": "system",
             "content": "CLI Chat Version: 0.1.0\nBuilt with Rich and prompt-toolkit",
         }
@@ -61,12 +61,12 @@ def handle_slash_command(state: UIState, text: str) -> bool:
         try:
             return state.slash_commands[cmd](args)
         except Exception as e:
-            msg = {"role": "system", "content": f"Error executing /{cmd}: {e}"}
-            state.messages.append(msg)
-            render_message(msg)
+            error_msg: Message = {"role": "system", "content": f"Error executing /{cmd}: {e}"}
+            state.messages.append(error_msg)
+            render_message(error_msg)
             return True
     else:
-        msg = {
+        msg: Message = {
             "role": "system",
             "content": f"Unknown command: /{cmd}\nType /help to see available commands.",
         }

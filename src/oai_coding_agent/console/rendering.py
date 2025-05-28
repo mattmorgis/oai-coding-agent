@@ -1,20 +1,22 @@
 import os
+from typing import Any, Iterable
 
 from rich.console import Console
 from rich.markdown import Heading, Markdown
-from rich.panel import Panel
+
+from .state import Message
 
 
 # Classes to override the default Markdown renderer
-class PlainHeading(Heading):
+class PlainHeading(Heading):  # type: ignore[misc]
     """Left-aligned, no panel."""
 
-    def __rich_console__(self, console, options):
+    def __rich_console__(self, console: Console, options: Any) -> Iterable[Any]:
         self.text.justify = "left"
         yield self.text
 
 
-class PlainMarkdown(Markdown):
+class PlainMarkdown(Markdown):  # type: ignore[misc]
     elements = Markdown.elements.copy()
     elements["heading_open"] = PlainHeading
 
@@ -31,7 +33,7 @@ def clear_terminal() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
 
-def render_message(msg: dict) -> None:
+def render_message(msg: Message) -> None:
     """Render a single message via Rich."""
     role = msg.get("role")
     content = msg.get("content", "")

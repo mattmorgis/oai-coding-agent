@@ -5,7 +5,10 @@ Headless (non-interactive) mode for running a single prompt asynchronously.
 import asyncio
 from pathlib import Path
 
+from typing import cast
+
 from .agent import AgentSession
+from .console.state import Message
 from .console.rendering import console as rich_console, render_message
 
 
@@ -38,4 +41,4 @@ async def headless_main(
     ) as session_agent:
         ui_stream, _ = await session_agent.run_step(prompt)
         async for msg in ui_stream:
-            render_message(msg)
+            render_message(cast(Message, msg))
