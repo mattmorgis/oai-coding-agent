@@ -1,6 +1,7 @@
 """
 Headless (non-interactive) mode for running a single prompt asynchronously.
 """
+
 import asyncio
 from pathlib import Path
 

@@ -134,7 +134,11 @@ async def start_mcp_servers(
                     "GITHUB_PERSONAL_ACCESS_TOKEN",
                     "ghcr.io/github/github-mcp-server",
                 ],
-                "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": os.environ["GITHUB_PERSONAL_ACCESS_TOKEN"]},
+                "env": {
+                    "GITHUB_PERSONAL_ACCESS_TOKEN": os.environ[
+                        "GITHUB_PERSONAL_ACCESS_TOKEN"
+                    ]
+                },
             },
             client_session_timeout_seconds=120,
             cache_tools_list=True,

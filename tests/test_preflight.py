@@ -76,7 +76,9 @@ def test_run_preflight_git_failure(monkeypatch, capsys):
 
 def test_run_preflight_node_missing(monkeypatch, capsys):
     # Simulate node missing, git and docker ok
-    monkeypatch.setattr(shutil, "which", lambda tool: None if tool == "node" else f"/usr/bin/{tool}")
+    monkeypatch.setattr(
+        shutil, "which", lambda tool: None if tool == "node" else f"/usr/bin/{tool}"
+    )
 
     def fake_run(cmd, cwd=None, capture_output=None, text=None, check=None):
         if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
@@ -99,7 +101,9 @@ def test_run_preflight_node_missing(monkeypatch, capsys):
 
 def test_run_preflight_docker_missing(monkeypatch, capsys):
     # Simulate docker missing, git and node ok
-    monkeypatch.setattr(shutil, "which", lambda tool: None if tool == "docker" else f"/usr/bin/{tool}")
+    monkeypatch.setattr(
+        shutil, "which", lambda tool: None if tool == "docker" else f"/usr/bin/{tool}"
+    )
 
     def fake_run(cmd, cwd=None, capture_output=None, text=None, check=None):
         if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:

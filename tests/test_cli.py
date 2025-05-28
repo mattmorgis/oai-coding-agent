@@ -14,6 +14,7 @@ def set_github_env(monkeypatch):
     monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "ENV_GH_TOKEN")
     yield
 
+
 @pytest.fixture(autouse=True)
 def stub_preflight(monkeypatch):
     # Stub preflight checks for CLI tests to not block execution
@@ -54,8 +55,10 @@ def test_cli_uses_defaults(monkeypatch, rich_tui_calls, tmp_path):
 def test_cli_prompt_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_path):
     # Monkeypatch headless_main to capture calls for headless (async) mode
     calls = []
+
     async def fake_batch_main(repo_path, model, api_key, gh_token, mode, prompt):
         calls.append((repo_path, model, api_key, mode, prompt))
+
     monkeypatch.setattr(cli_module, "headless_main", fake_batch_main)
     # Simulate running from cwd and reading keys from environment
     monkeypatch.chdir(tmp_path)
@@ -65,7 +68,9 @@ def test_cli_prompt_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_path)
     runner = CliRunner()
     result = runner.invoke(app, ["--prompt", "Do awesome things"])
     assert result.exit_code == 0
-    assert calls == [(tmp_path, "codex-mini-latest", "ENVKEY", "async", "Do awesome things")]
+    assert calls == [
+        (tmp_path, "codex-mini-latest", "ENVKEY", "async", "Do awesome things")
+    ]
     assert rich_tui_calls == []
 
 
@@ -75,8 +80,10 @@ def test_cli_prompt_file_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_
     prompt_file.write_text("Please summarize this project.")
     # Monkeypatch headless_main to capture calls
     calls = []
+
     async def fake_batch_main(repo_path, model, api_key, gh_token, mode, prompt):
         calls.append((repo_path, model, api_key, mode, prompt))
+
     monkeypatch.setattr(cli_module, "headless_main", fake_batch_main)
     # Simulate running from cwd and reading keys from environment
     monkeypatch.chdir(tmp_path)

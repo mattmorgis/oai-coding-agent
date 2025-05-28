@@ -5,7 +5,11 @@ from pathlib import Path
 
 import oai_coding_agent.agent as agent_module
 from oai_coding_agent.agent import _AgentSession
-from oai_coding_agent.mcp_servers import QuietMCPServerStdio, ALLOWED_CLI_COMMANDS, ALLOWED_CLI_FLAGS
+from oai_coding_agent.mcp_servers import (
+    QuietMCPServerStdio,
+    ALLOWED_CLI_COMMANDS,
+    ALLOWED_CLI_FLAGS,
+)
 
 
 def test_allowed_cli_vars():
@@ -26,6 +30,7 @@ def test_quiet_mcp_server_stdio_create_streams(monkeypatch):
         return "fake_streams"
 
     import oai_coding_agent.mcp_servers as mcp_servers_module
+
     monkeypatch.setattr(mcp_servers_module, "stdio_client", fake_stdio_client)
 
     params = {"command": "test", "args": []}
@@ -180,9 +185,12 @@ async def test_run_step_streams_and_returns(monkeypatch):
     )
     # Initialize session and set dummy agent
     session = _AgentSession(
-        repo_path=Path("."), model="m", openai_api_key="k",
+        repo_path=Path("."),
+        model="m",
+        openai_api_key="k",
         github_personal_access_token="TOK",
-        max_turns=1, mode="async"
+        max_turns=1,
+        mode="async",
     )
     session._agent = object()
 

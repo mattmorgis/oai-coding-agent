@@ -16,6 +16,7 @@ def patch_get_function_tools(monkeypatch):
     By default, stub out MCPUtil.get_function_tools to avoid touching real servers.
     Individual tests will override this.
     """
+
     async def _fake(server, convert_strict):
         return []
 
@@ -86,6 +87,7 @@ async def test_github_server_whitelist_default_mode(patch_get_function_tools):
         "update_pull_request",
     }
     names = list(full_allowed) + ["other_tool"]
+
     async def fake(server, convert_strict):
         return [DummyTool(name) for name in names]
 
@@ -94,6 +96,7 @@ async def test_github_server_whitelist_default_mode(patch_get_function_tools):
 
     tools = await get_filtered_function_tools(servers, mode="default")
     assert {t.name for t in tools} == full_allowed
+
 
 @pytest.mark.asyncio
 async def test_github_server_plan_mode_readonly_filter(patch_get_function_tools):
@@ -120,6 +123,7 @@ async def test_github_server_plan_mode_readonly_filter(patch_get_function_tools)
         "update_pull_request_branch",
         "other_tool",
     ]
+
     async def fake_plan(server, convert_strict):
         return [DummyTool(name) for name in names]
 

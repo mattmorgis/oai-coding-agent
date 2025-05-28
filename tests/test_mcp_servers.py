@@ -28,21 +28,26 @@ def test_create_streams_uses_stdio_client_and_devnull(monkeypatch):
         calls.append((params, errlog))
         return "STREAMS"
 
-    monkeypatch.setattr(mcp_servers, 'stdio_client', fake_stdio_client)
+    monkeypatch.setattr(mcp_servers, "stdio_client", fake_stdio_client)
 
-    params = {'command': 'dummy'}
+    params = {"command": "dummy"}
     ctx = mcp_servers.QuietMCPServerStdio(
-        name="test", params=params, client_session_timeout_seconds=1, cache_tools_list=False
+        name="test",
+        params=params,
+        client_session_timeout_seconds=1,
+        cache_tools_list=False,
     )
     streams = ctx.create_streams()
 
     assert streams == "STREAMS"
     assert len(calls) == 1
     called_params, errlog = calls[0]
-    assert hasattr(called_params, "command") and called_params.command == params["command"]
-    assert hasattr(errlog, 'name')
+    assert (
+        hasattr(called_params, "command") and called_params.command == params["command"]
+    )
+    assert hasattr(errlog, "name")
     assert errlog.name == os.devnull
-    assert errlog.mode == 'w'
+    assert errlog.mode == "w"
 
 
 @pytest.mark.asyncio
@@ -50,9 +55,16 @@ async def test_start_mcp_servers_all_success(monkeypatch):
     """
     All three MCP servers should be started successfully when no errors occur.
     """
+
     # Dummy context manager to replace QuietMCPServerStdio
     class DummyCtx:
-        def __init__(self, name, params, client_session_timeout_seconds=None, cache_tools_list=None):
+        def __init__(
+            self,
+            name,
+            params,
+            client_session_timeout_seconds=None,
+            cache_tools_list=None,
+        ):
             self.name = name
             self.params = params
 
@@ -62,7 +74,7 @@ async def test_start_mcp_servers_all_success(monkeypatch):
         async def __aexit__(self, exc_type, exc, tb):
             pass
 
-    monkeypatch.setattr(mcp_servers, 'QuietMCPServerStdio', DummyCtx)
+    monkeypatch.setattr(mcp_servers, "QuietMCPServerStdio", DummyCtx)
 
     exit_stack = DummyExitStack()
     repo = Path("/some/repo")
@@ -88,7 +100,13 @@ async def test_start_mcp_servers_skip_cli_on_error(monkeypatch):
     fail_names = {"cli-mcp-server"}
 
     class DummyCtx:
-        def __init__(self, name, params, client_session_timeout_seconds=None, cache_tools_list=None):
+        def __init__(
+            self,
+            name,
+            params,
+            client_session_timeout_seconds=None,
+            cache_tools_list=None,
+        ):
             self.name = name
             self.params = params
 
@@ -100,7 +118,7 @@ async def test_start_mcp_servers_skip_cli_on_error(monkeypatch):
         async def __aexit__(self, exc_type, exc, tb):
             pass
 
-    monkeypatch.setattr(mcp_servers, 'QuietMCPServerStdio', DummyCtx)
+    monkeypatch.setattr(mcp_servers, "QuietMCPServerStdio", DummyCtx)
 
     exit_stack = DummyExitStack()
     repo = Path("/repo")
@@ -120,7 +138,13 @@ async def test_start_mcp_servers_skip_git_on_error(monkeypatch):
     fail_names = {"mcp-server-git"}
 
     class DummyCtx:
-        def __init__(self, name, params, client_session_timeout_seconds=None, cache_tools_list=None):
+        def __init__(
+            self,
+            name,
+            params,
+            client_session_timeout_seconds=None,
+            cache_tools_list=None,
+        ):
             self.name = name
             self.params = params
 
@@ -132,7 +156,7 @@ async def test_start_mcp_servers_skip_git_on_error(monkeypatch):
         async def __aexit__(self, exc_type, exc, tb):
             pass
 
-    monkeypatch.setattr(mcp_servers, 'QuietMCPServerStdio', DummyCtx)
+    monkeypatch.setattr(mcp_servers, "QuietMCPServerStdio", DummyCtx)
 
     exit_stack = DummyExitStack()
     repo = Path("/repo")
@@ -152,7 +176,13 @@ async def test_start_mcp_servers_skip_cli_and_git_on_error(monkeypatch):
     fail_names = {"cli-mcp-server", "mcp-server-git"}
 
     class DummyCtx:
-        def __init__(self, name, params, client_session_timeout_seconds=None, cache_tools_list=None):
+        def __init__(
+            self,
+            name,
+            params,
+            client_session_timeout_seconds=None,
+            cache_tools_list=None,
+        ):
             self.name = name
             self.params = params
 
@@ -164,7 +194,7 @@ async def test_start_mcp_servers_skip_cli_and_git_on_error(monkeypatch):
         async def __aexit__(self, exc_type, exc, tb):
             pass
 
-    monkeypatch.setattr(mcp_servers, 'QuietMCPServerStdio', DummyCtx)
+    monkeypatch.setattr(mcp_servers, "QuietMCPServerStdio", DummyCtx)
 
     exit_stack = DummyExitStack()
     repo = Path("/repo")

@@ -1,6 +1,7 @@
 """
 Mode-based selection and filtering of MCP function-tools per server.
 """
+
 from typing import List, TYPE_CHECKING
 
 from agents.mcp.util import MCPUtil
@@ -10,7 +11,9 @@ if TYPE_CHECKING:
     from agents.mcp import MCPServer
 
 
-def _filter_tools_for_mode(server_name: str, tools: List[Tool], mode: str) -> List[Tool]:
+def _filter_tools_for_mode(
+    server_name: str, tools: List[Tool], mode: str
+) -> List[Tool]:
     """
     Apply mode-specific filtering rules for a given MCP server's tools.
     """
@@ -64,7 +67,7 @@ def _filter_tools_for_mode(server_name: str, tools: List[Tool], mode: str) -> Li
         }
         return [t for t in tools if t.name in allowed]
 
-# No filtering by default
+    # No filtering by default
     return tools
 
 
@@ -83,7 +86,9 @@ async def get_filtered_function_tools(
     """
     filtered_tools: List[Tool] = []
     for server in servers:
-        server_tools = await MCPUtil.get_function_tools(server, convert_schemas_to_strict)
+        server_tools = await MCPUtil.get_function_tools(
+            server, convert_schemas_to_strict
+        )
         server_tools = _filter_tools_for_mode(server.name, server_tools, mode)
         filtered_tools.extend(server_tools)
     return filtered_tools
