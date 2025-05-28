@@ -1,0 +1,3 @@
+from typing import Any
+
+def stdio_client(params: Any, errlog: Any = ...) -> Any: ...
