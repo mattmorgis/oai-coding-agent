@@ -24,6 +24,8 @@ def test_run_preflight_success(monkeypatch, caplog):
             return subprocess.CompletedProcess(cmd, 0, stdout="true\n")
         if cmd[:2] == ["node", "--version"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="v14.17.0\n")
+        if cmd[:2] == ["docker", "info"]:
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
         if cmd[:2] == ["docker", "--version"]:
             return subprocess.CompletedProcess(
                 cmd, 0, stdout="Docker version 20.10.7, build abcdef1\n"
@@ -56,6 +58,8 @@ def test_run_preflight_git_failure(monkeypatch, capsys):
             return subprocess.CompletedProcess(cmd, 1, stdout="false\n")
         if cmd[:2] == ["node", "--version"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="v14.17.0\n")
+        if cmd[:2] == ["docker", "info"]:
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
         if cmd[:2] == ["docker", "--version"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="Docker version x\n")
         pytest.fail(f"Unexpected command: {cmd}")
@@ -77,6 +81,8 @@ def test_run_preflight_node_missing(monkeypatch, capsys):
     def fake_run(cmd, cwd=None, capture_output=None, text=None, check=None):
         if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="true\n")
+        if cmd[:2] == ["docker", "info"]:
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
         if cmd[:2] == ["docker", "--version"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="Docker version x\n")
         pytest.fail(f"Unexpected command: {cmd}")

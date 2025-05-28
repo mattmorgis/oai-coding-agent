@@ -61,10 +61,28 @@ def check_node() -> str:
 def check_docker() -> str:
     """
     Check that 'docker' binary is on PATH and return its version string.
+    Additionally verifies that the Docker daemon is running.
     """
     docker_path = shutil.which("docker")
     if not docker_path:
         raise RuntimeError("Docker binary not found on PATH")
+
+    # Verify that the Docker daemon is up and running
+    try:
+        subprocess.run(
+            ["docker", "info"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except FileNotFoundError:
+        # (shouldn't really happen since we already did shutil.which)
+        raise RuntimeError("'docker' binary not found on PATH")
+    except subprocess.CalledProcessError as e:
+        msg = (e.stderr or "").strip() or str(e)
+        raise RuntimeError(f"Failed to connect to Docker daemon: {msg}")
+
+    # Now that the daemon is confirmed, grab & return the client version
     return get_tool_version(["docker", "--version"])
 
 
