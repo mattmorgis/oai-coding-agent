@@ -2,7 +2,7 @@
 Mode-based selection and filtering of MCP function-tools per server.
 """
 
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from agents.mcp.util import MCPUtil
 from agents.tool import Tool
@@ -33,6 +33,7 @@ def _filter_tools_for_mode(
         # Read-only commands only in plan mode
         if mode == "plan":
             readonly_allowed = {
+                "create_issue",
                 "get_issue",
                 "get_issue_comments",
                 "list_issues",
