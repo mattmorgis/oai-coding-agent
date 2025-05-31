@@ -1,17 +1,17 @@
 import os
-import pytest
 from pathlib import Path
+from typing import Any, AsyncGenerator, cast
+
+import pytest
+from agents.mcp import MCPServerStdioParams
 
 import oai_coding_agent.agent as agent_module
-from oai_coding_agent.agent import _AgentSession
+from oai_coding_agent.agent import Agent, _AgentSession
 from oai_coding_agent.mcp_servers import (
-    QuietMCPServerStdio,
     ALLOWED_CLI_COMMANDS,
     ALLOWED_CLI_FLAGS,
+    QuietMCPServerStdio,
 )
-
-from typing import Any, cast, AsyncGenerator
-from oai_coding_agent.agent import Agent
 
 
 def test_allowed_cli_vars() -> None:
@@ -38,7 +38,7 @@ def test_quiet_mcp_server_stdio_create_streams(monkeypatch: pytest.MonkeyPatch) 
     params = {"command": "test", "args": []}
     quiet = QuietMCPServerStdio(
         name="test",
-        params=params,
+        params=cast(MCPServerStdioParams, params),
         client_session_timeout_seconds=10,
         cache_tools_list=False,
     )
@@ -115,34 +115,44 @@ def test_map_sdk_event_tool() -> None:
     event = DummyEvent(
         type="run_item_stream_event", name="tool_called", item=DummyItem(raw)
     )
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)
+    mapped = agent_module._AgentSession._map_sdk_event(
+        cast(_AgentSession, object()), event
+    )
     assert mapped == {"role": "tool", "content": "cmd(('a', 'b'))"}
 
 
 def test_map_sdk_event_reasoning_with_summary() -> None:
     raw = DummyRaw(summary=[DummyRaw(text="thinking")])
     event = DummyEvent(name="reasoning_item_created", item=DummyItem(raw))
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)
+    mapped = agent_module._AgentSession._map_sdk_event(
+        cast(_AgentSession, object()), event
+    )
     assert mapped == {"role": "thought", "content": "💭 thinking"}
 
 
 def test_map_sdk_event_reasoning_without_summary() -> None:
     raw = DummyRaw(summary=[])
     event = DummyEvent(name="reasoning_item_created", item=DummyItem(raw))
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)
+    mapped = agent_module._AgentSession._map_sdk_event(
+        cast(_AgentSession, object()), event
+    )
     assert mapped is None
 
 
 def test_map_sdk_event_message_output_created() -> None:
     raw = DummyRaw(content=[DummyRaw(text="output text")])
     event = DummyEvent(name="message_output_created", item=DummyItem(raw))
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)
+    mapped = agent_module._AgentSession._map_sdk_event(
+        cast(_AgentSession, object()), event
+    )
     assert mapped == {"role": "assistant", "content": "output text"}
 
 
 def test_map_sdk_event_other() -> None:
     event = DummyEvent(type="other", name="something_else", item=DummyItem(DummyRaw()))
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)
+    mapped = agent_module._AgentSession._map_sdk_event(
+        cast(_AgentSession, object()), event
+    )
     assert mapped is None
 
 
@@ -200,7 +210,7 @@ async def test_run_step_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> 
         "input text", previous_response_id="prev"
     )
     # Should return the underlying result as is
-    assert returned is fake_result
+    assert returned is fake_result  # type: ignore[comparison-overlap]
     # Collect messages from ui_stream
     collected = []
     async for msg in ui_stream:
