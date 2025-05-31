@@ -1,7 +1,7 @@
 import pytest
 from rich.console import Console
 
-from oai_coding_agent.console.state import UIState
+from oai_coding_agent.console.state import UIState, UIMessage
 from oai_coding_agent.console.slash_commands import (
     register_slash_commands,
     handle_slash_command,
@@ -42,7 +42,8 @@ def test_handle_help_command_appends_help_message(record_console):
 
 def test_handle_clear_command_clears_messages(record_console):
     state = UIState()
-    state.messages.append({"role": "user", "content": "hi"})
+    msg: UIMessage = {"role": "user", "content": "hi"}
+    state.messages.append(msg)
     register_slash_commands(state)
     cont = handle_slash_command(state, "/clear")
     assert cont is True
