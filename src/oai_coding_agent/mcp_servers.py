@@ -14,16 +14,6 @@ from mcp.client.stdio import stdio_client
 logger = logging.getLogger(__name__)
 
 
-async def _enter_context(exit_stack: AsyncExitStack, ctx: Any) -> Any:
-    # Support both real AsyncExitStack and DummyExitStack in tests
-    if hasattr(exit_stack, "enter_async_context"):
-        return await exit_stack.enter_async_context(ctx)
-    # Fallback for DummyExitStack: manually enter and register exit callback
-    result = await ctx.__aenter__()
-    exit_stack.push_async_callback(ctx.__aexit__, None, None, None)
-    return result
-
-
 # CLI MCP server restrictions
 ALLOWED_CLI_COMMANDS = [
     "grep",
@@ -85,7 +75,7 @@ async def start_mcp_servers(
         client_session_timeout_seconds=30,
         cache_tools_list=True,
     )
-    fs = await _enter_context(exit_stack, fs_ctx)
+    fs = await exit_stack.enter_async_context(fs_ctx)
 
     servers.append(fs)
     logger.info("Filesystem MCP server started successfully")
@@ -107,7 +97,7 @@ async def start_mcp_servers(
             client_session_timeout_seconds=120,
             cache_tools_list=True,
         )
-        cli = await _enter_context(exit_stack, cli_ctx)
+        cli = await exit_stack.enter_async_context(cli_ctx)
 
         servers.append(cli)
         logger.info("CLI MCP server started successfully")
@@ -124,7 +114,7 @@ async def start_mcp_servers(
             client_session_timeout_seconds=120,
             cache_tools_list=True,
         )
-        git = await _enter_context(exit_stack, git_ctx)
+        git = await exit_stack.enter_async_context(git_ctx)
 
         servers.append(git)
         logger.info("Git MCP server started successfully")
@@ -154,7 +144,7 @@ async def start_mcp_servers(
             client_session_timeout_seconds=120,
             cache_tools_list=True,
         )
-        gh = await _enter_context(exit_stack, gh_ctx)
+        gh = await exit_stack.enter_async_context(gh_ctx)
 
         servers.append(gh)
         logger.info("GitHub MCP server started successfully")
