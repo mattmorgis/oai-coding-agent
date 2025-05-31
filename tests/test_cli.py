@@ -18,7 +18,7 @@ def stub_preflight(monkeypatch):
     monkeypatch.setattr(cli_module, "run_preflight_checks", lambda repo_path: None)
 
 
-def test_cli_invokes_rich_tui_with_flags(rich_tui_calls, tmp_path):
+def test_cli_invokes_rich_tui_with_flags(console_main_calls, tmp_path):
     runner = CliRunner()
     result = runner.invoke(
         app,
@@ -34,10 +34,10 @@ def test_cli_invokes_rich_tui_with_flags(rich_tui_calls, tmp_path):
         ],
     )
     assert result.exit_code == 0
-    assert rich_tui_calls == [(tmp_path, "o3", "TESTKEY", "default")]
+    assert console_main_calls == [(tmp_path, "o3", "TESTKEY", "default")]
 
 
-def test_cli_uses_defaults(monkeypatch, rich_tui_calls, tmp_path):
+def test_cli_uses_defaults(monkeypatch, console_main_calls, tmp_path):
     # Simulate running from cwd and reading keys from environment
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
@@ -46,10 +46,10 @@ def test_cli_uses_defaults(monkeypatch, rich_tui_calls, tmp_path):
     runner = CliRunner()
     result = runner.invoke(app, [])
     assert result.exit_code == 0
-    assert rich_tui_calls == [(tmp_path, "codex-mini-latest", "ENVKEY", "default")]
+    assert console_main_calls == [(tmp_path, "codex-mini-latest", "ENVKEY", "default")]
 
 
-def test_cli_prompt_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_path):
+def test_cli_prompt_invokes_headless_main(monkeypatch, console_main_calls, tmp_path):
     # Monkeypatch headless_main to capture calls for headless (async) mode
     calls = []
 
@@ -68,10 +68,12 @@ def test_cli_prompt_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_path)
     assert calls == [
         (tmp_path, "codex-mini-latest", "ENVKEY", "async", "Do awesome things")
     ]
-    assert rich_tui_calls == []
+    assert console_main_calls == []
 
 
-def test_cli_prompt_stdin_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_path):
+def test_cli_prompt_stdin_invokes_headless_main(
+    monkeypatch, console_main_calls, tmp_path
+):
     # Monkeypatch headless_main to capture calls for headless (async) mode
     calls = []
 
@@ -89,4 +91,4 @@ def test_cli_prompt_stdin_invokes_headless_main(monkeypatch, rich_tui_calls, tmp
     result = runner.invoke(app, ["--prompt", "-"], input=prompt_str)
     assert result.exit_code == 0
     assert calls == [(tmp_path, "codex-mini-latest", "ENVKEY", "async", prompt_str)]
-    assert rich_tui_calls == []
+    assert console_main_calls == []

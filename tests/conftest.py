@@ -3,7 +3,7 @@ import oai_coding_agent.cli as cli_module
 
 
 @pytest.fixture
-def rich_tui_calls(monkeypatch):
+def console_main_calls(monkeypatch):
     """
     Monkeypatch oai_coding_agent.cli.console_main to capture calls instead of running the console REPL.
     Returns a list of (repo_path, model, api_key, mode) tuples.
