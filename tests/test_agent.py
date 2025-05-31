@@ -11,6 +11,9 @@ from oai_coding_agent.mcp_servers import (
     ALLOWED_CLI_FLAGS,
 )
 
+from typing import Any, cast
+from oai_coding_agent.agent import Agent
+
 
 def test_allowed_cli_vars():
     # Ensure allowed CLI commands and flags are defined as lists and contain expected values
@@ -36,7 +39,7 @@ def test_quiet_mcp_server_stdio_create_streams(monkeypatch):
     params = {"command": "test", "args": []}
     quiet = QuietMCPServerStdio(
         name="test",
-        params=params,
+        params=params,  # type: ignore[arg-type]
         client_session_timeout_seconds=10,
         cache_tools_list=False,
     )
@@ -113,34 +116,34 @@ def test_map_sdk_event_tool():
     event = DummyEvent(
         type="run_item_stream_event", name="tool_called", item=DummyItem(raw)
     )
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)
+    mapped = agent_module._AgentSession._map_sdk_event(None, event)  # type: ignore[arg-type]
     assert mapped == {"role": "tool", "content": "cmd(('a', 'b'))"}
 
 
 def test_map_sdk_event_reasoning_with_summary():
     raw = DummyRaw(summary=[DummyRaw(text="thinking")])
     event = DummyEvent(name="reasoning_item_created", item=DummyItem(raw))
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)
+    mapped = agent_module._AgentSession._map_sdk_event(None, event)  # type: ignore[arg-type]
     assert mapped == {"role": "thought", "content": "💭 thinking"}
 
 
 def test_map_sdk_event_reasoning_without_summary():
     raw = DummyRaw(summary=[])
     event = DummyEvent(name="reasoning_item_created", item=DummyItem(raw))
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)
+    mapped = agent_module._AgentSession._map_sdk_event(None, event)  # type: ignore[arg-type]
     assert mapped is None
 
 
 def test_map_sdk_event_message_output_created():
     raw = DummyRaw(content=[DummyRaw(text="output text")])
     event = DummyEvent(name="message_output_created", item=DummyItem(raw))
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)
+    mapped = agent_module._AgentSession._map_sdk_event(None, event)  # type: ignore[arg-type]
     assert mapped == {"role": "assistant", "content": "output text"}
 
 
 def test_map_sdk_event_other():
     event = DummyEvent(type="other", name="something_else", item=DummyItem(DummyRaw()))
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)
+    mapped = agent_module._AgentSession._map_sdk_event(None, event)  # type: ignore[arg-type]
     assert mapped is None
 
 
@@ -192,13 +195,13 @@ async def test_run_step_streams_and_returns(monkeypatch):
         max_turns=1,
         mode="async",
     )
-    session._agent = object()
+    session._agent = cast(Agent[Any], object())
 
     ui_stream, returned = await session.run_step(
         "input text", previous_response_id="prev"
     )
     # Should return the underlying result as is
-    assert returned is fake_result
+    assert returned is fake_result  # type: ignore
     # Collect messages from ui_stream
     collected = []
     async for msg in ui_stream:
