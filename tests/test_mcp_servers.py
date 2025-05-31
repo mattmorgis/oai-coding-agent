@@ -1,6 +1,9 @@
 import os
 from types import SimpleNamespace
 from pathlib import Path
+from typing import cast
+from contextlib import AsyncExitStack
+from oai_coding_agent.mcp_servers import MCPServerStdioParams
 
 import pytest
 
@@ -36,7 +39,7 @@ def test_create_streams_uses_stdio_client_and_devnull(monkeypatch):
 
     monkeypatch.setattr(mcp_servers, "stdio_client", fake_stdio_client)
 
-    params = {"command": "dummy"}
+    params = cast(MCPServerStdioParams, {"command": "dummy"})
     ctx = mcp_servers.QuietMCPServerStdio(
         name="test",
         params=params,
@@ -85,7 +88,7 @@ async def test_start_mcp_servers_all_success(monkeypatch):
     exit_stack = DummyExitStack()
     repo = Path("/some/repo")
 
-    servers = await mcp_servers.start_mcp_servers(repo, exit_stack)
+    servers = await mcp_servers.start_mcp_servers(repo, cast(AsyncExitStack, exit_stack))
     # Should start filesystem, CLI, git, and GitHub servers
     names = [s.name for s in servers]
     assert names == [
@@ -129,7 +132,7 @@ async def test_start_mcp_servers_skip_cli_on_error(monkeypatch):
     exit_stack = DummyExitStack()
     repo = Path("/repo")
 
-    servers = await mcp_servers.start_mcp_servers(repo, exit_stack)
+    servers = await mcp_servers.start_mcp_servers(repo, cast(AsyncExitStack, exit_stack))
     names = [s.name for s in servers]
     # Should skip CLI and include filesystem, git, and GitHub servers
     assert names == ["file-system-mcp", "mcp-server-git", "github-mcp-server"]
@@ -167,7 +170,7 @@ async def test_start_mcp_servers_skip_git_on_error(monkeypatch):
     exit_stack = DummyExitStack()
     repo = Path("/repo")
 
-    servers = await mcp_servers.start_mcp_servers(repo, exit_stack)
+    servers = await mcp_servers.start_mcp_servers(repo, cast(AsyncExitStack, exit_stack))
     names = [s.name for s in servers]
     # Should skip Git and include filesystem, CLI, and GitHub servers
     assert names == ["file-system-mcp", "cli-mcp-server", "github-mcp-server"]
@@ -205,7 +208,7 @@ async def test_start_mcp_servers_skip_cli_and_git_on_error(monkeypatch):
     exit_stack = DummyExitStack()
     repo = Path("/repo")
 
-    servers = await mcp_servers.start_mcp_servers(repo, exit_stack)
+    servers = await mcp_servers.start_mcp_servers(repo, cast(AsyncExitStack, exit_stack))
     names = [s.name for s in servers]
     # Should skip CLI and Git and include filesystem and GitHub servers only
     assert names == ["file-system-mcp", "github-mcp-server"]
