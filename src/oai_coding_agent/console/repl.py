@@ -1,6 +1,6 @@
 import asyncio
 from pathlib import Path
-from typing import cast
+
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -90,8 +90,8 @@ async def main(
 
                 ui_stream, result = await session_agent.run_step(user_input, prev_id)
                 async for msg in ui_stream:
-                    state.messages.append(cast(UIMessage, msg))
-                    render_message(cast(UIMessage, msg))
+                    state.messages.append(msg)
+                    render_message(msg)
 
                 prev_id = result.last_response_id
 
