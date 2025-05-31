@@ -45,7 +45,7 @@ def test_config_from_cli_sets_attributes():
 
 def test_dotenv_load_sets_env(monkeypatch):
     # Ensure that config module uses dotenv_values to set OPENAI_API_KEY
-    import sys, types
+    import types
 
     # Prepare fake dotenv module
     fake_dotenv = types.ModuleType("dotenv")
@@ -56,7 +56,7 @@ def test_dotenv_load_sets_env(monkeypatch):
     # Remove and reload config_module to apply fake dotenv
     monkeypatch.setenv("OPENAI_API_KEY", "", prepend=False)
     sys.modules.pop("oai_coding_agent.config", None)
-    new_config = importlib.import_module("oai_coding_agent.config")
+    importlib.import_module("oai_coding_agent.config")
 
     try:
         assert os.environ.get("OPENAI_API_KEY") == "FROM_ENV"
@@ -71,7 +71,7 @@ def test_dotenv_load_sets_env(monkeypatch):
 
 def test_dotenv_load_sets_github_token(monkeypatch):
     # Ensure that config module uses dotenv_values to set GITHUB_PERSONAL_ACCESS_TOKEN
-    import sys, types
+    import types
 
     # Prepare fake dotenv module
     fake_dotenv = types.ModuleType("dotenv")
@@ -82,7 +82,7 @@ def test_dotenv_load_sets_github_token(monkeypatch):
     # Remove and reload config_module to apply fake dotenv
     monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN", raising=False)
     sys.modules.pop("oai_coding_agent.config", None)
-    new_config = importlib.import_module("oai_coding_agent.config")
+    importlib.import_module("oai_coding_agent.config")
 
     try:
         assert os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") == "GH_ENV"
@@ -102,7 +102,6 @@ def reload_config_module():
     Reload the config module after each test to restore original state.
     """
     yield
-    import sys
 
     # Ensure original config_module is registered in sys.modules
     if "oai_coding_agent.config" not in sys.modules:

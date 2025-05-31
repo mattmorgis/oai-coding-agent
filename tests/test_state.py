@@ -1,9 +1,7 @@
-import pytest
-
 from oai_coding_agent.console.state import UIState
 
 
-def test_ui_state_initializes_empty():
+def test_ui_state_initializes_empty() -> None:
     state = UIState()
     assert isinstance(state.messages, list)
     assert state.messages == []

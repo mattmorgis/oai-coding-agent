@@ -1,25 +1,25 @@
-import subprocess
+import logging
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
 import typer
-import logging
 
 from oai_coding_agent.preflight import (
-    is_inside_git_repo,
-    get_tool_version,
-    check_node,
-    check_docker,
     run_preflight_checks,
 )
 
 
-def test_run_preflight_success(monkeypatch, caplog):
+def test_run_preflight_success(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
     # Simulate git, node, and docker all present and returning versions
     monkeypatch.setattr(shutil, "which", lambda tool: f"/usr/bin/{tool}")
 
-    def fake_run(cmd, cwd=None, capture_output=None, text=None, check=None):
+    def fake_run(
+        cmd, cwd=None, capture_output=None, text=None, check=None
+    ) -> subprocess.CompletedProcess[str]:
         if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="true\n")
         if cmd[:2] == ["node", "--version"]:
@@ -49,11 +49,15 @@ def test_run_preflight_success(monkeypatch, caplog):
     )
 
 
-def test_run_preflight_git_failure(monkeypatch, capsys):
+def test_run_preflight_git_failure(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     # Simulate git not inside worktree, node and docker ok
     monkeypatch.setattr(shutil, "which", lambda tool: f"/usr/bin/{tool}")
 
-    def fake_run(cmd, cwd=None, capture_output=None, text=None, check=None):
+    def fake_run(
+        cmd, cwd=None, capture_output=None, text=None, check=None
+    ) -> subprocess.CompletedProcess[str]:
         if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
             return subprocess.CompletedProcess(cmd, 1, stdout="false\n")
         if cmd[:2] == ["node", "--version"]:
@@ -74,13 +78,17 @@ def test_run_preflight_git_failure(monkeypatch, capsys):
     assert excinfo.value.exit_code == 1
 
 
-def test_run_preflight_node_missing(monkeypatch, capsys):
+def test_run_preflight_node_missing(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     # Simulate node missing, git and docker ok
     monkeypatch.setattr(
         shutil, "which", lambda tool: None if tool == "node" else f"/usr/bin/{tool}"
     )
 
-    def fake_run(cmd, cwd=None, capture_output=None, text=None, check=None):
+    def fake_run(
+        cmd, cwd=None, capture_output=None, text=None, check=None
+    ) -> subprocess.CompletedProcess[str]:
         if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="true\n")
         if cmd[:2] == ["docker", "info"]:
@@ -99,13 +107,17 @@ def test_run_preflight_node_missing(monkeypatch, capsys):
     assert excinfo.value.exit_code == 1
 
 
-def test_run_preflight_docker_missing(monkeypatch, capsys):
+def test_run_preflight_docker_missing(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
     # Simulate docker missing, git and node ok
     monkeypatch.setattr(
         shutil, "which", lambda tool: None if tool == "docker" else f"/usr/bin/{tool}"
     )
 
-    def fake_run(cmd, cwd=None, capture_output=None, text=None, check=None):
+    def fake_run(
+        cmd, cwd=None, capture_output=None, text=None, check=None
+    ) -> subprocess.CompletedProcess[str]:
         if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="true\n")
         if cmd[:2] == ["node", "--version"]:

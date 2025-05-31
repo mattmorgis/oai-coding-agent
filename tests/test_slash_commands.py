@@ -1,16 +1,16 @@
 import pytest
 from rich.console import Console
 
-from oai_coding_agent.console.state import UIState, UIMessage
-from oai_coding_agent.console.slash_commands import (
-    register_slash_commands,
-    handle_slash_command,
-)
 import oai_coding_agent.console.rendering as rendering
+from oai_coding_agent.console.slash_commands import (
+    handle_slash_command,
+    register_slash_commands,
+)
+from oai_coding_agent.console.state import UIMessage, UIState
 
 
 @pytest.fixture(autouse=True)
-def record_console(monkeypatch):
+def record_console(monkeypatch: pytest.MonkeyPatch) -> Console:
     """Replace rendering.console and clear_terminal to no-ops and capture output."""
     recorder = Console(record=True, width=80)
     monkeypatch.setattr(rendering, "console", recorder)
@@ -22,14 +22,14 @@ def record_console(monkeypatch):
     return recorder
 
 
-def test_register_slash_commands_populates_commands():
+def test_register_slash_commands_populates_commands() -> None:
     state = UIState()
     register_slash_commands(state)
     expected = {"help", "clear", "exit", "quit", "version"}
     assert expected.issubset(set(state.slash_commands.keys()))
 
 
-def test_handle_help_command_appends_help_message(record_console):
+def test_handle_help_command_appends_help_message() -> None:
     state = UIState()
     register_slash_commands(state)
     cont = handle_slash_command(state, "/help")
@@ -40,7 +40,7 @@ def test_handle_help_command_appends_help_message(record_console):
     assert "/help - Show help information for available commands." in msg["content"]
 
 
-def test_handle_clear_command_clears_messages(record_console):
+def test_handle_clear_command_clears_messages() -> None:
     state = UIState()
     msg: UIMessage = {"role": "user", "content": "hi"}
     state.messages.append(msg)
@@ -51,14 +51,14 @@ def test_handle_clear_command_clears_messages(record_console):
     assert state.messages[0]["content"] == "Chat history has been cleared."
 
 
-def test_handle_exit_command_returns_false(record_console):
+def test_handle_exit_command_returns_false() -> None:
     state = UIState()
     register_slash_commands(state)
     cont = handle_slash_command(state, "/exit")
     assert cont is False
 
 
-def test_handle_unknown_command_appends_unknown(record_console):
+def test_handle_unknown_command_appends_unknown() -> None:
     state = UIState()
     register_slash_commands(state)
     cont = handle_slash_command(state, "/nonexistent arg")
