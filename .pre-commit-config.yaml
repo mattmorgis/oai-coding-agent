@@ -12,6 +12,6 @@ repos:
       - id: mypy
         name: mypy
         entry: uv run mypy
-        args: [--no-incremental, src]
+        args: [--no-incremental, .]
         pass_filenames: false
         language: system
