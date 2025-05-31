@@ -1,5 +1,8 @@
 import pytest
 from types import SimpleNamespace
+from typing import List, cast
+
+from agents.mcp import MCPServer
 
 from agents.mcp.util import MCPUtil
 from oai_coding_agent.mcp_tool_selector import get_filtered_function_tools
@@ -31,7 +34,7 @@ async def test_default_mode_no_filter(patch_get_function_tools):
         return [DummyTool("edit_file"), DummyTool("read_file")]
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
-    servers = [SimpleNamespace(name="file-system-mcp")]
+    servers = cast(List[MCPServer], [SimpleNamespace(name="file-system-mcp")])
     tools = await get_filtered_function_tools(servers, mode="default")
     assert {t.name for t in tools} == {"edit_file", "read_file"}
 
@@ -43,7 +46,7 @@ async def test_plan_mode_filesystem_filter(patch_get_function_tools):
         return [DummyTool("edit_file"), DummyTool("read_file")]
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
-    servers = [SimpleNamespace(name="file-system-mcp")]
+    servers = cast(List[MCPServer], [SimpleNamespace(name="file-system-mcp")])
     tools = await get_filtered_function_tools(servers, mode="plan")
     assert {t.name for t in tools} == {"read_file"}
 
@@ -59,7 +62,7 @@ async def test_plan_mode_git_filter(patch_get_function_tools):
         ]
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
-    servers = [SimpleNamespace(name="mcp-server-git")]
+    servers = cast(List[MCPServer], [SimpleNamespace(name="mcp-server-git")])
     tools = await get_filtered_function_tools(servers, mode="plan")
     assert {t.name for t in tools} == {"clone_repo", "list_branches"}
 
@@ -92,7 +95,7 @@ async def test_github_server_whitelist_default_mode(patch_get_function_tools):
         return [DummyTool(name) for name in names]
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
-    servers = [SimpleNamespace(name="github-mcp-server")]
+    servers = cast(List[MCPServer], [SimpleNamespace(name="github-mcp-server")])
 
     tools = await get_filtered_function_tools(servers, mode="default")
     assert {t.name for t in tools} == full_allowed
@@ -129,7 +132,7 @@ async def test_github_server_plan_mode_readonly_filter(patch_get_function_tools)
         return [DummyTool(name) for name in names]
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake_plan)
-    servers = [SimpleNamespace(name="github-mcp-server")]
+    servers = cast(List[MCPServer], [SimpleNamespace(name="github-mcp-server")])
 
     tools = await get_filtered_function_tools(servers, mode="plan")
     assert {t.name for t in tools} == readonly_allowed
