@@ -49,7 +49,7 @@ def test_dotenv_load_sets_env(monkeypatch):
 
     # Prepare fake dotenv module
     fake_dotenv = types.ModuleType("dotenv")
-    fake_dotenv.dotenv_values = lambda: {"OPENAI_API_KEY": "FROM_ENV"}
+    fake_dotenv.dotenv_values = lambda: {"OPENAI_API_KEY": "FROM_ENV"}  # type: ignore[attr-defined]
     # Patch sys.modules to inject fake dotenv
     monkeypatch.setitem(sys.modules, "dotenv", fake_dotenv)
 
@@ -75,7 +75,7 @@ def test_dotenv_load_sets_github_token(monkeypatch):
 
     # Prepare fake dotenv module
     fake_dotenv = types.ModuleType("dotenv")
-    fake_dotenv.dotenv_values = lambda: {"GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"}
+    fake_dotenv.dotenv_values = lambda: {"GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"}  # type: ignore[attr-defined]
     # Patch sys.modules to inject fake dotenv
     monkeypatch.setitem(sys.modules, "dotenv", fake_dotenv)
 
