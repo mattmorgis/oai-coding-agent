@@ -2,6 +2,7 @@ import pytest
 from rich.console import Console
 
 import oai_coding_agent.console.rendering as rendering
+from oai_coding_agent.console.state import UIMessage
 
 
 @pytest.fixture(autouse=True)
@@ -20,14 +21,14 @@ def test_clear_terminal_callable():
 
 
 def test_render_message_user(record_console):
-    msg = {"role": "user", "content": "hello user"}
+    msg: UIMessage = {"role": "user", "content": "hello user"}
     rendering.render_message(msg)
     out = record_console.export_text()
     assert "You: hello user" in out
 
 
 def test_render_message_assistant(record_console):
-    msg = {"role": "assistant", "content": "**bold** and `code`"}
+    msg: UIMessage = {"role": "assistant", "content": "**bold** and `code`"}
     rendering.render_message(msg)
     out = record_console.export_text()
     assert "oai:" in out
@@ -36,7 +37,7 @@ def test_render_message_assistant(record_console):
 
 
 def test_render_message_system(record_console):
-    msg = {"role": "system", "content": "system info"}
+    msg: UIMessage = {"role": "system", "content": "system info"}
     rendering.render_message(msg)
     out = record_console.export_text()
     assert "System:" in out
@@ -44,14 +45,14 @@ def test_render_message_system(record_console):
 
 
 def test_render_message_thought(record_console):
-    msg = {"role": "thought", "content": "thinking..."}
+    msg: UIMessage = {"role": "thought", "content": "thinking..."}
     rendering.render_message(msg)
     out = record_console.export_text()
     assert "thinking..." in out
 
 
 def test_render_message_tool(record_console):
-    msg = {"role": "tool", "content": "tool output"}
+    msg: UIMessage = {"role": "tool", "content": "tool output"}
     rendering.render_message(msg)
     out = record_console.export_text()
     assert "Tool: tool output" in out
