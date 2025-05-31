@@ -10,11 +10,11 @@ from oai_coding_agent.mcp_servers import (
     ALLOWED_CLI_FLAGS,
 )
 
-from typing import Any, cast
+from typing import Any, cast, AsyncGenerator
 from oai_coding_agent.agent import Agent
 
 
-def test_allowed_cli_vars():
+def test_allowed_cli_vars() -> None:
     # Ensure allowed CLI commands and flags are defined as lists and contain expected values
     assert isinstance(ALLOWED_CLI_COMMANDS, list)
     assert "grep" in ALLOWED_CLI_COMMANDS
@@ -22,11 +22,11 @@ def test_allowed_cli_vars():
     assert "all" in ALLOWED_CLI_FLAGS
 
 
-def test_quiet_mcp_server_stdio_create_streams(monkeypatch):
+def test_quiet_mcp_server_stdio_create_streams(monkeypatch: pytest.MonkeyPatch) -> None:
     # Monkeypatch stdio_client to capture params and errlog
     captured = {}
 
-    def fake_stdio_client(params_arg, errlog=None):
+    def fake_stdio_client(params_arg: Any, errlog: Any | None = None) -> str:
         captured["params"] = params_arg
         captured["errlog"] = errlog
         return "fake_streams"
@@ -38,7 +38,7 @@ def test_quiet_mcp_server_stdio_create_streams(monkeypatch):
     params = {"command": "test", "args": []}
     quiet = QuietMCPServerStdio(
         name="test",
-        params=params,  # type: ignore[arg-type]
+        params=params,
         client_session_timeout_seconds=10,
         cache_tools_list=False,
     )
@@ -57,7 +57,7 @@ def test_quiet_mcp_server_stdio_create_streams(monkeypatch):
     errlog.close()
 
 
-def test_build_instructions_with_known_mode():
+def test_build_instructions_with_known_mode() -> None:
     session = _AgentSession(
         repo_path=Path("repo"),
         model="model-x",
@@ -75,7 +75,7 @@ def test_build_instructions_with_known_mode():
     assert "## Autonomous Decision Making" in instr
 
 
-def test_build_instructions_with_unknown_mode_fallback():
+def test_build_instructions_with_unknown_mode_fallback() -> None:
     session = _AgentSession(
         repo_path=Path("repo2"),
         model="model-y",
@@ -93,61 +93,61 @@ def test_build_instructions_with_unknown_mode_fallback():
 
 
 class DummyRaw:
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         for k, v in kwargs.items():
             setattr(self, k, v)
 
 
 class DummyItem:
-    def __init__(self, raw_item):
+    def __init__(self, raw_item: Any) -> None:
         self.raw_item = raw_item
 
 
 class DummyEvent:
-    def __init__(self, type=None, name=None, item=None):
+    def __init__(self, type: Any = None, name: Any = None, item: Any = None) -> None:
         self.type = type
         self.name = name
         self.item = item
 
 
-def test_map_sdk_event_tool():
+def test_map_sdk_event_tool() -> None:
     raw = DummyRaw(name="cmd", arguments=("a", "b"))
     event = DummyEvent(
         type="run_item_stream_event", name="tool_called", item=DummyItem(raw)
     )
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)  # type: ignore[arg-type]
+    mapped = agent_module._AgentSession._map_sdk_event(None, event)
     assert mapped == {"role": "tool", "content": "cmd(('a', 'b'))"}
 
 
-def test_map_sdk_event_reasoning_with_summary():
+def test_map_sdk_event_reasoning_with_summary() -> None:
     raw = DummyRaw(summary=[DummyRaw(text="thinking")])
     event = DummyEvent(name="reasoning_item_created", item=DummyItem(raw))
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)  # type: ignore[arg-type]
+    mapped = agent_module._AgentSession._map_sdk_event(None, event)
     assert mapped == {"role": "thought", "content": "💭 thinking"}
 
 
-def test_map_sdk_event_reasoning_without_summary():
+def test_map_sdk_event_reasoning_without_summary() -> None:
     raw = DummyRaw(summary=[])
     event = DummyEvent(name="reasoning_item_created", item=DummyItem(raw))
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)  # type: ignore[arg-type]
+    mapped = agent_module._AgentSession._map_sdk_event(None, event)
     assert mapped is None
 
 
-def test_map_sdk_event_message_output_created():
+def test_map_sdk_event_message_output_created() -> None:
     raw = DummyRaw(content=[DummyRaw(text="output text")])
     event = DummyEvent(name="message_output_created", item=DummyItem(raw))
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)  # type: ignore[arg-type]
+    mapped = agent_module._AgentSession._map_sdk_event(None, event)
     assert mapped == {"role": "assistant", "content": "output text"}
 
 
-def test_map_sdk_event_other():
+def test_map_sdk_event_other() -> None:
     event = DummyEvent(type="other", name="something_else", item=DummyItem(DummyRaw()))
-    mapped = agent_module._AgentSession._map_sdk_event(None, event)  # type: ignore[arg-type]
+    mapped = agent_module._AgentSession._map_sdk_event(None, event)
     assert mapped is None
 
 
 @pytest.mark.asyncio
-async def test_run_step_streams_and_returns(monkeypatch):
+async def test_run_step_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     # Prepare dummy events in stream order
     events = [
         DummyEvent(
@@ -167,11 +167,11 @@ async def test_run_step_streams_and_returns(monkeypatch):
     ]
 
     class FakeResult:
-        def __init__(self, evts):
+        def __init__(self, evts: list[Any]) -> None:
             self._events = evts
 
-        def stream_events(self):
-            async def gen():
+        def stream_events(self) -> AsyncGenerator[Any, None]:
+            async def gen() -> AsyncGenerator[Any, None]:
                 for e in self._events:
                     yield e
 
@@ -200,7 +200,7 @@ async def test_run_step_streams_and_returns(monkeypatch):
         "input text", previous_response_id="prev"
     )
     # Should return the underlying result as is
-    assert returned is fake_result  # type: ignore
+    assert returned is fake_result
     # Collect messages from ui_stream
     collected = []
     async for msg in ui_stream:
