@@ -1,32 +1,35 @@
 import pytest
 from pathlib import Path
 from rich.console import Console
+from typing import Any, AsyncGenerator, Self
 
 import oai_coding_agent.console.repl as repl_module
 import oai_coding_agent.console.rendering as rendering
 
 
 class DummyPromptSession:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         pass
 
-    def prompt(self, prompt_str):
+    def prompt(self, prompt_str: str) -> str:
         # Immediately exit on slash command
         return "/exit"
 
 
 class DummyAgentSession:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         pass
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         return self
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
         pass
 
-    async def run_step(self, user_input, prev_id):
-        async def empty_stream():
+    async def run_step(
+        self, user_input: str, prev_id: Any
+    ) -> tuple[AsyncGenerator[Any, None], Any]:
+        async def empty_stream() -> AsyncGenerator[Any, None]:
             if False:
                 yield
 
@@ -37,7 +40,7 @@ class DummyAgentSession:
 
 
 @pytest.fixture(autouse=True)
-def setup_repl(monkeypatch, tmp_path):
+def setup_repl(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Console:
     # Redirect console output to recorder and disable clear
     recorder = Console(record=True, width=80)
     monkeypatch.setattr(rendering, "console", recorder)
@@ -56,7 +59,9 @@ def setup_repl(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_repl_main_exits_on_exit_and_prints_header(setup_repl, tmp_path):
+async def test_repl_main_exits_on_exit_and_prints_header(
+    setup_repl: Console, tmp_path: Path
+) -> None:
     recorder = setup_repl
     await repl_module.main(tmp_path, "model-x", "APIKEY", "GHTOKEN")
 

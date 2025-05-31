@@ -1,10 +1,13 @@
 import logging
 from pathlib import Path
+import pytest
 
 from oai_coding_agent.logger import setup_logging
 
 
-def test_setup_logging_creates_log_dir_and_file(tmp_path, monkeypatch):
+def test_setup_logging_creates_log_dir_and_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Monkeypatch home directory
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     # Capture original handlers to restore later
