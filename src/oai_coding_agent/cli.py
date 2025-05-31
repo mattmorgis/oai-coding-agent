@@ -54,7 +54,7 @@ def main(
         typer.Option(
             "--prompt",
             "-p",
-            help="Prompt to run in non-interactive mode",
+            help="Prompt text for non-interactive async mode; use '-' to read from stdin",
         ),
     ] = None,
 ) -> None:
@@ -74,14 +74,13 @@ def main(
     if prompt:
         # Force async mode for one-off prompt runs
         mode_value = ModeChoice.async_.value
-        # If prompt refers to a file, read its content
-        prompt_text = prompt
-        try:
-            prompt_path = Path(prompt)
-            if prompt_path.is_file():
-                prompt_text = prompt_path.read_text()
-        except Exception:
-            pass
+        # Read prompt text: literal or stdin if '-' sentinel
+        import sys
+
+        if prompt == "-":
+            prompt_text = sys.stdin.read()
+        else:
+            prompt_text = prompt
         logger.info(f"Running prompt in headless (async): {prompt}")
         try:
             asyncio.run(

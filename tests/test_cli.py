@@ -1,6 +1,3 @@
-import os
-from pathlib import Path
-
 import pytest
 from typer.testing import CliRunner
 
@@ -74,11 +71,8 @@ def test_cli_prompt_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_path)
     assert rich_tui_calls == []
 
 
-def test_cli_prompt_file_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_path):
-    # Create a markdown file for the prompt
-    prompt_file = tmp_path / "task.md"
-    prompt_file.write_text("Please summarize this project.")
-    # Monkeypatch headless_main to capture calls
+def test_cli_prompt_stdin_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_path):
+    # Monkeypatch headless_main to capture calls for headless (async) mode
     calls = []
 
     async def fake_batch_main(repo_path, model, api_key, gh_token, mode, prompt):
@@ -91,15 +85,8 @@ def test_cli_prompt_file_invokes_headless_main(monkeypatch, rich_tui_calls, tmp_
     monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "ENVGH")
 
     runner = CliRunner()
-    result = runner.invoke(app, ["--prompt", str(prompt_file)])
+    prompt_str = "Huge prompt content that exceeds usual limits"
+    result = runner.invoke(app, ["--prompt", "-"], input=prompt_str)
     assert result.exit_code == 0
-    assert calls == [
-        (
-            tmp_path,
-            "codex-mini-latest",
-            "ENVKEY",
-            "async",
-            "Please summarize this project.",
-        )
-    ]
+    assert calls == [(tmp_path, "codex-mini-latest", "ENVKEY", "async", prompt_str)]
     assert rich_tui_calls == []

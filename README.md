@@ -55,7 +55,7 @@ Common options:
 - `--model, -m <model>` — OpenAI model to use (default: `codex-mini-latest`)
 - `--mode <mode>` — Agent mode: `default`, `async`, or `plan` (default: `default`)
 - `--repo-path <path>` — Path to the repository (default: current directory)
-- `--prompt, -p <text|file>` — Run a one-off prompt in headless async mode
+- `--prompt, -p <text|->` — Run a one-off prompt in headless async mode (use `-` to read from stdin)
 
 See [docs/cli.md](docs/cli.md) for full CLI reference and a flow diagram.
 
@@ -64,7 +64,11 @@ See [docs/cli.md](docs/cli.md) for full CLI reference and a flow diagram.
 Run a single prompt non-interactively:
 
 ```bash
+# Literal prompt
 uv run oai --prompt "Explain this function in simple terms."
+
+# From stdin (for huge inputs / GitHub Actions)
+echo "${{ github.event.issue.body }}" | uv run oai --prompt -
 ```
 
 ## Testing
