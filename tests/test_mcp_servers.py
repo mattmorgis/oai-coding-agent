@@ -16,6 +16,12 @@ class DummyExitStack:
     def push_async_callback(self, func, *args):
         self.callbacks.append((func, args))
 
+    async def enter_async_context(self, ctx):
+        """Enter the async context and register exit callback."""
+        result = await ctx.__aenter__()
+        self.push_async_callback(ctx.__aexit__, None, None, None)
+        return result
+
 
 def test_create_streams_uses_stdio_client_and_devnull(monkeypatch):
     """

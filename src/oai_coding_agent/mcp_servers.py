@@ -6,12 +6,13 @@ import logging
 import os
 from contextlib import AsyncExitStack
 from pathlib import Path
-from typing import List
+from typing import Any, List
 
 from agents.mcp import MCPServer, MCPServerStdio
 from mcp.client.stdio import stdio_client
 
 logger = logging.getLogger(__name__)
+
 
 # CLI MCP server restrictions
 ALLOWED_CLI_COMMANDS = [
@@ -46,7 +47,7 @@ ALLOWED_CLI_FLAGS = ["all"]
 class QuietMCPServerStdio(MCPServerStdio):
     """Variant of MCPServerStdio that silences child-process stderr."""
 
-    def create_streams(self):
+    def create_streams(self) -> Any:
         return stdio_client(self.params, errlog=open(os.devnull, "w"))
 
 
@@ -74,8 +75,8 @@ async def start_mcp_servers(
         client_session_timeout_seconds=30,
         cache_tools_list=True,
     )
-    fs = await fs_ctx.__aenter__()
-    exit_stack.push_async_callback(fs_ctx.__aexit__, None, None, None)
+    fs = await exit_stack.enter_async_context(fs_ctx)
+
     servers.append(fs)
     logger.info("Filesystem MCP server started successfully")
 
@@ -96,8 +97,8 @@ async def start_mcp_servers(
             client_session_timeout_seconds=120,
             cache_tools_list=True,
         )
-        cli = await cli_ctx.__aenter__()
-        exit_stack.push_async_callback(cli_ctx.__aexit__, None, None, None)
+        cli = await exit_stack.enter_async_context(cli_ctx)
+
         servers.append(cli)
         logger.info("CLI MCP server started successfully")
     except OSError:
@@ -113,8 +114,8 @@ async def start_mcp_servers(
             client_session_timeout_seconds=120,
             cache_tools_list=True,
         )
-        git = await git_ctx.__aenter__()
-        exit_stack.push_async_callback(git_ctx.__aexit__, None, None, None)
+        git = await exit_stack.enter_async_context(git_ctx)
+
         servers.append(git)
         logger.info("Git MCP server started successfully")
     except OSError:
@@ -143,8 +144,8 @@ async def start_mcp_servers(
             client_session_timeout_seconds=120,
             cache_tools_list=True,
         )
-        gh = await gh_ctx.__aenter__()
-        exit_stack.push_async_callback(gh_ctx.__aexit__, None, None, None)
+        gh = await exit_stack.enter_async_context(gh_ctx)
+
         servers.append(gh)
         logger.info("GitHub MCP server started successfully")
     except OSError:

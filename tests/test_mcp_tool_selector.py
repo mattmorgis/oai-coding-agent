@@ -104,6 +104,7 @@ async def test_github_server_plan_mode_readonly_filter(patch_get_function_tools)
     readonly_allowed = {
         "get_issue",
         "get_issue_comments",
+        "create_issue",
         "list_issues",
         "search_issues",
         "get_pull_request",

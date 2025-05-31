@@ -8,7 +8,7 @@ import subprocess
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, AsyncIterator, Optional
 
 from agents import (
     Agent,
@@ -23,6 +23,7 @@ from openai.types.shared.reasoning import Reasoning
 
 from .mcp_servers import start_mcp_servers
 from .mcp_tool_selector import get_filtered_function_tools
+from .console.state import UIMessage
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,7 @@ class _AgentSession:
             branch_name=branch_name,
         )
 
-    def _map_sdk_event(self, event: Any) -> Optional[Dict[str, Any]]:
+    def _map_sdk_event(self, event: Any) -> Optional[UIMessage]:
         evt_type = getattr(event, "type", None)
         evt_name = getattr(event, "name", None)
         logger.debug(
@@ -167,7 +168,7 @@ class _AgentSession:
         self,
         user_input: str,
         previous_response_id: Optional[str] = None,
-    ) -> tuple[AsyncIterator[Dict[str, Any]], RunResultStreaming]:
+    ) -> tuple[AsyncIterator[UIMessage], RunResultStreaming]:
         """
         Send one user message to the agent and return an async iterator of UI messages
         plus the underlying RunResultStreaming.
@@ -180,7 +181,7 @@ class _AgentSession:
         )
         sdk_events = result.stream_events()
 
-        async def _ui_stream() -> AsyncIterator[Dict[str, Any]]:
+        async def _ui_stream() -> AsyncIterator[UIMessage]:
             async for evt in sdk_events:
                 msg = self._map_sdk_event(evt)
                 if msg:

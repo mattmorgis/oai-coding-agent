@@ -5,6 +5,7 @@
     "ms-python.debugpy",
     "ms-python.vscode-pylance",
     "charliermarsh.ruff",
+    "ms-python.mypy-type-checker",
     "ms-azuretools.vscode-docker",
     "tamasfe.even-better-toml",
     "mechatroner.rainbow-csv",
@@ -12,8 +13,6 @@
     "redhat.vscode-xml",
     "redhat.vscode-yaml",
     "github.vscode-github-actions",
-    "mhutchie.git-graph",
-    "eamodio.gitlens",
     "bierner.markdown-mermaid"
   ]
 }

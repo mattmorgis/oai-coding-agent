@@ -54,7 +54,7 @@ def main(
         typer.Option(
             "--prompt",
             "-p",
-            help="Prompt to run in non-interactive mode",
+            help="Prompt text for non-interactive async mode; use '-' to read from stdin",
         ),
     ] = None,
 ) -> None:
@@ -74,6 +74,13 @@ def main(
     if prompt:
         # Force async mode for one-off prompt runs
         mode_value = ModeChoice.async_.value
+        # Read prompt text: literal or stdin if '-' sentinel
+        import sys
+
+        if prompt == "-":
+            prompt_text = sys.stdin.read()
+        else:
+            prompt_text = prompt
         logger.info(f"Running prompt in headless (async): {prompt}")
         try:
             asyncio.run(
@@ -83,7 +90,7 @@ def main(
                     cfg.openai_api_key,
                     cfg.github_personal_access_token,
                     mode_value,
-                    prompt,
+                    prompt_text,
                 )
             )
         except KeyboardInterrupt:
