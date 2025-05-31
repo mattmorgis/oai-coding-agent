@@ -74,6 +74,14 @@ def main(
     if prompt:
         # Force async mode for one-off prompt runs
         mode_value = ModeChoice.async_.value
+        # If prompt refers to a file, read its content
+        prompt_text = prompt
+        try:
+            prompt_path = Path(prompt)
+            if prompt_path.is_file():
+                prompt_text = prompt_path.read_text()
+        except Exception:
+            pass
         logger.info(f"Running prompt in headless (async): {prompt}")
         try:
             asyncio.run(
@@ -83,7 +91,7 @@ def main(
                     cfg.openai_api_key,
                     cfg.github_personal_access_token,
                     mode_value,
-                    prompt,
+                    prompt_text,
                 )
             )
         except KeyboardInterrupt:
