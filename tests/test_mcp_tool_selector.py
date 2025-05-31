@@ -1,23 +1,25 @@
 import pytest
 from types import SimpleNamespace
+from typing import Any, List, cast
 
+from agents.mcp import MCPServer
 from agents.mcp.util import MCPUtil
 from oai_coding_agent.mcp_tool_selector import get_filtered_function_tools
 
 
 class DummyTool:
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         self.name = name
 
 
 @pytest.fixture(autouse=True)
-def patch_get_function_tools(monkeypatch):
+def patch_get_function_tools(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
     """
     By default, stub out MCPUtil.get_function_tools to avoid touching real servers.
     Individual tests will override this.
     """
 
-    async def _fake(server, convert_strict):
+    async def _fake(server: MCPServer, convert_strict: bool) -> List[Any]:
         return []
 
     monkeypatch.setattr(MCPUtil, "get_function_tools", _fake)
@@ -25,33 +27,39 @@ def patch_get_function_tools(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_default_mode_no_filter(patch_get_function_tools):
+async def test_default_mode_no_filter(
+    patch_get_function_tools: pytest.MonkeyPatch,
+) -> None:
     # Both edit_file and read_file should pass through in default mode
-    async def fake(server, convert_strict):
+    async def fake(server: MCPServer, convert_strict: bool) -> List[DummyTool]:
         return [DummyTool("edit_file"), DummyTool("read_file")]
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
-    servers = [SimpleNamespace(name="file-system-mcp")]
+    servers = cast(List[MCPServer], [SimpleNamespace(name="file-system-mcp")])
     tools = await get_filtered_function_tools(servers, mode="default")
     assert {t.name for t in tools} == {"edit_file", "read_file"}
 
 
 @pytest.mark.asyncio
-async def test_plan_mode_filesystem_filter(patch_get_function_tools):
+async def test_plan_mode_filesystem_filter(
+    patch_get_function_tools: pytest.MonkeyPatch,
+) -> None:
     # edit_file should be removed in plan mode for file-system-mcp
-    async def fake(server, convert_strict):
+    async def fake(server: MCPServer, convert_strict: bool) -> List[DummyTool]:
         return [DummyTool("edit_file"), DummyTool("read_file")]
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
-    servers = [SimpleNamespace(name="file-system-mcp")]
+    servers = cast(List[MCPServer], [SimpleNamespace(name="file-system-mcp")])
     tools = await get_filtered_function_tools(servers, mode="plan")
     assert {t.name for t in tools} == {"read_file"}
 
 
 @pytest.mark.asyncio
-async def test_plan_mode_git_filter(patch_get_function_tools):
+async def test_plan_mode_git_filter(
+    patch_get_function_tools: pytest.MonkeyPatch,
+) -> None:
     # Only clone_repo and list_branches should remain for mcp-server-git in plan mode
-    async def fake(server, convert_strict):
+    async def fake(server: MCPServer, convert_strict: bool) -> List[DummyTool]:
         return [
             DummyTool("clone_repo"),
             DummyTool("list_branches"),
@@ -59,13 +67,15 @@ async def test_plan_mode_git_filter(patch_get_function_tools):
         ]
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
-    servers = [SimpleNamespace(name="mcp-server-git")]
+    servers = cast(List[MCPServer], [SimpleNamespace(name="mcp-server-git")])
     tools = await get_filtered_function_tools(servers, mode="plan")
     assert {t.name for t in tools} == {"clone_repo", "list_branches"}
 
 
 @pytest.mark.asyncio
-async def test_github_server_whitelist_default_mode(patch_get_function_tools):
+async def test_github_server_whitelist_default_mode(
+    patch_get_function_tools: pytest.MonkeyPatch,
+) -> None:
     # Only the specified whitelist tools (including create/update) should be returned for default mode
     full_allowed = {
         "get_issue",
@@ -88,18 +98,20 @@ async def test_github_server_whitelist_default_mode(patch_get_function_tools):
     }
     names = list(full_allowed) + ["other_tool"]
 
-    async def fake(server, convert_strict):
+    async def fake(server: MCPServer, convert_strict: bool) -> List[DummyTool]:
         return [DummyTool(name) for name in names]
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
-    servers = [SimpleNamespace(name="github-mcp-server")]
+    servers = cast(List[MCPServer], [SimpleNamespace(name="github-mcp-server")])
 
     tools = await get_filtered_function_tools(servers, mode="default")
     assert {t.name for t in tools} == full_allowed
 
 
 @pytest.mark.asyncio
-async def test_github_server_plan_mode_readonly_filter(patch_get_function_tools):
+async def test_github_server_plan_mode_readonly_filter(
+    patch_get_function_tools: pytest.MonkeyPatch,
+) -> None:
     # Only read-only tools should be returned for plan mode
     readonly_allowed = {
         "get_issue",
@@ -125,11 +137,11 @@ async def test_github_server_plan_mode_readonly_filter(patch_get_function_tools)
         "other_tool",
     ]
 
-    async def fake_plan(server, convert_strict):
+    async def fake_plan(server: MCPServer, convert_strict: bool) -> List[DummyTool]:
         return [DummyTool(name) for name in names]
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake_plan)
-    servers = [SimpleNamespace(name="github-mcp-server")]
+    servers = cast(List[MCPServer], [SimpleNamespace(name="github-mcp-server")])
 
     tools = await get_filtered_function_tools(servers, mode="plan")
     assert {t.name for t in tools} == readonly_allowed
