@@ -8,6 +8,9 @@ from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any, List
 
+# Type alias to cast 'params' in tests to expected type
+MCPServerStdioParams = Any
+
 from agents.mcp import MCPServer, MCPServerStdio
 from mcp.client.stdio import stdio_client
 
