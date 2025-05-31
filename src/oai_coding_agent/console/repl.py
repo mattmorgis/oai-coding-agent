@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from typing import cast
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -9,10 +10,10 @@ from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
 from ..agent import AgentSession
-from .state import UIState
-from .rendering import console, clear_terminal, render_message
-from .slash_commands import register_slash_commands, handle_slash_command
 from .key_bindings import get_key_bindings
+from .rendering import clear_terminal, console, render_message
+from .slash_commands import handle_slash_command, register_slash_commands
+from .state import UIMessage, UIState
 
 
 async def main(
@@ -44,7 +45,7 @@ async def main(
     history_path = Path.home() / ".oai_coding_agent" / "prompt_history"
     history_path.parent.mkdir(parents=True, exist_ok=True)
 
-    prompt_session = PromptSession(
+    prompt_session: PromptSession[str] = PromptSession(
         history=FileHistory(str(history_path)),
         auto_suggest=AutoSuggestFromHistory(),
         enable_history_search=True,
@@ -83,14 +84,14 @@ async def main(
                     continue_loop = handle_slash_command(state, user_input)
                     continue
 
-                user_msg = {"role": "user", "content": user_input}
+                user_msg: UIMessage = {"role": "user", "content": user_input}
                 state.messages.append(user_msg)
                 console.print(f"[dim]› {user_input}[/dim]\n")
 
                 ui_stream, result = await session_agent.run_step(user_input, prev_id)
                 async for msg in ui_stream:
-                    state.messages.append(msg)
-                    render_message(msg)
+                    state.messages.append(cast(UIMessage, msg))
+                    render_message(cast(UIMessage, msg))
 
                 prev_id = result.last_response_id
 
