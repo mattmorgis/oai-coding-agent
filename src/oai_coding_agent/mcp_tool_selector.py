@@ -35,6 +35,7 @@ def _filter_tools_for_mode(
             readonly_allowed = {
                 "get_issue",
                 "get_issue_comments",
+                "create_issue",
                 "list_issues",
                 "search_issues",
                 "get_pull_request",
