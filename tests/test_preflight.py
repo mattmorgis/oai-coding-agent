@@ -2,6 +2,7 @@ import logging
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Sequence
 
 import pytest
 import typer
@@ -18,7 +19,11 @@ def test_run_preflight_success(
     monkeypatch.setattr(shutil, "which", lambda tool: f"/usr/bin/{tool}")
 
     def fake_run(
-        cmd, cwd=None, capture_output=None, text=None, check=None
+        cmd: Sequence[str],
+        cwd: Path | None = None,
+        capture_output: bool | None = None,
+        text: bool | None = None,
+        check: bool | None = None,
     ) -> subprocess.CompletedProcess[str]:
         if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="true\n")
@@ -50,13 +55,17 @@ def test_run_preflight_success(
 
 
 def test_run_preflight_git_failure(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     # Simulate git not inside worktree, node and docker ok
     monkeypatch.setattr(shutil, "which", lambda tool: f"/usr/bin/{tool}")
 
     def fake_run(
-        cmd, cwd=None, capture_output=None, text=None, check=None
+        cmd: Sequence[str],
+        cwd: Path | None = None,
+        capture_output: bool | None = None,
+        text: bool | None = None,
+        check: bool | None = None,
     ) -> subprocess.CompletedProcess[str]:
         if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
             return subprocess.CompletedProcess(cmd, 1, stdout="false\n")
@@ -79,7 +88,7 @@ def test_run_preflight_git_failure(
 
 
 def test_run_preflight_node_missing(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     # Simulate node missing, git and docker ok
     monkeypatch.setattr(
@@ -87,7 +96,11 @@ def test_run_preflight_node_missing(
     )
 
     def fake_run(
-        cmd, cwd=None, capture_output=None, text=None, check=None
+        cmd: Sequence[str],
+        cwd: Path | None = None,
+        capture_output: bool | None = None,
+        text: bool | None = None,
+        check: bool | None = None,
     ) -> subprocess.CompletedProcess[str]:
         if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="true\n")
@@ -108,7 +121,7 @@ def test_run_preflight_node_missing(
 
 
 def test_run_preflight_docker_missing(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     # Simulate docker missing, git and node ok
     monkeypatch.setattr(
@@ -116,7 +129,11 @@ def test_run_preflight_docker_missing(
     )
 
     def fake_run(
-        cmd, cwd=None, capture_output=None, text=None, check=None
+        cmd: Sequence[str],
+        cwd: Path | None = None,
+        capture_output: bool | None = None,
+        text: bool | None = None,
+        check: bool | None = None,
     ) -> subprocess.CompletedProcess[str]:
         if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="true\n")

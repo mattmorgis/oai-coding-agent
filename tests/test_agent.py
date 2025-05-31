@@ -1,6 +1,5 @@
 import os
 import pytest
-import asyncio
 from pathlib import Path
 
 import oai_coding_agent.agent as agent_module
