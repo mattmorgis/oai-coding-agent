@@ -63,6 +63,7 @@ class RuntimeConfig:
         mode: The agent mode to use.
         github_repo: The GitHub repository in "owner/repo" format (if available).
         branch_name: The current git branch name (if available).
+        prompt: The prompt text for headless mode (if provided).
     """
 
     openai_api_key: str
@@ -72,3 +73,4 @@ class RuntimeConfig:
     mode: ModeChoice = ModeChoice.default
     github_repo: Optional[str] = None
     branch_name: Optional[str] = None
+    prompt: Optional[str] = None

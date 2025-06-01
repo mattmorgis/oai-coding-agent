@@ -86,6 +86,7 @@ def main(
         mode=ModeChoice.async_ if prompt else mode,  # run in async mode if prompt
         github_repo=github_repo,
         branch_name=branch_name,
+        prompt=prompt_text,
     )
 
     if not prompt:
@@ -94,7 +95,7 @@ def main(
         )
 
     try:
-        asyncio.run(console_main(cfg, prompt_text))
+        asyncio.run(console_main(cfg))
     except KeyboardInterrupt:
         print("\nExiting...")
 
