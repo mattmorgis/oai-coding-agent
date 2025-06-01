@@ -76,7 +76,7 @@ def test_load_envs_sets_openai_and_github_if_not_set(
 ) -> None:
     # Ensure load_envs loads keys from dotenv when not in env
     fake_dotenv = types.ModuleType("dotenv")
-    fake_dotenv.dotenv_values = lambda: {
+    fake_dotenv.dotenv_values = lambda: {  # type: ignore[attr-defined]
         "OPENAI_API_KEY": "FROM_ENV",
         "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV",
     }
@@ -94,7 +94,7 @@ def test_load_envs_sets_openai_and_github_if_not_set(
 def test_load_envs_does_not_override_existing(monkeypatch: pytest.MonkeyPatch) -> None:
     # Ensure load_envs does not override existing env vars
     fake_dotenv = types.ModuleType("dotenv")
-    fake_dotenv.dotenv_values = lambda: {
+    fake_dotenv.dotenv_values = lambda: {  # type: ignore[attr-defined]
         "OPENAI_API_KEY": "FROM_ENV",
         "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV",
     }
