@@ -42,6 +42,8 @@ line_length = 88
 
 [tool.ruff.lint]
 preview = true
+# "I" = imports are sorted (following isort rules above)
+# "PLC0415" = all imports must be at top of the file, imports within functions are not allowed
 extend-select = ["I", "PLC0415"]
 
 [tool.mypy]
