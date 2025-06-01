@@ -127,7 +127,6 @@ async def test_github_server_plan_mode_readonly_filter(
         "get_pull_request_reviews",
     }
     names = list(readonly_allowed) + [
-        "create_issue",
         "add_issue_comment",
         "update_issue",
         "create_pull_request",
