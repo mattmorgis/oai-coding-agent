@@ -4,7 +4,6 @@ Headless (non-interactive) mode for running a single prompt asynchronously.
 
 from pathlib import Path
 
-
 from .agent import AgentSession
 from .console.rendering import console as rich_console
 from .console.rendering import render_message

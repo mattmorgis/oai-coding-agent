@@ -6,8 +6,8 @@ and provides a Config data class for collecting runtime settings.
 """
 
 import os
-from pathlib import Path
 from enum import Enum
+from pathlib import Path
 from typing import Optional
 
 from dotenv import dotenv_values

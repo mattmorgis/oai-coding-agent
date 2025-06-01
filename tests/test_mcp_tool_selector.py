@@ -1,9 +1,10 @@
-import pytest
 from types import SimpleNamespace
 from typing import Any, List, cast
 
+import pytest
 from agents.mcp import MCPServer
 from agents.mcp.util import MCPUtil
+
 from oai_coding_agent.mcp_tool_selector import get_filtered_function_tools
 
 

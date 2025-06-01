@@ -23,9 +23,9 @@ from agents import (
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from openai.types.shared.reasoning import Reasoning
 
+from .console.state import UIMessage
 from .mcp_servers import start_mcp_servers
 from .mcp_tool_selector import get_filtered_function_tools
-from .console.state import UIMessage
 
 logger = logging.getLogger(__name__)
 

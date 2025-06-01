@@ -1,12 +1,12 @@
 import os
-from types import SimpleNamespace
+from contextlib import AsyncExitStack
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Callable, cast
 
 import pytest
-
-from contextlib import AsyncExitStack
 from agents.mcp import MCPServerStdioParams
+
 import oai_coding_agent.mcp_servers as mcp_servers
 
 

@@ -1,12 +1,13 @@
+import importlib
 import os
 import sys
-import importlib
 from pathlib import Path
-import pytest
 from typing import Generator
 
+import pytest
+
 import oai_coding_agent.config as config_module
-from oai_coding_agent.config import ModelChoice, Config
+from oai_coding_agent.config import Config, ModelChoice
 
 
 def test_model_choice_enum_values() -> None:

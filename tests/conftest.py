@@ -1,5 +1,7 @@
-import pytest
 from pathlib import Path
+
+import pytest
+
 import oai_coding_agent.cli as cli_module
 
 

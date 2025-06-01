@@ -1,10 +1,11 @@
-import pytest
 from pathlib import Path
-from rich.console import Console
 from typing import Any, AsyncGenerator, Self
 
-import oai_coding_agent.console.repl as repl_module
+import pytest
+from rich.console import Console
+
 import oai_coding_agent.console.rendering as rendering
+import oai_coding_agent.console.repl as repl_module
 
 
 class DummyPromptSession:

@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+
 import pytest
 
 from oai_coding_agent.logger import setup_logging

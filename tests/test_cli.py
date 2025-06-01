@@ -1,6 +1,7 @@
-import pytest
 from pathlib import Path
 from typing import Generator
+
+import pytest
 from typer.testing import CliRunner
 
 import oai_coding_agent.cli as cli_module
