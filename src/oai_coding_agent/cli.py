@@ -5,10 +5,8 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.console import Console
 from typing_extensions import Annotated
 
-from .console.rendering import console as rich_console
 from .console.repl import main as console_main
 from .headless import headless_main
 from .logger import setup_logging
@@ -27,9 +25,6 @@ logger = logging.getLogger(__name__)
 
 # Load API keys from .env if not already set in the environment
 load_envs()
-
-# Local console for CLI messages (e.g., exit)
-console = Console()
 
 app = typer.Typer(rich_markup_mode=None)
 
@@ -110,7 +105,7 @@ def main(
                 )
             )
         except KeyboardInterrupt:
-            rich_console.print("\nExiting...")
+            print("\nExiting...")
         return
 
     logger.info(f"Starting chat with model {cfg.model.value} on repo {cfg.repo_path}")
@@ -127,7 +122,7 @@ def main(
             )
         )
     except KeyboardInterrupt:
-        console.print("\nExiting...")
+        print("\nExiting...")
 
 
 if __name__ == "__main__":
