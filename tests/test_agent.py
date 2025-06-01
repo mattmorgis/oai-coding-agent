@@ -6,6 +6,7 @@ import pytest
 from agents.mcp import MCPServerStdioParams
 
 import oai_coding_agent.agent as agent_module
+import oai_coding_agent.mcp_servers as mcp_servers_module
 from oai_coding_agent.agent import Agent, _AgentSession
 from oai_coding_agent.mcp_servers import (
     ALLOWED_CLI_COMMANDS,
@@ -30,8 +31,6 @@ def test_quiet_mcp_server_stdio_create_streams(monkeypatch: pytest.MonkeyPatch) 
         captured["params"] = params_arg
         captured["errlog"] = errlog
         return "fake_streams"
-
-    import oai_coding_agent.mcp_servers as mcp_servers_module
 
     monkeypatch.setattr(mcp_servers_module, "stdio_client", fake_stdio_client)
 

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -75,7 +76,6 @@ def main(
         # Force async mode for one-off prompt runs
         mode_value = ModeChoice.async_.value
         # Read prompt text: literal or stdin if '-' sentinel
-        import sys
 
         if prompt == "-":
             prompt_text = sys.stdin.read()

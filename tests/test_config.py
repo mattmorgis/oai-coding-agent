@@ -1,6 +1,7 @@
 import importlib
 import os
 import sys
+import types
 from pathlib import Path
 from typing import Generator
 
@@ -49,7 +50,6 @@ def test_config_from_cli_sets_attributes() -> None:
 
 def test_dotenv_load_sets_env(monkeypatch: pytest.MonkeyPatch) -> None:
     # Ensure that config module uses dotenv_values to set OPENAI_API_KEY
-    import types
 
     # Prepare fake dotenv module
     fake_dotenv = types.ModuleType("dotenv")
@@ -75,7 +75,6 @@ def test_dotenv_load_sets_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_dotenv_load_sets_github_token(monkeypatch: pytest.MonkeyPatch) -> None:
     # Ensure that config module uses dotenv_values to set GITHUB_PERSONAL_ACCESS_TOKEN
-    import types
 
     # Prepare fake dotenv module
     fake_dotenv = types.ModuleType("dotenv")

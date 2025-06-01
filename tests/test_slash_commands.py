@@ -2,6 +2,7 @@ import pytest
 from rich.console import Console
 
 import oai_coding_agent.console.rendering as rendering
+import oai_coding_agent.console.slash_commands as _sc
 from oai_coding_agent.console.slash_commands import (
     handle_slash_command,
     register_slash_commands,
@@ -16,7 +17,6 @@ def record_console(monkeypatch: pytest.MonkeyPatch) -> Console:
     monkeypatch.setattr(rendering, "console", recorder)
     monkeypatch.setattr(rendering, "clear_terminal", lambda: None)
     # Also patch slash_commands.clear_terminal (imported at module load)
-    import oai_coding_agent.console.slash_commands as _sc
 
     monkeypatch.setattr(_sc, "clear_terminal", lambda: None)
     return recorder
