@@ -1,6 +1,5 @@
 import asyncio
 from pathlib import Path
-from typing import Optional
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -10,21 +9,14 @@ from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
 from ..agent import AgentSession
+from ..runtime_config import RuntimeConfig
 from .key_bindings import get_key_bindings
 from .rendering import clear_terminal, console, render_message
 from .slash_commands import handle_slash_command, register_slash_commands
 from .state import UIMessage, UIState
 
 
-async def main(
-    repo_path: Path,
-    model: str,
-    openai_api_key: str,
-    github_personal_access_token: str,
-    mode: str = "default",
-    github_repo: Optional[str] = None,
-    branch_name: Optional[str] = None,
-) -> None:
+async def main(config: RuntimeConfig) -> None:
     """Main REPL loop for the console interface."""
     state = UIState()
     clear_terminal()
@@ -34,9 +26,9 @@ async def main(
     console.print(
         Panel(
             f"[bold cyan]╭─ OAI CODING AGENT ─╮[/bold cyan]\n\n"
-            f"[dim]Current Directory:[/dim] [dim cyan]{repo_path}[/dim cyan]\n"
-            f"[dim]Model:[/dim] [dim cyan]{model}[/dim cyan]\n"
-            f"[dim]Mode:[/dim] [dim cyan]{mode}[/dim cyan]",
+            f"[dim]Current Directory:[/dim] [dim cyan]{config.repo_path}[/dim cyan]\n"
+            f"[dim]Model:[/dim] [dim cyan]{config.model.value}[/dim cyan]\n"
+            f"[dim]Mode:[/dim] [dim cyan]{config.mode.value}[/dim cyan]",
             expand=False,
         )
     )
@@ -61,15 +53,7 @@ async def main(
         erase_when_done=True,
     )
 
-    async with AgentSession(
-        repo_path=repo_path,
-        model=model,
-        openai_api_key=openai_api_key,
-        github_personal_access_token=github_personal_access_token,
-        mode=mode,
-        github_repo=github_repo,
-        branch_name=branch_name,
-    ) as session_agent:
+    async with AgentSession(config) as session_agent:
         prev_id = None
         continue_loop = True
         while continue_loop:

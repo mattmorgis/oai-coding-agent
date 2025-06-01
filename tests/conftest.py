@@ -1,30 +1,21 @@
-from pathlib import Path
-
 import pytest
 
 import oai_coding_agent.cli as cli_module
+from oai_coding_agent.runtime_config import RuntimeConfig
 
 
 @pytest.fixture
 def console_main_calls(
     monkeypatch: pytest.MonkeyPatch,
-) -> list[tuple[Path, str, str, str]]:
+) -> list[RuntimeConfig]:
     """
     Monkeypatch oai_coding_agent.cli.console_main to capture calls instead of running the console REPL.
-    Returns a list of (repo_path, model, api_key, mode) tuples.
+    Returns a list of RuntimeConfig objects.
     """
     calls = []
 
-    async def fake_main(
-        repo_path: Path,
-        model: str,
-        api_key: str,
-        github_personal_access_token: str,
-        mode: str,
-        github_repo: str | None = None,
-        branch_name: str | None = None,
-    ) -> None:
-        calls.append((repo_path, model, api_key, mode))
+    async def fake_main(config: RuntimeConfig) -> None:
+        calls.append(config)
 
     monkeypatch.setattr(cli_module, "console_main", fake_main)
     return calls
@@ -33,24 +24,15 @@ def console_main_calls(
 @pytest.fixture
 def headless_main_calls(
     monkeypatch: pytest.MonkeyPatch,
-) -> list[tuple[Path, str, str, str, str]]:
+) -> list[tuple[RuntimeConfig, str]]:
     """
     Monkeypatch oai_coding_agent.cli.headless_main to capture calls instead of running headless mode.
-    Returns a list of (repo_path, model, api_key, gh_token, mode, prompt) tuples.
+    Returns a list of (RuntimeConfig, prompt) tuples.
     """
     calls = []
 
-    async def fake_headless_main(
-        repo_path: Path,
-        model: str,
-        api_key: str,
-        github_personal_access_token: str,
-        mode: str,
-        prompt: str,
-        github_repo: str | None = None,
-        branch_name: str | None = None,
-    ) -> None:
-        calls.append((repo_path, model, api_key, mode, prompt))
+    async def fake_headless_main(config: RuntimeConfig, prompt: str) -> None:
+        calls.append((config, prompt))
 
     monkeypatch.setattr(cli_module, "headless_main", fake_headless_main)
     return calls

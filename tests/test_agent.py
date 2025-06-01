@@ -13,6 +13,7 @@ from oai_coding_agent.mcp_servers import (
     ALLOWED_CLI_FLAGS,
     QuietMCPServerStdio,
 )
+from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConfig
 
 
 def test_allowed_cli_vars() -> None:
@@ -57,13 +58,16 @@ def test_quiet_mcp_server_stdio_create_streams(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_build_instructions_with_known_mode() -> None:
-    session = _AgentSession(
-        repo_path=Path("repo"),
-        model="model-x",
+    config = RuntimeConfig(
         openai_api_key="apikey",
         github_personal_access_token="TOK",
+        model=ModelChoice.codex_mini_latest,
+        repo_path=Path("repo"),
+        mode=ModeChoice.async_,
+    )
+    session = _AgentSession(
+        config=config,
         max_turns=5,
-        mode="async",
     )
     instr = session._build_instructions()
     # Should load prompt_async.jinja2
@@ -75,13 +79,17 @@ def test_build_instructions_with_known_mode() -> None:
 
 
 def test_build_instructions_with_unknown_mode_fallback() -> None:
-    session = _AgentSession(
-        repo_path=Path("repo2"),
-        model="model-y",
+    # Create a config with default mode which uses prompt_default.jinja2
+    config = RuntimeConfig(
         openai_api_key="apikey",
         github_personal_access_token="TOK",
+        model=ModelChoice.codex_mini_latest,
+        repo_path=Path("repo2"),
+        mode=ModeChoice.default,
+    )
+    session = _AgentSession(
+        config=config,
         max_turns=5,
-        mode="nonexistent_mode",
     )
     instr = session._build_instructions()
     # Should fallback to default prompt
@@ -195,13 +203,16 @@ async def test_run_step_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> 
         lambda agent, u, previous_response_id, max_turns: fake_result,
     )
     # Initialize session and set dummy agent
-    session = _AgentSession(
-        repo_path=Path("."),
-        model="m",
+    config = RuntimeConfig(
         openai_api_key="k",
         github_personal_access_token="TOK",
+        model=ModelChoice.codex_mini_latest,
+        repo_path=Path("."),
+        mode=ModeChoice.async_,
+    )
+    session = _AgentSession(
+        config=config,
         max_turns=1,
-        mode="async",
     )
     session._agent = cast(Agent[Any], object())
 

@@ -82,8 +82,6 @@ def main(
     )
 
     if prompt:
-        # Force async mode for one-off prompt runs
-        mode_value = ModeChoice.async_.value
         # Read prompt text: literal or stdin if '-' sentinel
 
         if prompt == "-":
@@ -91,36 +89,25 @@ def main(
         else:
             prompt_text = prompt
         logger.info(f"Running prompt in headless (async): {prompt}")
+        # Create a new config with forced async mode
+        headless_cfg = RuntimeConfig(
+            openai_api_key=cfg.openai_api_key,
+            github_personal_access_token=cfg.github_personal_access_token,
+            model=cfg.model,
+            repo_path=cfg.repo_path,
+            mode=ModeChoice.async_,
+            github_repo=cfg.github_repo,
+            branch_name=cfg.branch_name,
+        )
         try:
-            asyncio.run(
-                headless_main(
-                    cfg.repo_path,
-                    cfg.model.value,
-                    cfg.openai_api_key,
-                    cfg.github_personal_access_token,
-                    mode_value,
-                    prompt_text,
-                    cfg.github_repo,
-                    cfg.branch_name,
-                )
-            )
+            asyncio.run(headless_main(headless_cfg, prompt_text))
         except KeyboardInterrupt:
             print("\nExiting...")
         return
 
     logger.info(f"Starting chat with model {cfg.model.value} on repo {cfg.repo_path}")
     try:
-        asyncio.run(
-            console_main(
-                cfg.repo_path,
-                cfg.model.value,
-                cfg.openai_api_key,
-                cfg.github_personal_access_token,
-                cfg.mode.value,
-                cfg.github_repo,
-                cfg.branch_name,
-            )
-        )
+        asyncio.run(console_main(cfg))
     except KeyboardInterrupt:
         print("\nExiting...")
 

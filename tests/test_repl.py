@@ -6,6 +6,7 @@ from rich.console import Console
 
 import oai_coding_agent.console.rendering as rendering
 import oai_coding_agent.console.repl as repl_module
+from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConfig
 
 
 class DummyPromptSession:
@@ -64,12 +65,19 @@ async def test_repl_main_exits_on_exit_and_prints_header(
     setup_repl: Console, tmp_path: Path
 ) -> None:
     recorder = setup_repl
-    await repl_module.main(tmp_path, "model-x", "APIKEY", "GHTOKEN")
+    config = RuntimeConfig(
+        openai_api_key="APIKEY",
+        github_personal_access_token="GHTOKEN",
+        model=ModelChoice.codex_mini_latest,
+        repo_path=tmp_path,
+        mode=ModeChoice.default,
+    )
+    await repl_module.main(config)
 
     output = recorder.export_text()
     # Header includes agent name and model
     assert "OAI CODING AGENT" in output
-    assert "model-x" in output
+    assert "codex-mini-latest" in output
 
     # Ensure history directory was created under tmp_path
     history_dir = tmp_path / ".oai_coding_agent"

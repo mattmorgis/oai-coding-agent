@@ -24,6 +24,7 @@ from openai.types.shared.reasoning import Reasoning
 from .console.state import UIMessage
 from .mcp_servers import start_mcp_servers
 from .mcp_tool_selector import get_filtered_function_tools
+from .runtime_config import RuntimeConfig
 
 logger = logging.getLogger(__name__)
 
@@ -41,14 +42,8 @@ _DEFAULT_MODE = "default"
 class _AgentSession:
     """Internal agent session managing MCP servers, tracing, and the Agent instance."""
 
-    repo_path: Path
-    model: str
-    openai_api_key: str
-    github_personal_access_token: str
+    config: RuntimeConfig
     max_turns: int = 100
-    mode: str = _DEFAULT_MODE
-    github_repo: Optional[str] = None
-    branch_name: Optional[str] = None
 
     _exit_stack: AsyncExitStack = field(init=False, repr=False)
     _agent: Agent = field(init=False, repr=False)
@@ -60,7 +55,9 @@ class _AgentSession:
 
         # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
         mcp_servers = await start_mcp_servers(
-            self.repo_path, self.github_personal_access_token, self._exit_stack
+            self.config.repo_path,
+            self.config.github_personal_access_token,
+            self._exit_stack,
         )
 
         # Begin tracing
@@ -71,13 +68,15 @@ class _AgentSession:
 
         # Build instructions and fetch filtered MCP function-tools
         dynamic_instructions = self._build_instructions()
-        function_tools = await get_filtered_function_tools(mcp_servers, self.mode)
+        function_tools = await get_filtered_function_tools(
+            mcp_servers, self.config.mode.value
+        )
 
         # Instantiate the Agent with the filtered function-tools
         self._agent = Agent(
             name="Coding Agent",
             instructions=dynamic_instructions,
-            model=self.model,
+            model=self.config.model.value,
             model_settings=ModelSettings(
                 reasoning=Reasoning(summary="auto", effort="high")
             ),
@@ -89,15 +88,17 @@ class _AgentSession:
 
     def _build_instructions(self) -> str:
         try:
-            template = TEMPLATE_ENV.get_template(f"prompt_{self.mode}.jinja2")
+            template = TEMPLATE_ENV.get_template(
+                f"prompt_{self.config.mode.value}.jinja2"
+            )
         except TemplateNotFound:
             template = TEMPLATE_ENV.get_template("prompt_default.jinja2")
 
         return template.render(
-            repo_path=str(self.repo_path),
-            mode=self.mode,
-            github_repository=self.github_repo or "",
-            branch_name=self.branch_name or "",
+            repo_path=str(self.config.repo_path),
+            mode=self.config.mode.value,
+            github_repository=self.config.github_repo or "",
+            branch_name=self.config.branch_name or "",
         )
 
     def _map_sdk_event(self, event: Any) -> Optional[UIMessage]:
@@ -152,27 +153,15 @@ class _AgentSession:
 
 @asynccontextmanager
 async def AgentSession(
-    repo_path: Path,
-    model: str,
-    openai_api_key: str,
-    github_personal_access_token: str,
+    config: RuntimeConfig,
     max_turns: int = 100,
-    mode: str = _DEFAULT_MODE,
-    github_repo: Optional[str] = None,
-    branch_name: Optional[str] = None,
 ) -> AsyncIterator[_AgentSession]:
     """
     Async context manager for setting up and tearing down an agent session.
     """
     session = _AgentSession(
-        repo_path=repo_path,
-        model=model,
-        openai_api_key=openai_api_key,
-        github_personal_access_token=github_personal_access_token,
+        config=config,
         max_turns=max_turns,
-        mode=mode,
-        github_repo=github_repo,
-        branch_name=branch_name,
     )
     await session._startup()
     try:
