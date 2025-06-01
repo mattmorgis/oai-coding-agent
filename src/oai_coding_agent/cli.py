@@ -8,15 +8,18 @@ import typer
 from rich.console import Console
 from typing_extensions import Annotated
 
-from .config import Config, ModeChoice, ModelChoice
 from .console.rendering import console as rich_console
 from .console.repl import main as console_main
 from .headless import headless_main
 from .logger import setup_logging
 from .preflight import run_preflight_checks
+from .runtime_config import ModeChoice, ModelChoice, RuntimeConfig, load_envs
 
 setup_logging()
 logger = logging.getLogger(__name__)
+
+# Load API keys from .env if not already set in the environment
+load_envs()
 
 # Local console for CLI messages (e.g., exit)
 console = Console()
@@ -63,7 +66,7 @@ def main(
     OAI CODING AGENT - starts an interactive or batch session
     """
     # Build a single config object from the CLI parameters
-    cfg = Config.from_cli(
+    cfg = RuntimeConfig.from_cli(
         openai_api_key,
         github_personal_access_token,
         model,
