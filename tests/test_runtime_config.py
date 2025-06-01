@@ -1,7 +1,6 @@
 import importlib
 import os
 import sys
-import types
 from pathlib import Path
 from typing import Generator
 
@@ -75,12 +74,9 @@ def test_load_envs_sets_openai_and_github_if_not_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Ensure load_envs loads keys from dotenv when not in env
-    fake_dotenv = types.ModuleType("dotenv")
-    fake_dotenv.dotenv_values = lambda: {  # type: ignore[attr-defined]
-        "OPENAI_API_KEY": "FROM_ENV",
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV",
-    }
-    monkeypatch.setitem(sys.modules, "dotenv", fake_dotenv)
+    # Fake dotenv_values so load_envs picks up our values.
+    vals = {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"}
+    monkeypatch.setattr(config_module, "dotenv_values", lambda env_file=None: vals)
 
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN", raising=False)
@@ -93,12 +89,9 @@ def test_load_envs_sets_openai_and_github_if_not_set(
 
 def test_load_envs_does_not_override_existing(monkeypatch: pytest.MonkeyPatch) -> None:
     # Ensure load_envs does not override existing env vars
-    fake_dotenv = types.ModuleType("dotenv")
-    fake_dotenv.dotenv_values = lambda: {  # type: ignore[attr-defined]
-        "OPENAI_API_KEY": "FROM_ENV",
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV",
-    }
-    monkeypatch.setitem(sys.modules, "dotenv", fake_dotenv)
+    # Fake dotenv_values so load_envs picks up our values.
+    vals = {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"}
+    monkeypatch.setattr(config_module, "dotenv_values", lambda env_file=None: vals)
 
     monkeypatch.setenv("OPENAI_API_KEY", "SHELL_KEY")
     monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "SHELL_GH")
