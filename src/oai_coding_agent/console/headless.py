@@ -2,10 +2,10 @@
 Headless (non-interactive) mode for running a single prompt asynchronously.
 """
 
-from .agent import AgentSession
-from .console.rendering import console as rich_console
-from .console.rendering import render_message
-from .runtime_config import RuntimeConfig
+from ..agent import AgentSession
+from ..runtime_config import RuntimeConfig
+from .rendering import console as rich_console
+from .rendering import render_message
 
 
 async def headless_main(config: RuntimeConfig, prompt: str) -> None:

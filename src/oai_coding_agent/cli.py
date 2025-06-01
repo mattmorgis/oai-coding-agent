@@ -7,8 +7,8 @@ from typing import Optional
 import typer
 from typing_extensions import Annotated
 
+from .console.headless import headless_main
 from .console.repl import main as console_main
-from .headless import headless_main
 from .logger import setup_logging
 from .preflight import run_preflight_checks
 from .runtime_config import (
