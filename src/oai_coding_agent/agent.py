@@ -58,11 +58,6 @@ class _AgentSession:
         self._exit_stack = AsyncExitStack()
         await self._exit_stack.__aenter__()
 
-        # Ensure API key is set for OpenAI SDK
-        os.environ["OPENAI_API_KEY"] = self.openai_api_key
-        # Ensure GitHub token is set for GitHub MCP server
-        os.environ["GITHUB_PERSONAL_ACCESS_TOKEN"] = self.github_personal_access_token
-
         # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
         mcp_servers = await start_mcp_servers(self.repo_path, self._exit_stack)
 
