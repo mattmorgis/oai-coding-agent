@@ -59,7 +59,9 @@ class _AgentSession:
         await self._exit_stack.__aenter__()
 
         # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
-        mcp_servers = await start_mcp_servers(self.repo_path, self._exit_stack)
+        mcp_servers = await start_mcp_servers(
+            self.repo_path, self.github_personal_access_token, self._exit_stack
+        )
 
         # Begin tracing
         trace_id = gen_trace_id()

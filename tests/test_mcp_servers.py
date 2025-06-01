@@ -93,7 +93,7 @@ async def test_start_mcp_servers_all_success(monkeypatch: pytest.MonkeyPatch) ->
     repo = Path("/some/repo")
 
     servers = await mcp_servers.start_mcp_servers(
-        repo, cast(AsyncExitStack[bool | None], exit_stack)
+        repo, "dummy-token", cast(AsyncExitStack[bool | None], exit_stack)
     )
     # Should start filesystem, CLI, git, and GitHub servers
     names = [s.name for s in servers]
@@ -141,7 +141,7 @@ async def test_start_mcp_servers_skip_cli_on_error(
     repo = Path("/repo")
 
     servers = await mcp_servers.start_mcp_servers(
-        repo, cast(AsyncExitStack[bool | None], exit_stack)
+        repo, "dummy-token", cast(AsyncExitStack[bool | None], exit_stack)
     )
     names = [s.name for s in servers]
     # Should skip CLI and include filesystem, git, and GitHub servers
@@ -183,7 +183,7 @@ async def test_start_mcp_servers_skip_git_on_error(
     repo = Path("/repo")
 
     servers = await mcp_servers.start_mcp_servers(
-        repo, cast(AsyncExitStack[bool | None], exit_stack)
+        repo, "dummy-token", cast(AsyncExitStack[bool | None], exit_stack)
     )
     names = [s.name for s in servers]
     # Should skip Git and include filesystem, CLI, and GitHub servers
@@ -225,7 +225,7 @@ async def test_start_mcp_servers_skip_cli_and_git_on_error(
     repo = Path("/repo")
 
     servers = await mcp_servers.start_mcp_servers(
-        repo, cast(AsyncExitStack[bool | None], exit_stack)
+        repo, "dummy-token", cast(AsyncExitStack[bool | None], exit_stack)
     )
     names = [s.name for s in servers]
     # Should skip CLI and Git and include filesystem and GitHub servers only

@@ -52,7 +52,7 @@ class QuietMCPServerStdio(MCPServerStdio):
 
 
 async def start_mcp_servers(
-    repo_path: Path, exit_stack: AsyncExitStack
+    repo_path: Path, github_personal_access_token: str, exit_stack: AsyncExitStack
 ) -> List[MCPServer]:
     """
     Start filesystem, CLI, Git, and GitHub MCP servers, registering cleanup on the provided exit_stack.
@@ -135,11 +135,7 @@ async def start_mcp_servers(
                     "GITHUB_PERSONAL_ACCESS_TOKEN",
                     "ghcr.io/github/github-mcp-server",
                 ],
-                "env": {
-                    "GITHUB_PERSONAL_ACCESS_TOKEN": os.environ[
-                        "GITHUB_PERSONAL_ACCESS_TOKEN"
-                    ]
-                },
+                "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": github_personal_access_token},
             },
             client_session_timeout_seconds=120,
             cache_tools_list=True,
