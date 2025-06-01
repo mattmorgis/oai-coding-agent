@@ -9,9 +9,9 @@ import pytest
 
 import oai_coding_agent.runtime_config as config_module
 from oai_coding_agent.runtime_config import (
-    RuntimeConfig,
-    ModelChoice,
     ModeChoice,
+    ModelChoice,
+    RuntimeConfig,
     load_envs,
 )
 
@@ -71,13 +71,15 @@ def test_runtime_config_from_cli_with_custom_mode() -> None:
     assert cfg.mode == ModeChoice.plan
 
 
-def test_load_envs_sets_openai_and_github_if_not_set(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_envs_sets_openai_and_github_if_not_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     # Ensure load_envs loads keys from dotenv when not in env
     fake_dotenv = types.ModuleType("dotenv")
     fake_dotenv.dotenv_values = lambda: {
         "OPENAI_API_KEY": "FROM_ENV",
         "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV",
-    }  # type: ignore[attr-defined]
+    }
     monkeypatch.setitem(sys.modules, "dotenv", fake_dotenv)
 
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -95,11 +97,11 @@ def test_load_envs_does_not_override_existing(monkeypatch: pytest.MonkeyPatch) -
     fake_dotenv.dotenv_values = lambda: {
         "OPENAI_API_KEY": "FROM_ENV",
         "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV",
-    }  # type: ignore[attr-defined]
+    }
     monkeypatch.setitem(sys.modules, "dotenv", fake_dotenv)
 
-    monkeypatch.setenv("OPENAI_API_KEY", "SHELL_KEY", prepend=False)
-    monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "SHELL_GH", prepend=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "SHELL_KEY")
+    monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "SHELL_GH")
 
     load_envs()
 
@@ -107,10 +109,14 @@ def test_load_envs_does_not_override_existing(monkeypatch: pytest.MonkeyPatch) -
     assert os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") == "SHELL_GH"
 
 
-def test_load_envs_with_explicit_env_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_envs_with_explicit_env_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Ensure load_envs loads keys from an explicit .env file path
     env_file = tmp_path / ".custom_env"
-    env_file.write_text("OPENAI_API_KEY=EXPLICIT_KEY\nGITHUB_PERSONAL_ACCESS_TOKEN=EXPLICIT_GH\n")
+    env_file.write_text(
+        "OPENAI_API_KEY=EXPLICIT_KEY\nGITHUB_PERSONAL_ACCESS_TOKEN=EXPLICIT_GH\n"
+    )
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN", raising=False)
 
