@@ -26,3 +26,27 @@ def console_main_calls(
 
     monkeypatch.setattr(cli_module, "console_main", fake_main)
     return calls
+
+
+@pytest.fixture
+def headless_main_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[tuple[Path, str, str, str, str]]:
+    """
+    Monkeypatch oai_coding_agent.cli.headless_main to capture calls instead of running headless mode.
+    Returns a list of (repo_path, model, api_key, gh_token, mode, prompt) tuples.
+    """
+    calls = []
+
+    async def fake_headless_main(
+        repo_path: Path,
+        model: str,
+        api_key: str,
+        github_personal_access_token: str,
+        mode: str,
+        prompt: str,
+    ) -> None:
+        calls.append((repo_path, model, api_key, mode, prompt))
+
+    monkeypatch.setattr(cli_module, "headless_main", fake_headless_main)
+    return calls
