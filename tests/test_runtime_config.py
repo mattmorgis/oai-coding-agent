@@ -1,8 +1,5 @@
-import importlib
 import os
-import sys
 from pathlib import Path
-from typing import Generator
 
 import pytest
 
@@ -117,16 +114,3 @@ def test_load_envs_with_explicit_env_file(
 
     assert os.environ.get("OPENAI_API_KEY") == "EXPLICIT_KEY"
     assert os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") == "EXPLICIT_GH"
-
-
-# Clean up import cache to prevent side effects
-@pytest.fixture(autouse=True)
-def reload_runtime_config_module() -> Generator[None, None, None]:
-    """
-    Reload the runtime_config module after each test to restore original state.
-    """
-    yield
-
-    if "oai_coding_agent.runtime_config" not in sys.modules:
-        sys.modules["oai_coding_agent.runtime_config"] = config_module
-    importlib.reload(config_module)
