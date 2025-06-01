@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional, Union
 
 import pytest
 from typer.testing import CliRunner
@@ -17,7 +18,8 @@ def stub_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_cli_invokes_console_with_explicit_flags(
-    console_main_calls: list[RuntimeConfig], tmp_path: Path
+    console_main_calls: list[Union[RuntimeConfig, tuple[RuntimeConfig, Optional[str]]]],
+    tmp_path: Path,
 ) -> None:
     runner = CliRunner()
     result = runner.invoke(
@@ -35,6 +37,8 @@ def test_cli_invokes_console_with_explicit_flags(
     )
     assert result.exit_code == 0
     assert len(console_main_calls) == 1
+    # For REPL mode, we get just the config
+    assert isinstance(console_main_calls[0], RuntimeConfig)
     config = console_main_calls[0]
     assert config.repo_path == tmp_path
     assert config.model == ModelChoice.o3
@@ -44,7 +48,7 @@ def test_cli_invokes_console_with_explicit_flags(
 
 def test_cli_uses_environment_defaults(
     monkeypatch: pytest.MonkeyPatch,
-    console_main_calls: list[RuntimeConfig],
+    console_main_calls: list[Union[RuntimeConfig, tuple[RuntimeConfig, Optional[str]]]],
     tmp_path: Path,
 ) -> None:
     # Set environment variables for API keys
@@ -55,6 +59,8 @@ def test_cli_uses_environment_defaults(
     result = runner.invoke(app, ["--repo-path", str(tmp_path)])
     assert result.exit_code == 0
     assert len(console_main_calls) == 1
+    # For REPL mode, we get just the config
+    assert isinstance(console_main_calls[0], RuntimeConfig)
     config = console_main_calls[0]
     assert config.repo_path == tmp_path
     assert config.model == ModelChoice.codex_mini_latest
@@ -64,7 +70,7 @@ def test_cli_uses_environment_defaults(
 
 def test_cli_uses_cwd_as_default_repo_path(
     monkeypatch: pytest.MonkeyPatch,
-    console_main_calls: list[RuntimeConfig],
+    console_main_calls: list[Union[RuntimeConfig, tuple[RuntimeConfig, Optional[str]]]],
 ) -> None:
     # Set environment variables for API keys
     monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
@@ -77,6 +83,8 @@ def test_cli_uses_cwd_as_default_repo_path(
     result = runner.invoke(app, [])  # No --repo-path specified
     assert result.exit_code == 0
     assert len(console_main_calls) == 1
+    # For REPL mode, we get just the config
+    assert isinstance(console_main_calls[0], RuntimeConfig)
     config = console_main_calls[0]
     assert config.repo_path == expected_cwd
     assert config.model == ModelChoice.codex_mini_latest
@@ -86,8 +94,7 @@ def test_cli_uses_cwd_as_default_repo_path(
 
 def test_cli_prompt_invokes_headless_main(
     monkeypatch: pytest.MonkeyPatch,
-    console_main_calls: list[RuntimeConfig],
-    headless_main_calls: list[tuple[RuntimeConfig, str]],
+    console_main_calls: list[Union[RuntimeConfig, tuple[RuntimeConfig, Optional[str]]]],
     tmp_path: Path,
 ) -> None:
     # Set environment variables for API keys
@@ -99,20 +106,20 @@ def test_cli_prompt_invokes_headless_main(
         app, ["--repo-path", str(tmp_path), "--prompt", "Do awesome things"]
     )
     assert result.exit_code == 0
-    assert len(headless_main_calls) == 1
-    config, prompt = headless_main_calls[0]
+    assert len(console_main_calls) == 1
+    # Should be a tuple for headless mode
+    assert isinstance(console_main_calls[0], tuple)
+    config, prompt = console_main_calls[0]
     assert config.repo_path == tmp_path
     assert config.model == ModelChoice.codex_mini_latest
     assert config.openai_api_key == "ENVKEY"
     assert config.mode == ModeChoice.async_
     assert prompt == "Do awesome things"
-    assert console_main_calls == []
 
 
 def test_cli_prompt_stdin_invokes_headless_main(
     monkeypatch: pytest.MonkeyPatch,
-    console_main_calls: list[RuntimeConfig],
-    headless_main_calls: list[tuple[RuntimeConfig, str]],
+    console_main_calls: list[Union[RuntimeConfig, tuple[RuntimeConfig, Optional[str]]]],
     tmp_path: Path,
 ) -> None:
     # Set environment variables for API keys
@@ -125,11 +132,12 @@ def test_cli_prompt_stdin_invokes_headless_main(
         app, ["--repo-path", str(tmp_path), "--prompt", "-"], input=prompt_str
     )
     assert result.exit_code == 0
-    assert len(headless_main_calls) == 1
-    config, prompt = headless_main_calls[0]
+    assert len(console_main_calls) == 1
+    # Should be a tuple for headless mode
+    assert isinstance(console_main_calls[0], tuple)
+    config, prompt = console_main_calls[0]
     assert config.repo_path == tmp_path
     assert config.model == ModelChoice.codex_mini_latest
     assert config.openai_api_key == "ENVKEY"
     assert config.mode == ModeChoice.async_
     assert prompt == prompt_str
-    assert console_main_calls == []

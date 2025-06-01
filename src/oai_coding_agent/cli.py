@@ -7,7 +7,6 @@ from typing import Optional
 import typer
 from typing_extensions import Annotated
 
-from .console.headless import headless_main
 from .console.repl import main as console_main
 from .logger import setup_logging
 from .preflight import run_preflight_checks
@@ -100,7 +99,7 @@ def main(
             branch_name=cfg.branch_name,
         )
         try:
-            asyncio.run(headless_main(headless_cfg, prompt_text))
+            asyncio.run(console_main(headless_cfg, prompt_text))
         except KeyboardInterrupt:
             print("\nExiting...")
         return

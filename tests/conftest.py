@@ -1,3 +1,5 @@
+from typing import Optional, Union
+
 import pytest
 
 import oai_coding_agent.cli as cli_module
@@ -7,32 +9,18 @@ from oai_coding_agent.runtime_config import RuntimeConfig
 @pytest.fixture
 def console_main_calls(
     monkeypatch: pytest.MonkeyPatch,
-) -> list[RuntimeConfig]:
+) -> list[Union[RuntimeConfig, tuple[RuntimeConfig, Optional[str]]]]:
     """
-    Monkeypatch oai_coding_agent.cli.console_main to capture calls instead of running the console REPL.
-    Returns a list of RuntimeConfig objects.
+    Monkeypatch oai_coding_agent.cli.console_main to capture calls.
+    Returns a list of either RuntimeConfig (REPL mode) or (RuntimeConfig, prompt) tuples (headless mode).
     """
-    calls = []
+    calls: list[Union[RuntimeConfig, tuple[RuntimeConfig, Optional[str]]]] = []
 
-    async def fake_main(config: RuntimeConfig) -> None:
-        calls.append(config)
+    async def fake_main(config: RuntimeConfig, prompt: Optional[str] = None) -> None:
+        if prompt is None:
+            calls.append(config)
+        else:
+            calls.append((config, prompt))
 
     monkeypatch.setattr(cli_module, "console_main", fake_main)
-    return calls
-
-
-@pytest.fixture
-def headless_main_calls(
-    monkeypatch: pytest.MonkeyPatch,
-) -> list[tuple[RuntimeConfig, str]]:
-    """
-    Monkeypatch oai_coding_agent.cli.headless_main to capture calls instead of running headless mode.
-    Returns a list of (RuntimeConfig, prompt) tuples.
-    """
-    calls = []
-
-    async def fake_headless_main(config: RuntimeConfig, prompt: str) -> None:
-        calls.append((config, prompt))
-
-    monkeypatch.setattr(cli_module, "headless_main", fake_headless_main)
     return calls

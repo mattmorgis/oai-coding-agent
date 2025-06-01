@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from typing import Optional
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -16,8 +17,23 @@ from .slash_commands import handle_slash_command, register_slash_commands
 from .state import UIMessage, UIState
 
 
-async def main(config: RuntimeConfig) -> None:
-    """Main REPL loop for the console interface."""
+async def headless_main(config: RuntimeConfig, prompt: str) -> None:
+    """
+    Execute one prompt in async 'headless' mode and render streamed output.
+
+    Args:
+        config: Runtime configuration for the agent.
+        prompt: The prompt text to send to the agent.
+    """
+    console.print(f"[bold cyan]Prompt:[/bold cyan] {prompt}")
+    async with AgentSession(config) as session_agent:
+        ui_stream, _ = await session_agent.run_step(prompt)
+        async for msg in ui_stream:
+            render_message(msg)
+
+
+async def repl_main(config: RuntimeConfig) -> None:
+    """Interactive REPL loop for the console interface."""
     state = UIState()
     clear_terminal()
 
@@ -85,3 +101,18 @@ async def main(config: RuntimeConfig) -> None:
 
             except (KeyboardInterrupt, EOFError):
                 continue_loop = False
+
+
+async def main(config: RuntimeConfig, prompt: Optional[str] = None) -> None:
+    """
+    Unified entry point for both interactive REPL and headless modes.
+
+    Args:
+        config: Runtime configuration for the agent.
+        prompt: If provided, runs in headless mode with this prompt.
+                If None, runs interactive REPL.
+    """
+    if prompt:
+        await headless_main(config, prompt)
+    else:
+        await repl_main(config)
