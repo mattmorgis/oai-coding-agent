@@ -76,7 +76,6 @@ def main(
             prompt_text = sys.stdin.read()
         else:
             prompt_text = prompt
-        logger.info(f"Running prompt in headless (async): {prompt}")
 
     cfg = RuntimeConfig(
         openai_api_key=openai_api_key,
@@ -93,6 +92,8 @@ def main(
         logger.info(
             f"Starting chat with model {cfg.model.value} on repo {cfg.repo_path}"
         )
+    else:
+        logger.info(f"Running prompt in headless (async): {cfg.prompt}")
 
     try:
         asyncio.run(console_main(cfg))
