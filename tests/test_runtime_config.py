@@ -42,9 +42,9 @@ def test_runtime_config_init_defaults_repo_path(
     assert cfg.mode == ModeChoice.default
 
 
-def test_runtime_config_from_cli_sets_attributes() -> None:
+def test_runtime_config_constructor_sets_attributes() -> None:
     rp = Path("/somewhere")
-    cfg = RuntimeConfig.from_cli(
+    cfg = RuntimeConfig(
         openai_api_key="A",
         github_personal_access_token="GH",
         model=ModelChoice.o4_mini,
@@ -58,9 +58,9 @@ def test_runtime_config_from_cli_sets_attributes() -> None:
     assert cfg.mode == ModeChoice.default
 
 
-def test_runtime_config_from_cli_with_custom_mode() -> None:
+def test_runtime_config_constructor_with_custom_mode() -> None:
     rp = Path("/custom")
-    cfg = RuntimeConfig.from_cli(
+    cfg = RuntimeConfig(
         openai_api_key="A",
         github_personal_access_token="GH",
         model=ModelChoice.o4_mini,

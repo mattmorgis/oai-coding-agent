@@ -53,7 +53,7 @@ def main(
         ModeChoice, typer.Option("--mode", help="Agent mode: default, async, or plan")
     ] = ModeChoice.default,
     repo_path: Path = typer.Option(
-        None,
+        Path.cwd(),
         "--repo-path",
         help=(
             "Path to the repository. This path (and its subdirectories) "
@@ -73,12 +73,12 @@ def main(
     OAI CODING AGENT - starts an interactive or batch session
     """
     # Build a single config object from the CLI parameters
-    cfg = RuntimeConfig.from_cli(
-        openai_api_key,
-        github_personal_access_token,
-        model,
-        repo_path,
-        mode,
+    cfg = RuntimeConfig(
+        openai_api_key=openai_api_key,
+        github_personal_access_token=github_personal_access_token,
+        model=model,
+        repo_path=repo_path,
+        mode=mode,
     )
     run_preflight_checks(cfg.repo_path)
 

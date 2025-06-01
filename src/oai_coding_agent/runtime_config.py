@@ -68,23 +68,3 @@ class RuntimeConfig:
     model: ModelChoice
     repo_path: Path = field(default_factory=Path.cwd)
     mode: ModeChoice = ModeChoice.default
-
-    @classmethod
-    def from_cli(
-        cls,
-        openai_api_key: str,
-        github_personal_access_token: str,
-        model: ModelChoice,
-        repo_path: Optional[Path] = None,
-        mode: ModeChoice = ModeChoice.default,
-    ) -> "RuntimeConfig":
-        """
-        Build a RuntimeConfig object from CLI-supplied parameters.
-        """
-        return cls(
-            openai_api_key=openai_api_key,
-            github_personal_access_token=github_personal_access_token,
-            model=model,
-            repo_path=repo_path or Path.cwd(),
-            mode=mode,
-        )
