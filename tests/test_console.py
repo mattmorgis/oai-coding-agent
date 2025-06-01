@@ -4,8 +4,8 @@ from typing import Any, AsyncGenerator, Self
 import pytest
 from rich.console import Console
 
+import oai_coding_agent.console.console as console_module
 import oai_coding_agent.console.rendering as rendering
-import oai_coding_agent.console.repl as repl_module
 from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConfig
 
 
@@ -46,16 +46,16 @@ def setup_repl(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Console:
     # Redirect console output to recorder and disable clear
     recorder = Console(record=True, width=80)
     monkeypatch.setattr(rendering, "console", recorder)
-    monkeypatch.setattr(repl_module, "console", recorder)
+    monkeypatch.setattr(console_module, "console", recorder)
     monkeypatch.setattr(rendering, "clear_terminal", lambda: None)
-    monkeypatch.setattr(repl_module, "clear_terminal", lambda: None)
+    monkeypatch.setattr(console_module, "clear_terminal", lambda: None)
 
     # Force history path into tmp_path
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     # Monkeypatch prompt session and agent session
-    monkeypatch.setattr(repl_module, "PromptSession", DummyPromptSession)
-    monkeypatch.setattr(repl_module, "AgentSession", DummyAgentSession)
+    monkeypatch.setattr(console_module, "PromptSession", DummyPromptSession)
+    monkeypatch.setattr(console_module, "AgentSession", DummyAgentSession)
 
     return recorder
 
@@ -72,7 +72,7 @@ async def test_repl_main_exits_on_exit_and_prints_header(
         repo_path=tmp_path,
         mode=ModeChoice.default,
     )
-    await repl_module.main(config)
+    await console_module.main(config)
 
     output = recorder.export_text()
     # Header includes agent name and model

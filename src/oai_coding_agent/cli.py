@@ -7,7 +7,7 @@ from typing import Optional
 import typer
 from typing_extensions import Annotated
 
-from .console.repl import main as console_main
+from .console.console import main as console_main
 from .logger import setup_logging
 from .preflight import run_preflight_checks
 from .runtime_config import (
