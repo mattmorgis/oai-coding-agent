@@ -72,6 +72,9 @@ def main(
     """
     OAI CODING AGENT - starts an interactive or batch session
     """
+    # Run preflight checks and get git info
+    github_repo, branch_name = run_preflight_checks(repo_path)
+
     # Build a single config object from the CLI parameters
     cfg = RuntimeConfig(
         openai_api_key=openai_api_key,
@@ -79,8 +82,9 @@ def main(
         model=model,
         repo_path=repo_path,
         mode=mode,
+        github_repo=github_repo,
+        branch_name=branch_name,
     )
-    run_preflight_checks(cfg.repo_path)
 
     if prompt:
         # Force async mode for one-off prompt runs
@@ -101,6 +105,8 @@ def main(
                     cfg.github_personal_access_token,
                     mode_value,
                     prompt_text,
+                    cfg.github_repo,
+                    cfg.branch_name,
                 )
             )
         except KeyboardInterrupt:
@@ -116,6 +122,8 @@ def main(
                 cfg.openai_api_key,
                 cfg.github_personal_access_token,
                 cfg.mode.value,
+                cfg.github_repo,
+                cfg.branch_name,
             )
         )
     except KeyboardInterrupt:

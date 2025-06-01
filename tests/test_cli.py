@@ -10,7 +10,9 @@ from oai_coding_agent.cli import app
 @pytest.fixture(autouse=True)
 def stub_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
     # Stub preflight checks for CLI tests to not block execution
-    monkeypatch.setattr(cli_module, "run_preflight_checks", lambda repo_path: None)
+    monkeypatch.setattr(
+        cli_module, "run_preflight_checks", lambda repo_path: (None, None)
+    )
 
 
 def test_cli_invokes_console_with_explicit_flags(

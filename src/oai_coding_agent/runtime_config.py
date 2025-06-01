@@ -61,6 +61,8 @@ class RuntimeConfig:
         model: The OpenAI model identifier.
         repo_path: Path to the repository to work on.
         mode: The agent mode to use.
+        github_repo: The GitHub repository in "owner/repo" format (if available).
+        branch_name: The current git branch name (if available).
     """
 
     openai_api_key: str
@@ -68,3 +70,5 @@ class RuntimeConfig:
     model: ModelChoice
     repo_path: Path = field(default_factory=Path.cwd)
     mode: ModeChoice = ModeChoice.default
+    github_repo: Optional[str] = None
+    branch_name: Optional[str] = None

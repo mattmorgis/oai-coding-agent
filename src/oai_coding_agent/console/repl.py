@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from typing import Optional
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -21,6 +22,8 @@ async def main(
     openai_api_key: str,
     github_personal_access_token: str,
     mode: str = "default",
+    github_repo: Optional[str] = None,
+    branch_name: Optional[str] = None,
 ) -> None:
     """Main REPL loop for the console interface."""
     state = UIState()
@@ -64,6 +67,8 @@ async def main(
         openai_api_key=openai_api_key,
         github_personal_access_token=github_personal_access_token,
         mode=mode,
+        github_repo=github_repo,
+        branch_name=branch_name,
     ) as session_agent:
         prev_id = None
         continue_loop = True

@@ -5,8 +5,6 @@ AgentSession context manager for streaming OAI agent interactions with a local c
 __all__ = ["AgentSession", "Runner", "Agent"]
 
 import logging
-import os
-import subprocess
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -49,6 +47,8 @@ class _AgentSession:
     github_personal_access_token: str
     max_turns: int = 100
     mode: str = _DEFAULT_MODE
+    github_repo: Optional[str] = None
+    branch_name: Optional[str] = None
 
     _exit_stack: AsyncExitStack = field(init=False, repr=False)
     _agent: Agent = field(init=False, repr=False)
@@ -93,50 +93,11 @@ class _AgentSession:
         except TemplateNotFound:
             template = TEMPLATE_ENV.get_template("prompt_default.jinja2")
 
-        # Plug in the GitHub repo (owner/name) from the 'origin' remote URL
-        try:
-            raw = (
-                subprocess.check_output(
-                    ["git", "config", "--get", "remote.origin.url"],
-                    cwd=self.repo_path,
-                )
-                .decode()
-                .strip()
-            )
-            # Remove trailing ".git"
-            if raw.endswith(".git"):
-                raw = raw[:-4]
-            # SSH style: git@github.com:owner/repo
-            if raw.startswith("git@"):
-                _, path = raw.split(":", 1)
-                github_repo = path
-            # HTTPS style: https://github.com/owner/repo
-            elif "://" in raw:
-                github_repo = raw.split("://", 1)[1].split("/", 1)[1]
-            else:
-                github_repo = raw
-        except Exception:
-            github_repo = ""
-
-        # Derive the current branch name (local HEAD or fallback to GITHUB_REF)
-        try:
-            branch_name = (
-                subprocess.check_output(
-                    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                    cwd=self.repo_path,
-                )
-                .decode()
-                .strip()
-            )
-        except Exception:
-            ref = os.getenv("GITHUB_REF", "")
-            branch_name = ref.rsplit("/", 1)[-1] if "/" in ref else ref
-
         return template.render(
             repo_path=str(self.repo_path),
             mode=self.mode,
-            github_repository=github_repo,
-            branch_name=branch_name,
+            github_repository=self.github_repo or "",
+            branch_name=self.branch_name or "",
         )
 
     def _map_sdk_event(self, event: Any) -> Optional[UIMessage]:
@@ -197,6 +158,8 @@ async def AgentSession(
     github_personal_access_token: str,
     max_turns: int = 100,
     mode: str = _DEFAULT_MODE,
+    github_repo: Optional[str] = None,
+    branch_name: Optional[str] = None,
 ) -> AsyncIterator[_AgentSession]:
     """
     Async context manager for setting up and tearing down an agent session.
@@ -208,6 +171,8 @@ async def AgentSession(
         github_personal_access_token=github_personal_access_token,
         max_turns=max_turns,
         mode=mode,
+        github_repo=github_repo,
+        branch_name=branch_name,
     )
     await session._startup()
     try:

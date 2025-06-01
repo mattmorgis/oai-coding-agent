@@ -3,9 +3,11 @@ Preflight checks for the OAI Coding Agent CLI.
 """
 
 import logging
+import os
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Optional, Tuple
 
 import typer
 
@@ -86,13 +88,70 @@ def check_docker() -> str:
     return get_tool_version(["docker", "--version"])
 
 
-def run_preflight_checks(repo_path: Path) -> None:
+def get_github_repo(repo_path: Path) -> Optional[str]:
+    """
+    Extract GitHub repository in 'owner/repo' format from git remote.origin.url.
+    Returns None if extraction fails.
+    """
+    try:
+        raw = (
+            subprocess.check_output(
+                ["git", "config", "--get", "remote.origin.url"],
+                cwd=repo_path,
+            )
+            .decode()
+            .strip()
+        )
+        # Remove trailing ".git"
+        if raw.endswith(".git"):
+            raw = raw[:-4]
+        # SSH style: git@github.com:owner/repo
+        if raw.startswith("git@"):
+            _, path = raw.split(":", 1)
+            return path
+        # HTTPS style: https://github.com/owner/repo
+        elif "://" in raw:
+            return raw.split("://", 1)[1].split("/", 1)[1]
+        else:
+            return raw
+    except Exception:
+        return None
+
+
+def get_git_branch(repo_path: Path) -> Optional[str]:
+    """
+    Get the current git branch name.
+    Falls back to GITHUB_REF environment variable if direct extraction fails.
+    Returns None if extraction fails.
+    """
+    try:
+        branch_name = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                cwd=repo_path,
+            )
+            .decode()
+            .strip()
+        )
+        return branch_name
+    except Exception:
+        # Fallback to GITHUB_REF (useful in CI environments)
+        ref = os.getenv("GITHUB_REF", "")
+        if ref and "/" in ref:
+            return ref.rsplit("/", 1)[-1]
+        return None
+
+
+def run_preflight_checks(repo_path: Path) -> Tuple[Optional[str], Optional[str]]:
     """
     Validate preflight requirements:
       - Git worktree check
       - Node.js binary + version
       - Docker binary + version
     On failure, prints errors and exits (typer.Exit).
+
+    Returns:
+        Tuple of (github_repo, branch_name) - both may be None if extraction fails
     """
     errors: list[str] = []
 
@@ -118,3 +177,14 @@ def run_preflight_checks(repo_path: Path) -> None:
 
     logger.info(f"Detected Node.js version: {node_version}")
     logger.info(f"Detected Docker version: {docker_version}")
+
+    # Extract git info
+    github_repo = get_github_repo(repo_path)
+    branch_name = get_git_branch(repo_path)
+
+    if github_repo:
+        logger.info(f"Detected GitHub repository: {github_repo}")
+    if branch_name:
+        logger.info(f"Detected git branch: {branch_name}")
+
+    return github_repo, branch_name

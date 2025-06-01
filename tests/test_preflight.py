@@ -37,10 +37,24 @@ def test_run_preflight_success(
             )
         pytest.fail(f"Unexpected command: {cmd}")
 
+    def fake_check_output(
+        cmd: Sequence[str],
+        cwd: Path | None = None,
+    ) -> bytes:
+        if cmd == ["git", "config", "--get", "remote.origin.url"]:
+            return b"https://github.com/owner/repo.git\n"
+        if cmd == ["git", "rev-parse", "--abbrev-ref", "HEAD"]:
+            return b"main\n"
+        pytest.fail(f"Unexpected check_output command: {cmd}")
+
     monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(subprocess, "check_output", fake_check_output)
 
     caplog.set_level(logging.INFO)
-    run_preflight_checks(Path("/some/repo"))
+    github_repo, branch_name = run_preflight_checks(Path("/some/repo"))
+
+    assert github_repo == "owner/repo"
+    assert branch_name == "main"
 
     # Ensure versions are logged at INFO level
     assert any(

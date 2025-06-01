@@ -21,6 +21,8 @@ def console_main_calls(
         api_key: str,
         github_personal_access_token: str,
         mode: str,
+        github_repo: str | None = None,
+        branch_name: str | None = None,
     ) -> None:
         calls.append((repo_path, model, api_key, mode))
 
@@ -45,6 +47,8 @@ def headless_main_calls(
         github_personal_access_token: str,
         mode: str,
         prompt: str,
+        github_repo: str | None = None,
+        branch_name: str | None = None,
     ) -> None:
         calls.append((repo_path, model, api_key, mode, prompt))
 
