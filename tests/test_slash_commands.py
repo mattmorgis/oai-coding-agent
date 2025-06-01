@@ -7,7 +7,7 @@ from oai_coding_agent.console.slash_commands import (
     handle_slash_command,
     register_slash_commands,
 )
-from oai_coding_agent.console.state import UIMessage, UIState
+from oai_coding_agent.console.state import UIState
 
 
 @pytest.fixture(autouse=True)
@@ -29,26 +29,18 @@ def test_register_slash_commands_populates_commands() -> None:
     assert expected.issubset(set(state.slash_commands.keys()))
 
 
-def test_handle_help_command_appends_help_message() -> None:
+def test_handle_help_command_returns_true() -> None:
     state = UIState()
     register_slash_commands(state)
     cont = handle_slash_command(state, "/help")
     assert cont is True
-    assert state.messages
-    msg = state.messages[-1]
-    assert msg["role"] == "system"
-    assert "/help - Show help information for available commands." in msg["content"]
 
 
-def test_handle_clear_command_clears_messages() -> None:
+def test_handle_clear_command_returns_true() -> None:
     state = UIState()
-    msg: UIMessage = {"role": "user", "content": "hi"}
-    state.messages.append(msg)
     register_slash_commands(state)
     cont = handle_slash_command(state, "/clear")
     assert cont is True
-    assert len(state.messages) == 1
-    assert state.messages[0]["content"] == "Chat history has been cleared."
 
 
 def test_handle_exit_command_returns_false() -> None:
@@ -58,10 +50,8 @@ def test_handle_exit_command_returns_false() -> None:
     assert cont is False
 
 
-def test_handle_unknown_command_appends_unknown() -> None:
+def test_handle_unknown_command_returns_true() -> None:
     state = UIState()
     register_slash_commands(state)
     cont = handle_slash_command(state, "/nonexistent arg")
     assert cont is True
-    msg = state.messages[-1]
-    assert "Unknown command: /nonexistent" in msg["content"]

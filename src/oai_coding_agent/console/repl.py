@@ -14,7 +14,7 @@ from ..runtime_config import RuntimeConfig
 from .key_bindings import get_key_bindings
 from .rendering import clear_terminal, console, render_message
 from .slash_commands import handle_slash_command, register_slash_commands
-from .state import UIMessage, UIState
+from .state import UIState
 
 
 async def headless_main(config: RuntimeConfig, prompt: str) -> None:
@@ -88,13 +88,10 @@ async def repl_main(config: RuntimeConfig) -> None:
                     continue_loop = handle_slash_command(state, user_input)
                     continue
 
-                user_msg: UIMessage = {"role": "user", "content": user_input}
-                state.messages.append(user_msg)
                 console.print(f"[dim]› {user_input}[/dim]\n")
 
                 ui_stream, result = await session_agent.run_step(user_input, prev_id)
                 async for msg in ui_stream:
-                    state.messages.append(msg)
                     render_message(msg)
 
                 prev_id = result.last_response_id

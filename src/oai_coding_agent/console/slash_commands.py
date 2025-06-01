@@ -13,16 +13,13 @@ def register_slash_commands(state: UIState) -> None:
             doc = func.__doc__ or "No description available"
             help_text += f"/{cmd} - {doc}\n"
         msg: UIMessage = {"role": "system", "content": help_text}
-        state.messages.append(msg)
         render_message(msg)
         return True
 
     def cmd_clear(args: str = "") -> bool:
-        """Clear the chat history."""
-        state.messages.clear()
-        msg: UIMessage = {"role": "system", "content": "Chat history has been cleared."}
-        state.messages.append(msg)
+        """Clear the terminal screen."""
         clear_terminal()
+        msg: UIMessage = {"role": "system", "content": "Terminal has been cleared."}
         render_message(msg)
         return True
 
@@ -36,7 +33,6 @@ def register_slash_commands(state: UIState) -> None:
             "role": "system",
             "content": "CLI Chat Version: 0.1.0\nBuilt with Rich and prompt-toolkit",
         }
-        state.messages.append(msg)
         render_message(msg)
         return True
 
@@ -63,14 +59,12 @@ def handle_slash_command(state: UIState, text: str) -> bool:
                 "role": "system",
                 "content": f"Error executing /{cmd}: {e}",
             }
-            state.messages.append(msg)
             render_message(msg)
             return True
     else:
-        msg = {
+        error_msg: UIMessage = {
             "role": "system",
             "content": f"Unknown command: /{cmd}\nType /help to see available commands.",
         }
-        state.messages.append(msg)
-        render_message(msg)
+        render_message(error_msg)
         return True
