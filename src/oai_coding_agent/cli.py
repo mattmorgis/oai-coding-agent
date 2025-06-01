@@ -13,7 +13,14 @@ from .console.repl import main as console_main
 from .headless import headless_main
 from .logger import setup_logging
 from .preflight import run_preflight_checks
-from .runtime_config import ModeChoice, ModelChoice, RuntimeConfig, load_envs
+from .runtime_config import (
+    GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
+    OPENAI_API_KEY_ENV,
+    ModeChoice,
+    ModelChoice,
+    RuntimeConfig,
+    load_envs,
+)
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -30,12 +37,12 @@ app = typer.Typer(rich_markup_mode=None)
 @app.command()
 def main(
     openai_api_key: Annotated[
-        str, typer.Option(envvar="OPENAI_API_KEY", help="OpenAI API key")
+        str, typer.Option(envvar=OPENAI_API_KEY_ENV, help="OpenAI API key")
     ],
     github_personal_access_token: Annotated[
         str,
         typer.Option(
-            envvar="GITHUB_PERSONAL_ACCESS_TOKEN",
+            envvar=GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
             help="GitHub Personal Access Token",
         ),
     ],

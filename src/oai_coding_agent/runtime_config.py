@@ -16,6 +16,10 @@ from typing import Optional
 
 from dotenv import dotenv_values
 
+# Environment variable names for credentials
+OPENAI_API_KEY_ENV: str = "OPENAI_API_KEY"
+GITHUB_PERSONAL_ACCESS_TOKEN_ENV: str = "GITHUB_PERSONAL_ACCESS_TOKEN"
+
 
 def load_envs(env_file: Optional[str] = None) -> None:
     """
@@ -23,7 +27,7 @@ def load_envs(env_file: Optional[str] = None) -> None:
     into the process environment if they are not already set.
     """
     env_values = dotenv_values(env_file) if env_file else dotenv_values()
-    for key in ("OPENAI_API_KEY", "GITHUB_PERSONAL_ACCESS_TOKEN"):
+    for key in (OPENAI_API_KEY_ENV, GITHUB_PERSONAL_ACCESS_TOKEN_ENV):
         if not os.environ.get(key):
             val = env_values.get(key)
             if val:
