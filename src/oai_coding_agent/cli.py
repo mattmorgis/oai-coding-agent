@@ -19,9 +19,6 @@ from .runtime_config import (
     load_envs,
 )
 
-setup_logging()
-logger = logging.getLogger(__name__)
-
 # Load API keys from .env if not already set in the environment
 load_envs()
 
@@ -66,47 +63,38 @@ def main(
     """
     OAI CODING AGENT - starts an interactive or batch session
     """
+    setup_logging()
+    logger = logging.getLogger(__name__)
+
     # Run preflight checks and get git info
     github_repo, branch_name = run_preflight_checks(repo_path)
 
-    # Build a single config object from the CLI parameters
-    cfg = RuntimeConfig(
-        openai_api_key=openai_api_key,
-        github_personal_access_token=github_personal_access_token,
-        model=model,
-        repo_path=repo_path,
-        mode=mode,
-        github_repo=github_repo,
-        branch_name=branch_name,
-    )
-
+    # Read prompt text if provided
+    prompt_text = None
     if prompt:
-        # Read prompt text: literal or stdin if '-' sentinel
-
         if prompt == "-":
             prompt_text = sys.stdin.read()
         else:
             prompt_text = prompt
         logger.info(f"Running prompt in headless (async): {prompt}")
-        # Create a new config with forced async mode
-        headless_cfg = RuntimeConfig(
-            openai_api_key=cfg.openai_api_key,
-            github_personal_access_token=cfg.github_personal_access_token,
-            model=cfg.model,
-            repo_path=cfg.repo_path,
-            mode=ModeChoice.async_,
-            github_repo=cfg.github_repo,
-            branch_name=cfg.branch_name,
-        )
-        try:
-            asyncio.run(console_main(headless_cfg, prompt_text))
-        except KeyboardInterrupt:
-            print("\nExiting...")
-        return
 
-    logger.info(f"Starting chat with model {cfg.model.value} on repo {cfg.repo_path}")
+    cfg = RuntimeConfig(
+        openai_api_key=openai_api_key,
+        github_personal_access_token=github_personal_access_token,
+        model=model,
+        repo_path=repo_path,
+        mode=ModeChoice.async_ if prompt else mode,  # run in async mode if prompt
+        github_repo=github_repo,
+        branch_name=branch_name,
+    )
+
+    if not prompt:
+        logger.info(
+            f"Starting chat with model {cfg.model.value} on repo {cfg.repo_path}"
+        )
+
     try:
-        asyncio.run(console_main(cfg))
+        asyncio.run(console_main(cfg, prompt_text))
     except KeyboardInterrupt:
         print("\nExiting...")
 
