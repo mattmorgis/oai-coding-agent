@@ -3,8 +3,7 @@ repos:
     rev: v0.11.12
     hooks:
       - id: ruff-check
-        args:
-          - --fix
+        args: [--select=I, PLC0415, --preview, --fix]
       - id: ruff-format
 
   - repo: local

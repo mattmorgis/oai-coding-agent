@@ -19,6 +19,26 @@ This project uses `uv` for project management.
 Example: `uv run script.py`
 `uv tree`: View the dependency tree for the project.
 
+### Running Linting
+
+```bash
+uv run ruff check
+uv run ruff check --fix # optional to auto-fix
+```
+
+### Run Formatting
+
+```bash
+uv run ruff format # auto formats files by default
+uv run ruff format --check # dry run
+```
+
+### Running Type Checks
+
+```
+uv run mypy .
+```
+
 ### Running Tests
 
 ```bash
@@ -37,8 +57,11 @@ Otherwise, add them to conftest.py for reuse across test files.
 
 1. After ALL code changes:
 
-   - Run tests for the specific module you modified:
+   - Run checks & tests for the specific module you modified:
      ```
+     uv run ruff check
+     uv run ruff format
+     uv run mypy .
      uv run pytest
      ```
    - Fix any test errors (warnings can be ignored)
