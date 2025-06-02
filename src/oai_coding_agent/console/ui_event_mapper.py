@@ -25,13 +25,13 @@ def map_sdk_event_to_ui_message(event: AgentEvent) -> Optional[UIMessage]:
     # Uses Python 3.10 structural pattern-matching for clearer dispatch
     match event:
         case AgentRunItemStreamEvent(item=AgentToolCallItem(raw_item=raw)):
-            raw_any: Any = raw
-            return UIMessage(role="tool", content=f"{raw_any.name}({raw_any.arguments})")
+            raw_tool: Any = raw
+            return UIMessage(role="tool", content=f"{raw_tool.name}({raw_tool.arguments})")
         case AgentRunItemStreamEvent(item=AgentReasoningItem(raw_item=raw)) if raw.summary:
-            raw_any: Any = raw
-            return UIMessage(role="thought", content=f"💭 {raw_any.summary[0].text}")
+            raw_reasoning: Any = raw
+            return UIMessage(role="thought", content=f"💭 {raw_reasoning.summary[0].text}")
         case AgentRunItemStreamEvent(item=AgentMessageOutputItem(raw_item=raw)) if raw.content:
-            raw_any: Any = raw
-            return UIMessage(role="assistant", content=raw_any.content[0].text)
+            raw_msg: Any = raw
+            return UIMessage(role="assistant", content=raw_msg.content[0].text)
         case _:
             return None
