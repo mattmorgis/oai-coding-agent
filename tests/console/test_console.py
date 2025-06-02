@@ -18,7 +18,7 @@ class DummyPromptSession:
         return "/exit"
 
 
-class DummyAgentSession:
+class DummyAgent:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         pass
 
@@ -28,7 +28,7 @@ class DummyAgentSession:
     async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
         pass
 
-    async def run_step(
+    async def run(
         self, user_input: str, prev_id: Any
     ) -> tuple[AsyncGenerator[Any, None], Any]:
         async def empty_stream() -> AsyncGenerator[Any, None]:
@@ -53,9 +53,9 @@ def setup_repl(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Console:
     # Force history path into tmp_path
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
-    # Monkeypatch prompt session and agent session
+    # Monkeypatch prompt session and agent
     monkeypatch.setattr(console_module, "PromptSession", DummyPromptSession)
-    monkeypatch.setattr(console_module, "AgentSession", DummyAgentSession)
+    monkeypatch.setattr(console_module, "Agent", DummyAgent)
 
     return recorder
 

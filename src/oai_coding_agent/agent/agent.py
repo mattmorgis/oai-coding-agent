@@ -1,54 +1,45 @@
 """
-AgentSession context manager for streaming OAI agent interactions with a local codebase.
+Agent for streaming OAI agent interactions with a local codebase.
 """
 
-__all__ = ["AgentSession", "Runner", "Agent"]
+__all__ = ["Agent"]
 
 import logging
-from contextlib import AsyncExitStack, asynccontextmanager
-from dataclasses import dataclass, field
-from pathlib import Path
+from contextlib import AsyncExitStack
 from typing import Any, AsyncIterator, Optional
 
 from agents import (
-    Agent,
+    Agent as SDKAgent,
+)
+from agents import (
     ModelSettings,
     Runner,
     RunResultStreaming,
     gen_trace_id,
     trace,
 )
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from openai.types.shared.reasoning import Reasoning
 
 from ..console.state import UIMessage
 from ..runtime_config import RuntimeConfig
+from .event_mapper import map_sdk_event_to_ui_message
+from .instruction_builder import build_instructions
 from .mcp_servers import start_mcp_servers
 from .mcp_tool_selector import get_filtered_function_tools
 
 logger = logging.getLogger(__name__)
 
-TEMPLATE_ENV = Environment(
-    loader=FileSystemLoader(Path(__file__).parent.parent / "templates"),
-    autoescape=False,
-    keep_trailing_newline=True,
-)
 
+class Agent:
+    """Agent that manages MCP servers, tracing, and SDK agent interactions."""
 
-_DEFAULT_MODE = "default"
+    def __init__(self, config: RuntimeConfig, max_turns: int = 100):
+        self.config = config
+        self.max_turns = max_turns
+        self._exit_stack: Optional[AsyncExitStack] = None
+        self._sdk_agent: Optional[SDKAgent] = None
 
-
-@dataclass
-class _AgentSession:
-    """Internal agent session managing MCP servers, tracing, and the Agent instance."""
-
-    config: RuntimeConfig
-    max_turns: int = 100
-
-    _exit_stack: AsyncExitStack = field(init=False, repr=False)
-    _agent: Agent = field(init=False, repr=False)
-
-    async def _startup(self) -> None:
+    async def __aenter__(self) -> "Agent":
         # Initialize exit stack for async contexts and callbacks
         self._exit_stack = AsyncExitStack()
         await self._exit_stack.__aenter__()
@@ -67,13 +58,13 @@ class _AgentSession:
         self._exit_stack.callback(trace_ctx.__exit__, None, None, None)
 
         # Build instructions and fetch filtered MCP function-tools
-        dynamic_instructions = self._build_instructions()
+        dynamic_instructions = build_instructions(self.config)
         function_tools = await get_filtered_function_tools(
             mcp_servers, self.config.mode.value
         )
 
-        # Instantiate the Agent with the filtered function-tools
-        self._agent = Agent(
+        # Instantiate the SDK Agent with the filtered function-tools
+        self._sdk_agent = SDKAgent(
             name="Coding Agent",
             instructions=dynamic_instructions,
             model=self.config.model.value,
@@ -83,49 +74,13 @@ class _AgentSession:
             tools=function_tools,
         )
 
-    async def _cleanup(self) -> None:
-        await self._exit_stack.__aexit__(None, None, None)
+        return self
 
-    def _build_instructions(self) -> str:
-        try:
-            template = TEMPLATE_ENV.get_template(
-                f"prompt_{self.config.mode.value}.jinja2"
-            )
-        except TemplateNotFound:
-            template = TEMPLATE_ENV.get_template("prompt_default.jinja2")
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        if self._exit_stack:
+            await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
 
-        return template.render(
-            repo_path=str(self.config.repo_path),
-            mode=self.config.mode.value,
-            github_repository=self.config.github_repo or "",
-            branch_name=self.config.branch_name or "",
-        )
-
-    def _map_sdk_event(self, event: Any) -> Optional[UIMessage]:
-        evt_type = getattr(event, "type", None)
-        evt_name = getattr(event, "name", None)
-        logger.debug(
-            "SDK event received: type=%s, name=%s, event=%r", evt_type, evt_name, event
-        )
-
-        if evt_type == "run_item_stream_event" and evt_name == "tool_called":
-            return {
-                "role": "tool",
-                "content": f"{event.item.raw_item.name}({event.item.raw_item.arguments})",
-            }
-        if evt_name == "reasoning_item_created":
-            summary = event.item.raw_item.summary
-            if summary:
-                text = summary[0].text
-                return {"role": "thought", "content": f"💭 {text}"}
-        if evt_name == "message_output_created":
-            return {
-                "role": "assistant",
-                "content": event.item.raw_item.content[0].text,
-            }
-        return None
-
-    async def run_step(
+    async def run(
         self,
         user_input: str,
         previous_response_id: Optional[str] = None,
@@ -134,8 +89,11 @@ class _AgentSession:
         Send one user message to the agent and return an async iterator of UI messages
         plus the underlying RunResultStreaming.
         """
+        if self._sdk_agent is None:
+            raise RuntimeError("Agent not initialized. Use async with context manager.")
+
         result = Runner.run_streamed(
-            self._agent,
+            self._sdk_agent,
             user_input,
             previous_response_id=previous_response_id,
             max_turns=self.max_turns,
@@ -144,27 +102,8 @@ class _AgentSession:
 
         async def _ui_stream() -> AsyncIterator[UIMessage]:
             async for evt in sdk_events:
-                msg = self._map_sdk_event(evt)
+                msg = map_sdk_event_to_ui_message(evt)
                 if msg:
                     yield msg
 
         return _ui_stream(), result
-
-
-@asynccontextmanager
-async def AgentSession(
-    config: RuntimeConfig,
-    max_turns: int = 100,
-) -> AsyncIterator[_AgentSession]:
-    """
-    Async context manager for setting up and tearing down an agent session.
-    """
-    session = _AgentSession(
-        config=config,
-        max_turns=max_turns,
-    )
-    await session._startup()
-    try:
-        yield session
-    finally:
-        await session._cleanup()

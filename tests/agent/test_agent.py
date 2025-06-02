@@ -3,11 +3,12 @@ from pathlib import Path
 from typing import Any, AsyncGenerator, cast
 
 import pytest
+from agents import Agent as SDKAgent
+from agents import Runner
 from agents.mcp import MCPServerStdioParams
 
-import oai_coding_agent.agent.agent as agent_module
 import oai_coding_agent.agent.mcp_servers as mcp_servers_module
-from oai_coding_agent.agent.agent import Agent, _AgentSession
+from oai_coding_agent.agent.agent import Agent
 from oai_coding_agent.agent.mcp_servers import (
     ALLOWED_CLI_COMMANDS,
     ALLOWED_CLI_FLAGS,
@@ -57,48 +58,6 @@ def test_quiet_mcp_server_stdio_create_streams(monkeypatch: pytest.MonkeyPatch) 
     errlog.close()
 
 
-def test_build_instructions_with_known_mode() -> None:
-    config = RuntimeConfig(
-        openai_api_key="apikey",
-        github_personal_access_token="TOK",
-        model=ModelChoice.codex_mini_latest,
-        repo_path=Path("repo"),
-        mode=ModeChoice.async_,
-    )
-    session = _AgentSession(
-        config=config,
-        max_turns=5,
-    )
-    instr = session._build_instructions()
-    # Should load prompt_async.jinja2
-    assert instr.startswith(
-        "You are an autonomous software engineering agent running in GitHub Actions"
-    )
-    # Should not be empty
-    assert "## Autonomous Decision Making" in instr
-
-
-def test_build_instructions_with_unknown_mode_fallback() -> None:
-    # Create a config with default mode which uses prompt_default.jinja2
-    config = RuntimeConfig(
-        openai_api_key="apikey",
-        github_personal_access_token="TOK",
-        model=ModelChoice.codex_mini_latest,
-        repo_path=Path("repo2"),
-        mode=ModeChoice.default,
-    )
-    session = _AgentSession(
-        config=config,
-        max_turns=5,
-    )
-    instr = session._build_instructions()
-    # Should fallback to default prompt
-    assert instr.startswith(
-        "You are OAI - a collaborative software engineering assistant"
-    )
-    assert "## Collaborative Approach" in instr
-
-
 class DummyRaw:
     def __init__(self, **kwargs: Any) -> None:
         for k, v in kwargs.items():
@@ -117,54 +76,8 @@ class DummyEvent:
         self.item = item
 
 
-def test_map_sdk_event_tool() -> None:
-    raw = DummyRaw(name="cmd", arguments=("a", "b"))
-    event = DummyEvent(
-        type="run_item_stream_event", name="tool_called", item=DummyItem(raw)
-    )
-    mapped = agent_module._AgentSession._map_sdk_event(
-        cast(_AgentSession, object()), event
-    )
-    assert mapped == {"role": "tool", "content": "cmd(('a', 'b'))"}
-
-
-def test_map_sdk_event_reasoning_with_summary() -> None:
-    raw = DummyRaw(summary=[DummyRaw(text="thinking")])
-    event = DummyEvent(name="reasoning_item_created", item=DummyItem(raw))
-    mapped = agent_module._AgentSession._map_sdk_event(
-        cast(_AgentSession, object()), event
-    )
-    assert mapped == {"role": "thought", "content": "💭 thinking"}
-
-
-def test_map_sdk_event_reasoning_without_summary() -> None:
-    raw = DummyRaw(summary=[])
-    event = DummyEvent(name="reasoning_item_created", item=DummyItem(raw))
-    mapped = agent_module._AgentSession._map_sdk_event(
-        cast(_AgentSession, object()), event
-    )
-    assert mapped is None
-
-
-def test_map_sdk_event_message_output_created() -> None:
-    raw = DummyRaw(content=[DummyRaw(text="output text")])
-    event = DummyEvent(name="message_output_created", item=DummyItem(raw))
-    mapped = agent_module._AgentSession._map_sdk_event(
-        cast(_AgentSession, object()), event
-    )
-    assert mapped == {"role": "assistant", "content": "output text"}
-
-
-def test_map_sdk_event_other() -> None:
-    event = DummyEvent(type="other", name="something_else", item=DummyItem(DummyRaw()))
-    mapped = agent_module._AgentSession._map_sdk_event(
-        cast(_AgentSession, object()), event
-    )
-    assert mapped is None
-
-
 @pytest.mark.asyncio
-async def test_run_step_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     # Prepare dummy events in stream order
     events = [
         DummyEvent(
@@ -198,11 +111,11 @@ async def test_run_step_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> 
 
     # Monkeypatch Runner.run_streamed
     monkeypatch.setattr(
-        agent_module.Runner,
+        Runner,
         "run_streamed",
         lambda agent, u, previous_response_id, max_turns: fake_result,
     )
-    # Initialize session and set dummy agent
+    # Initialize agent and set dummy SDK agent
     config = RuntimeConfig(
         openai_api_key="k",
         github_personal_access_token="TOK",
@@ -210,15 +123,10 @@ async def test_run_step_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> 
         repo_path=Path("."),
         mode=ModeChoice.async_,
     )
-    session = _AgentSession(
-        config=config,
-        max_turns=1,
-    )
-    session._agent = cast(Agent[Any], object())
+    agent = Agent(config, max_turns=1)
+    agent._sdk_agent = cast(SDKAgent, object())
 
-    ui_stream, returned = await session.run_step(
-        "input text", previous_response_id="prev"
-    )
+    ui_stream, returned = await agent.run("input text", previous_response_id="prev")
     # Should return the underlying result as is
     assert returned is fake_result  # type: ignore[comparison-overlap]
     # Collect messages from ui_stream
@@ -226,8 +134,5 @@ async def test_run_step_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> 
     async for msg in ui_stream:
         collected.append(msg)
     # Should map exactly three events (skip unknown)
-    assert collected == [
-        {"role": "tool", "content": "t(('x',))"},
-        {"role": "thought", "content": "💭 r"},
-        {"role": "assistant", "content": "m"},
-    ]
+    # Note: The actual event mapping is now tested in test_event_mapper.py
+    assert len(collected) == 3

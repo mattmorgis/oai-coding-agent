@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from typing import Protocol
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -8,13 +9,12 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
-from ..agent.agent import AgentSession
+from ..agent.agent import Agent
 from ..runtime_config import RuntimeConfig
 from .key_bindings import get_key_bindings
 from .rendering import clear_terminal, console, render_message
 from .slash_commands import handle_slash_command, register_slash_commands
 from .state import UIState
-from typing import Protocol
 
 
 class Console(Protocol):
@@ -23,7 +23,7 @@ class Console(Protocol):
     config: RuntimeConfig
 
     async def run(self) -> None:
-        ...
+        pass
 
 
 class HeadlessConsole:
@@ -57,8 +57,8 @@ async def headless_main(config: RuntimeConfig) -> None:
         raise ValueError("Prompt is required for headless mode")
 
     console.print(f"[bold cyan]Prompt:[/bold cyan] {config.prompt}")
-    async with AgentSession(config) as session_agent:
-        ui_stream, _ = await session_agent.run_step(config.prompt)
+    async with Agent(config) as agent:
+        ui_stream, _ = await agent.run(config.prompt)
         async for msg in ui_stream:
             render_message(msg)
 
@@ -100,7 +100,7 @@ async def repl_main(config: RuntimeConfig) -> None:
         erase_when_done=True,
     )
 
-    async with AgentSession(config) as session_agent:
+    async with Agent(config) as agent:
         prev_id = None
         continue_loop = True
         while continue_loop:
@@ -121,7 +121,7 @@ async def repl_main(config: RuntimeConfig) -> None:
 
                 console.print(f"[dim]› {user_input}[/dim]\n")
 
-                ui_stream, result = await session_agent.run_step(user_input, prev_id)
+                ui_stream, result = await agent.run(user_input, prev_id)
                 async for msg in ui_stream:
                     render_message(msg)
 
