@@ -5,7 +5,8 @@ Map SDK events to UI messages.
 import logging
 from typing import Any, Optional
 
-from agents import RunItemStreamEvent, StreamEvent
+from agents import RunItemStreamEvent
+from ..agent.events import AgentEvent
 from agents.items import MessageOutputItem, ReasoningItem, ToolCallItem
 
 from .state import UIMessage
@@ -13,7 +14,7 @@ from .state import UIMessage
 logger = logging.getLogger(__name__)
 
 
-def map_sdk_event_to_ui_message(event: StreamEvent) -> Optional[UIMessage]:
+def map_sdk_event_to_ui_message(event: AgentEvent) -> Optional[UIMessage]:
     """Map an SDK event to a UI message."""
     logger.debug("SDK event received: type=%s, event=%r", event.type, event)
 

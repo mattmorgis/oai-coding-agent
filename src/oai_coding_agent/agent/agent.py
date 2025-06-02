@@ -15,10 +15,11 @@ from agents import (
     ModelSettings,
     Runner,
     RunResultStreaming,
-    StreamEvent,
     gen_trace_id,
     trace,
 )
+
+from .events import AgentEvent
 from openai.types.shared.reasoning import Reasoning
 
 from ..runtime_config import RuntimeConfig
@@ -43,7 +44,7 @@ class AgentProtocol(Protocol):
         self,
         user_input: str,
         previous_response_id: Optional[str] = None,
-    ) -> tuple[AsyncIterator[StreamEvent], RunResultStreaming]: ...
+    ) -> tuple[AsyncIterator[AgentEvent], RunResultStreaming]: ...
 
 
 class Agent:
@@ -100,7 +101,7 @@ class Agent:
         self,
         user_input: str,
         previous_response_id: Optional[str] = None,
-    ) -> tuple[AsyncIterator[StreamEvent], RunResultStreaming]:
+    ) -> tuple[AsyncIterator[AgentEvent], RunResultStreaming]:
         """
         Send one user message to the agent and return an async iterator of SDK events
         plus the underlying RunResultStreaming.
