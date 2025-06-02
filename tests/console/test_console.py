@@ -1,9 +1,12 @@
+import sys
 from pathlib import Path
-from typing import Any, AsyncGenerator, Optional, Self
-from unittest.mock import Mock
+from typing import Any
 
 import pytest
 from rich.console import Console
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from conftest import MockAgent
 
 import oai_coding_agent.console.console as console_module
 import oai_coding_agent.console.rendering as rendering
@@ -17,29 +20,6 @@ class DummyPromptSession:
     def prompt(self, prompt_str: str) -> str:
         # Immediately exit on slash command
         return "/exit"
-
-
-class DummyAgent:
-    def __init__(self, config: RuntimeConfig):
-        self.config = config
-
-    async def __aenter__(self) -> Self:
-        return self
-
-    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
-        pass
-
-    async def run(
-        self, user_input: str, prev_id: Optional[str] = None
-    ) -> tuple[AsyncGenerator[Any, None], Any]:
-        async def empty_stream() -> AsyncGenerator[Any, None]:
-            if False:
-                yield
-
-        result = Mock()
-        result.last_response_id = None
-
-        return empty_stream(), result
 
 
 @pytest.fixture(autouse=True)
@@ -74,7 +54,7 @@ async def test_repl_console_exits_on_exit_and_prints_header(
     )
 
     # Create agent and console directly
-    agent = DummyAgent(config)
+    agent = MockAgent(config)
     console = console_module.ReplConsole(agent)
     await console.run()
 

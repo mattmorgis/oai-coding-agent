@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any, Callable, Optional
 
 import pytest
 from conftest import MockAgent, MockConsole
@@ -12,15 +13,47 @@ from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConf
 
 
 @pytest.fixture
-def mock_agents() -> list[MockAgent]:
-    """Track created mock agents."""
-    return []
+def mock_agent_factory() -> Any:
+    """Create a factory that returns a MockAgent."""
+    created_agent: Optional[MockAgent] = None
+
+    def factory(config: RuntimeConfig) -> AgentProtocol:
+        nonlocal created_agent
+        created_agent = MockAgent(config)
+        return created_agent
+
+    class FactoryResult:
+        @property
+        def agent(self) -> Optional[MockAgent]:
+            return created_agent
+
+        @property
+        def factory(self) -> Callable[[RuntimeConfig], AgentProtocol]:
+            return factory
+
+    return FactoryResult()
 
 
 @pytest.fixture
-def mock_consoles() -> list[MockConsole]:
-    """Track created mock consoles."""
-    return []
+def mock_console_factory() -> Any:
+    """Create a factory that returns a MockConsole."""
+    created_console: Optional[MockConsole] = None
+
+    def factory(agent: AgentProtocol) -> Console:
+        nonlocal created_console
+        created_console = MockConsole(agent)
+        return created_console
+
+    class FactoryResult:
+        @property
+        def console(self) -> Optional[MockConsole]:
+            return created_console
+
+        @property
+        def factory(self) -> Callable[[AgentProtocol], Console]:
+            return factory
+
+    return FactoryResult()
 
 
 @pytest.fixture(autouse=True)
@@ -32,21 +65,11 @@ def stub_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_cli_invokes_console_with_explicit_flags(
-    mock_agents: list[MockAgent],
-    mock_consoles: list[MockConsole],
+    mock_agent_factory: Any,
+    mock_console_factory: Any,
     tmp_path: Path,
 ) -> None:
-    def test_agent_factory(config: RuntimeConfig) -> AgentProtocol:
-        agent = MockAgent(config)
-        mock_agents.append(agent)
-        return agent
-
-    def test_console_factory(agent: AgentProtocol) -> Console:
-        console = MockConsole(agent)
-        mock_consoles.append(console)
-        return console
-
-    app = create_app(test_agent_factory, test_console_factory)
+    app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
     runner = CliRunner()
     result = runner.invoke(
         app,
@@ -62,46 +85,35 @@ def test_cli_invokes_console_with_explicit_flags(
         ],
     )
     assert result.exit_code == 0
-    assert len(mock_agents) == 1
-    assert len(mock_consoles) == 1
+    assert mock_agent_factory.agent is not None
+    assert mock_console_factory.console is not None
 
-    agent = mock_agents[0]
+    agent = mock_agent_factory.agent
     assert agent.config.repo_path == tmp_path
     assert agent.config.model == ModelChoice.o3
     assert agent.config.openai_api_key == "TESTKEY"
     assert agent.config.mode == ModeChoice.default
 
-    console = mock_consoles[0]
-    assert console.run_called
+    assert mock_console_factory.console.run_called
 
 
 def test_cli_uses_environment_defaults(
     monkeypatch: pytest.MonkeyPatch,
-    mock_agents: list[MockAgent],
-    mock_consoles: list[MockConsole],
+    mock_agent_factory: Any,
+    mock_console_factory: Any,
     tmp_path: Path,
 ) -> None:
     # Set environment variables for API keys
     monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
     monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "ENVGH")
 
-    def test_agent_factory(config: RuntimeConfig) -> AgentProtocol:
-        agent = MockAgent(config)
-        mock_agents.append(agent)
-        return agent
-
-    def test_console_factory(agent: AgentProtocol) -> Console:
-        console = MockConsole(agent)
-        mock_consoles.append(console)
-        return console
-
-    app = create_app(test_agent_factory, test_console_factory)
+    app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
     runner = CliRunner()
     result = runner.invoke(app, ["--repo-path", str(tmp_path)])
     assert result.exit_code == 0
-    assert len(mock_agents) == 1
+    assert mock_agent_factory.agent is not None
 
-    agent = mock_agents[0]
+    agent = mock_agent_factory.agent
     assert agent.config.repo_path == tmp_path
     assert agent.config.model == ModelChoice.codex_mini_latest
     assert agent.config.openai_api_key == "ENVKEY"
@@ -110,8 +122,8 @@ def test_cli_uses_environment_defaults(
 
 def test_cli_uses_cwd_as_default_repo_path(
     monkeypatch: pytest.MonkeyPatch,
-    mock_agents: list[MockAgent],
-    mock_consoles: list[MockConsole],
+    mock_agent_factory: Any,
+    mock_console_factory: Any,
 ) -> None:
     # Set environment variables for API keys
     monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
@@ -120,23 +132,13 @@ def test_cli_uses_cwd_as_default_repo_path(
     # Get the actual current working directory
     expected_cwd = Path.cwd()
 
-    def test_agent_factory(config: RuntimeConfig) -> AgentProtocol:
-        agent = MockAgent(config)
-        mock_agents.append(agent)
-        return agent
-
-    def test_console_factory(agent: AgentProtocol) -> Console:
-        console = MockConsole(agent)
-        mock_consoles.append(console)
-        return console
-
-    app = create_app(test_agent_factory, test_console_factory)
+    app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
     runner = CliRunner()
     result = runner.invoke(app, [])  # No --repo-path specified
     assert result.exit_code == 0
-    assert len(mock_agents) == 1
+    assert mock_agent_factory.agent is not None
 
-    agent = mock_agents[0]
+    agent = mock_agent_factory.agent
     assert agent.config.repo_path == expected_cwd
     assert agent.config.model == ModelChoice.codex_mini_latest
     assert agent.config.openai_api_key == "ENVKEY"
@@ -145,33 +147,23 @@ def test_cli_uses_cwd_as_default_repo_path(
 
 def test_cli_prompt_invokes_headless_main(
     monkeypatch: pytest.MonkeyPatch,
-    mock_agents: list[MockAgent],
-    mock_consoles: list[MockConsole],
+    mock_agent_factory: Any,
+    mock_console_factory: Any,
     tmp_path: Path,
 ) -> None:
     # Set environment variables for API keys
     monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
     monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "ENVGH")
 
-    def test_agent_factory(config: RuntimeConfig) -> AgentProtocol:
-        agent = MockAgent(config)
-        mock_agents.append(agent)
-        return agent
-
-    def test_console_factory(agent: AgentProtocol) -> Console:
-        console = MockConsole(agent)
-        mock_consoles.append(console)
-        return console
-
-    app = create_app(test_agent_factory, test_console_factory)
+    app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
     runner = CliRunner()
     result = runner.invoke(
         app, ["--repo-path", str(tmp_path), "--prompt", "Do awesome things"]
     )
     assert result.exit_code == 0
-    assert len(mock_agents) == 1
+    assert mock_agent_factory.agent is not None
 
-    agent = mock_agents[0]
+    agent = mock_agent_factory.agent
     assert agent.config.repo_path == tmp_path
     assert agent.config.model == ModelChoice.codex_mini_latest
     assert agent.config.openai_api_key == "ENVKEY"
@@ -181,34 +173,24 @@ def test_cli_prompt_invokes_headless_main(
 
 def test_cli_prompt_stdin_invokes_headless_main(
     monkeypatch: pytest.MonkeyPatch,
-    mock_agents: list[MockAgent],
-    mock_consoles: list[MockConsole],
+    mock_agent_factory: Any,
+    mock_console_factory: Any,
     tmp_path: Path,
 ) -> None:
     # Set environment variables for API keys
     monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
     monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "ENVGH")
 
-    def test_agent_factory(config: RuntimeConfig) -> AgentProtocol:
-        agent = MockAgent(config)
-        mock_agents.append(agent)
-        return agent
-
-    def test_console_factory(agent: AgentProtocol) -> Console:
-        console = MockConsole(agent)
-        mock_consoles.append(console)
-        return console
-
-    app = create_app(test_agent_factory, test_console_factory)
+    app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
     runner = CliRunner()
     prompt_str = "Huge prompt content that exceeds usual limits"
     result = runner.invoke(
         app, ["--repo-path", str(tmp_path), "--prompt", "-"], input=prompt_str
     )
     assert result.exit_code == 0
-    assert len(mock_agents) == 1
+    assert mock_agent_factory.agent is not None
 
-    agent = mock_agents[0]
+    agent = mock_agent_factory.agent
     assert agent.config.repo_path == tmp_path
     assert agent.config.model == ModelChoice.codex_mini_latest
     assert agent.config.openai_api_key == "ENVKEY"
