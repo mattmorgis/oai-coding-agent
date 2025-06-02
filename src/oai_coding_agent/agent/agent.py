@@ -15,14 +15,13 @@ from agents import (
     ModelSettings,
     Runner,
     RunResultStreaming,
+    StreamEvent,
     gen_trace_id,
     trace,
 )
 from openai.types.shared.reasoning import Reasoning
 
-from ..console.state import UIMessage
 from ..runtime_config import RuntimeConfig
-from .event_mapper import map_sdk_event_to_ui_message
 from .instruction_builder import build_instructions
 from .mcp_servers import start_mcp_servers
 from .mcp_tool_selector import get_filtered_function_tools
@@ -44,7 +43,7 @@ class AgentProtocol(Protocol):
         self,
         user_input: str,
         previous_response_id: Optional[str] = None,
-    ) -> tuple[AsyncIterator[UIMessage], RunResultStreaming]: ...
+    ) -> tuple[AsyncIterator[StreamEvent], RunResultStreaming]: ...
 
 
 class Agent:
@@ -101,9 +100,9 @@ class Agent:
         self,
         user_input: str,
         previous_response_id: Optional[str] = None,
-    ) -> tuple[AsyncIterator[UIMessage], RunResultStreaming]:
+    ) -> tuple[AsyncIterator[StreamEvent], RunResultStreaming]:
         """
-        Send one user message to the agent and return an async iterator of UI messages
+        Send one user message to the agent and return an async iterator of SDK events
         plus the underlying RunResultStreaming.
         """
         if self._sdk_agent is None:
@@ -115,12 +114,5 @@ class Agent:
             previous_response_id=previous_response_id,
             max_turns=self.max_turns,
         )
-        sdk_events = result.stream_events()
 
-        async def _ui_stream() -> AsyncIterator[UIMessage]:
-            async for evt in sdk_events:
-                msg = map_sdk_event_to_ui_message(evt)
-                if msg:
-                    yield msg
-
-        return _ui_stream(), result
+        return result.stream_events(), result

@@ -58,43 +58,13 @@ def test_quiet_mcp_server_stdio_create_streams(monkeypatch: pytest.MonkeyPatch) 
     errlog.close()
 
 
-class DummyRaw:
-    def __init__(self, **kwargs: Any) -> None:
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-
-
-class DummyItem:
-    def __init__(self, raw_item: Any) -> None:
-        self.raw_item = raw_item
-
-
-class DummyEvent:
-    def __init__(self, type: Any = None, name: Any = None, item: Any = None) -> None:
-        self.type = type
-        self.name = name
-        self.item = item
-
-
 @pytest.mark.asyncio
 async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Prepare dummy events in stream order
-    events = [
-        DummyEvent(
-            type="run_item_stream_event",
-            name="tool_called",
-            item=DummyItem(DummyRaw(name="t", arguments=("x",))),
-        ),
-        DummyEvent(
-            name="reasoning_item_created",
-            item=DummyItem(DummyRaw(summary=[DummyRaw(text="r")])),
-        ),
-        DummyEvent(
-            name="message_output_created",
-            item=DummyItem(DummyRaw(content=[DummyRaw(text="m")])),
-        ),
-        DummyEvent(type="none", name="unknown", item=DummyItem(DummyRaw())),
-    ]
+    # Mock SDK events
+    from unittest.mock import Mock
+
+    # Create mock events
+    events = [Mock(), Mock(), Mock()]
 
     class FakeResult:
         def __init__(self, evts: list[Any]) -> None:
@@ -126,13 +96,12 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     agent = Agent(config, max_turns=1)
     agent._sdk_agent = cast(SDKAgent, object())
 
-    ui_stream, returned = await agent.run("input text", previous_response_id="prev")
+    event_stream, returned = await agent.run("input text", previous_response_id="prev")
     # Should return the underlying result as is
     assert returned is fake_result  # type: ignore[comparison-overlap]
-    # Collect messages from ui_stream
+    # Verify we can iterate the events from the stream
     collected = []
-    async for msg in ui_stream:
-        collected.append(msg)
-    # Should map exactly three events (skip unknown)
-    # Note: The actual event mapping is now tested in test_event_mapper.py
+    async for event in event_stream:
+        collected.append(event)
     assert len(collected) == 3
+    assert collected == events
