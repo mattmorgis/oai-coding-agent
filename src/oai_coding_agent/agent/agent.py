@@ -18,11 +18,15 @@ from agents import (
     gen_trace_id,
     trace,
 )
-
-from .events import AgentEvent
 from openai.types.shared.reasoning import Reasoning
 
 from ..runtime_config import RuntimeConfig
+from .events import (
+    MessageOutputEvent,
+    ReasoningEvent,
+    ToolCallEvent,
+    map_sdk_event_to_agent_event,
+)
 from .instruction_builder import build_instructions
 from .mcp_servers import start_mcp_servers
 from .mcp_tool_selector import get_filtered_function_tools
@@ -44,7 +48,10 @@ class AgentProtocol(Protocol):
         self,
         user_input: str,
         previous_response_id: Optional[str] = None,
-    ) -> tuple[AsyncIterator[AgentEvent], RunResultStreaming]: ...
+    ) -> tuple[
+        AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent],
+        RunResultStreaming,
+    ]: ...
 
 
 class Agent:
@@ -101,9 +108,12 @@ class Agent:
         self,
         user_input: str,
         previous_response_id: Optional[str] = None,
-    ) -> tuple[AsyncIterator[AgentEvent], RunResultStreaming]:
+    ) -> tuple[
+        AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent],
+        RunResultStreaming,
+    ]:
         """
-        Send one user message to the agent and return an async iterator of SDK events
+        Send one user message to the agent and return an async iterator of internal events
         plus the underlying RunResultStreaming.
         """
         if self._sdk_agent is None:
@@ -116,4 +126,13 @@ class Agent:
             max_turns=self.max_turns,
         )
 
-        return result.stream_events(), result
+        async def _map_events() -> AsyncIterator[
+            ToolCallEvent | ReasoningEvent | MessageOutputEvent
+        ]:
+            """Map SDK events to internal events, filtering out None values."""
+            async for sdk_event in result.stream_events():
+                internal_event = map_sdk_event_to_agent_event(sdk_event)
+                if internal_event is not None:
+                    yield internal_event
+
+        return _map_events(), result

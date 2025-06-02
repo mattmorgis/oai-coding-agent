@@ -14,7 +14,7 @@ from .key_bindings import get_key_bindings
 from .rendering import clear_terminal, console, render_message
 from .slash_commands import handle_slash_command, register_slash_commands
 from .state import UIState
-from .ui_event_mapper import map_sdk_event_to_ui_message
+from .ui_event_mapper import map_event_to_ui_message
 
 
 class Console(Protocol):
@@ -43,7 +43,7 @@ class HeadlessConsole:
         async with self.agent:
             event_stream, _ = await self.agent.run(self.agent.config.prompt)
             async for event in event_stream:
-                ui_msg = map_sdk_event_to_ui_message(event)
+                ui_msg = map_event_to_ui_message(event)
                 if ui_msg:
                     render_message(ui_msg)
 
@@ -114,9 +114,8 @@ class ReplConsole:
 
                     event_stream, result = await self.agent.run(user_input, prev_id)
                     async for event in event_stream:
-                        ui_msg = map_sdk_event_to_ui_message(event)
-                        if ui_msg:
-                            render_message(ui_msg)
+                        ui_msg = map_event_to_ui_message(event)
+                        render_message(ui_msg)
 
                     prev_id = result.last_response_id
 

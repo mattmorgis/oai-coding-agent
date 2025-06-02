@@ -1,37 +1,27 @@
 """
-Map SDK events to UI messages.
+Map internal agent events to UI messages.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Union
 
-from ..agent.events import (
-    AgentEvent,
-    AgentRunItemStreamEvent,
-    AgentToolCallItem,
-    AgentReasoningItem,
-    AgentMessageOutputItem,
-)
-
+from ..agent.events import MessageOutputEvent, ReasoningEvent, ToolCallEvent
 from .state import UIMessage
 
 logger = logging.getLogger(__name__)
 
 
-def map_sdk_event_to_ui_message(event: AgentEvent) -> Optional[UIMessage]:
-    """Map an SDK event to a UI message."""
-    logger.debug("SDK event received: type=%s, event=%r", event.type, event)
+InternalEvent = Union[ToolCallEvent, ReasoningEvent, MessageOutputEvent]
 
-    # Uses Python 3.10 structural pattern-matching for clearer dispatch
+
+def map_event_to_ui_message(event: InternalEvent) -> UIMessage:
+    """Map an internal agent event to a UI message."""
+    logger.debug("Internal event received: %r", event)
+
     match event:
-        case AgentRunItemStreamEvent(item=AgentToolCallItem(raw_item=raw)):
-            raw_tool: Any = raw
-            return UIMessage(role="tool", content=f"{raw_tool.name}({raw_tool.arguments})")
-        case AgentRunItemStreamEvent(item=AgentReasoningItem(raw_item=raw)) if raw.summary:
-            raw_reasoning: Any = raw
-            return UIMessage(role="thought", content=f"💭 {raw_reasoning.summary[0].text}")
-        case AgentRunItemStreamEvent(item=AgentMessageOutputItem(raw_item=raw)) if raw.content:
-            raw_msg: Any = raw
-            return UIMessage(role="assistant", content=raw_msg.content[0].text)
-        case _:
-            return None
+        case ToolCallEvent(name=name, arguments=arguments):
+            return UIMessage(role="tool", content=f"{name}({arguments})")
+        case ReasoningEvent(text=text):
+            return UIMessage(role="thought", content=f"💭 {text}")
+        case MessageOutputEvent(text=text):
+            return UIMessage(role="assistant", content=text)
