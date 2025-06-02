@@ -11,7 +11,7 @@ from typing import Any, List
 from agents.mcp import MCPServer, MCPServerStdio
 from mcp.client.stdio import stdio_client
 
-from .runtime_config import GITHUB_PERSONAL_ACCESS_TOKEN_ENV
+from ..runtime_config import GITHUB_PERSONAL_ACCESS_TOKEN_ENV
 
 logger = logging.getLogger(__name__)
 

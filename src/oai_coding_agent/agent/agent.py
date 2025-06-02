@@ -21,15 +21,15 @@ from agents import (
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from openai.types.shared.reasoning import Reasoning
 
-from .console.state import UIMessage
+from ..console.state import UIMessage
+from ..runtime_config import RuntimeConfig
 from .mcp_servers import start_mcp_servers
 from .mcp_tool_selector import get_filtered_function_tools
-from .runtime_config import RuntimeConfig
 
 logger = logging.getLogger(__name__)
 
 TEMPLATE_ENV = Environment(
-    loader=FileSystemLoader(Path(__file__).parent / "templates"),
+    loader=FileSystemLoader(Path(__file__).parent.parent / "templates"),
     autoescape=False,
     keep_trailing_newline=True,
 )

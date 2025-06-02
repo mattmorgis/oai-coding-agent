@@ -5,10 +5,10 @@ from typing import Any, AsyncGenerator, cast
 import pytest
 from agents.mcp import MCPServerStdioParams
 
-import oai_coding_agent.agent as agent_module
-import oai_coding_agent.mcp_servers as mcp_servers_module
-from oai_coding_agent.agent import Agent, _AgentSession
-from oai_coding_agent.mcp_servers import (
+import oai_coding_agent.agent.agent as agent_module
+import oai_coding_agent.agent.mcp_servers as mcp_servers_module
+from oai_coding_agent.agent.agent import Agent, _AgentSession
+from oai_coding_agent.agent.mcp_servers import (
     ALLOWED_CLI_COMMANDS,
     ALLOWED_CLI_FLAGS,
     QuietMCPServerStdio,

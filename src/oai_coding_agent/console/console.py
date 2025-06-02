@@ -8,7 +8,7 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
-from ..agent import AgentSession
+from ..agent.agent import AgentSession
 from ..runtime_config import RuntimeConfig
 from .key_bindings import get_key_bindings
 from .rendering import clear_terminal, console, render_message

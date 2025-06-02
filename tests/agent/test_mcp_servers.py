@@ -7,7 +7,7 @@ from typing import Any, Callable, cast
 import pytest
 from agents.mcp import MCPServerStdioParams
 
-import oai_coding_agent.mcp_servers as mcp_servers
+import oai_coding_agent.agent.mcp_servers as mcp_servers
 
 
 class DummyExitStack:
