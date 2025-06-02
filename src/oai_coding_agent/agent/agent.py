@@ -2,11 +2,11 @@
 Agent for streaming OAI agent interactions with a local codebase.
 """
 
-__all__ = ["Agent"]
+__all__ = ["Agent", "AgentProtocol"]
 
 import logging
 from contextlib import AsyncExitStack
-from typing import Any, AsyncIterator, Optional
+from typing import Any, AsyncIterator, Optional, Protocol, runtime_checkable
 
 from agents import (
     Agent as SDKAgent,
@@ -28,6 +28,23 @@ from .mcp_servers import start_mcp_servers
 from .mcp_tool_selector import get_filtered_function_tools
 
 logger = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class AgentProtocol(Protocol):
+    """Protocol defining the interface for agents."""
+
+    config: RuntimeConfig
+
+    async def __aenter__(self) -> "AgentProtocol": ...
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...
+
+    async def run(
+        self,
+        user_input: str,
+        previous_response_id: Optional[str] = None,
+    ) -> tuple[AsyncIterator[UIMessage], RunResultStreaming]: ...
 
 
 class Agent:

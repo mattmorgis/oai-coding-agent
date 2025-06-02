@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import Any, AsyncGenerator, Self
+from typing import Any, AsyncGenerator, Optional, Self
+from unittest.mock import Mock
 
 import pytest
 from rich.console import Console
@@ -19,8 +20,8 @@ class DummyPromptSession:
 
 
 class DummyAgent:
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        pass
+    def __init__(self, config: RuntimeConfig):
+        self.config = config
 
     async def __aenter__(self) -> Self:
         return self
@@ -29,16 +30,16 @@ class DummyAgent:
         pass
 
     async def run(
-        self, user_input: str, prev_id: Any
+        self, user_input: str, prev_id: Optional[str] = None
     ) -> tuple[AsyncGenerator[Any, None], Any]:
         async def empty_stream() -> AsyncGenerator[Any, None]:
             if False:
                 yield
 
-        class Result:
-            last_response_id = None
+        result = Mock()
+        result.last_response_id = None
 
-        return empty_stream(), Result()
+        return empty_stream(), result
 
 
 @pytest.fixture(autouse=True)
@@ -53,15 +54,14 @@ def setup_repl(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Console:
     # Force history path into tmp_path
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
-    # Monkeypatch prompt session and agent
+    # Monkeypatch prompt session only
     monkeypatch.setattr(console_module, "PromptSession", DummyPromptSession)
-    monkeypatch.setattr(console_module, "Agent", DummyAgent)
 
     return recorder
 
 
 @pytest.mark.asyncio
-async def test_repl_main_exits_on_exit_and_prints_header(
+async def test_repl_console_exits_on_exit_and_prints_header(
     setup_repl: Console, tmp_path: Path
 ) -> None:
     recorder = setup_repl
@@ -72,7 +72,11 @@ async def test_repl_main_exits_on_exit_and_prints_header(
         repo_path=tmp_path,
         mode=ModeChoice.default,
     )
-    await console_module.main(config)
+
+    # Create agent and console directly
+    agent = DummyAgent(config)
+    console = console_module.ReplConsole(agent)
+    await console.run()
 
     output = recorder.export_text()
     # Header includes agent name and model

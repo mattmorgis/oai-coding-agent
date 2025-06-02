@@ -1,21 +1,47 @@
-import pytest
+from typing import Any, AsyncIterator, Optional
+from unittest.mock import Mock
 
-import oai_coding_agent.cli as cli_module
+from oai_coding_agent.agent import AgentProtocol
 from oai_coding_agent.runtime_config import RuntimeConfig
 
 
-@pytest.fixture
-def console_main_calls(
-    monkeypatch: pytest.MonkeyPatch,
-) -> list[RuntimeConfig]:
-    """
-    Monkeypatch oai_coding_agent.cli.console_main to capture calls.
-    Returns a list of RuntimeConfig objects.
-    """
-    calls: list[RuntimeConfig] = []
+class MockAgent:
+    """Mock agent for testing."""
 
-    async def fake_main(config: RuntimeConfig) -> None:
-        calls.append(config)
+    def __init__(self, config: RuntimeConfig):
+        self.config = config
+        self.run_called = False
+        self.run_args: list[tuple[str, Optional[str]]] = []
 
-    monkeypatch.setattr(cli_module, "console_main", fake_main)
-    return calls
+    async def __aenter__(self) -> "MockAgent":
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        pass
+
+    async def run(
+        self,
+        user_input: str,
+        previous_response_id: Optional[str] = None,
+    ) -> tuple[AsyncIterator[Any], Any]:
+        self.run_called = True
+        self.run_args.append((user_input, previous_response_id))
+
+        async def empty_stream() -> AsyncIterator[Any]:
+            if False:
+                yield
+
+        result = Mock()
+        result.last_response_id = None
+        return empty_stream(), result
+
+
+class MockConsole:
+    """Mock console for testing."""
+
+    def __init__(self, agent: AgentProtocol):
+        self.agent = agent
+        self.run_called = False
+
+    async def run(self) -> None:
+        self.run_called = True

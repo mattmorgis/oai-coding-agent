@@ -9,8 +9,7 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
-from ..agent.agent import Agent
-from ..runtime_config import RuntimeConfig
+from ..agent import AgentProtocol
 from .key_bindings import get_key_bindings
 from .rendering import clear_terminal, console, render_message
 from .slash_commands import handle_slash_command, register_slash_commands
@@ -20,7 +19,7 @@ from .state import UIState
 class Console(Protocol):
     """Common interface for console interactions."""
 
-    config: RuntimeConfig
+    agent: AgentProtocol
 
     async def run(self) -> None:
         pass
@@ -29,19 +28,19 @@ class Console(Protocol):
 class HeadlessConsole:
     """Console that runs headless (single prompt) mode."""
 
-    def __init__(self, config: RuntimeConfig) -> None:
-        self.config = config
+    def __init__(self, agent: AgentProtocol) -> None:
+        self.agent = agent
 
     async def run(self) -> None:
         """
         Execute one prompt in async 'headless' mode and render streamed output.
         """
-        if not self.config.prompt:
+        if not self.agent.config.prompt:
             raise ValueError("Prompt is required for headless mode")
 
-        console.print(f"[bold cyan]Prompt:[/bold cyan] {self.config.prompt}")
-        async with Agent(self.config) as agent:
-            ui_stream, _ = await agent.run(self.config.prompt)
+        console.print(f"[bold cyan]Prompt:[/bold cyan] {self.agent.config.prompt}")
+        async with self.agent:
+            ui_stream, _ = await self.agent.run(self.agent.config.prompt)
             async for msg in ui_stream:
                 render_message(msg)
 
@@ -49,8 +48,8 @@ class HeadlessConsole:
 class ReplConsole:
     """Console that runs interactive REPL mode."""
 
-    def __init__(self, config: RuntimeConfig) -> None:
-        self.config = config
+    def __init__(self, agent: AgentProtocol) -> None:
+        self.agent = agent
 
     async def run(self) -> None:
         """Interactive REPL loop for the console interface."""
@@ -62,9 +61,9 @@ class ReplConsole:
         console.print(
             Panel(
                 f"[bold cyan]╭─ OAI CODING AGENT ─╮[/bold cyan]\n\n"
-                f"[dim]Current Directory:[/dim] [dim cyan]{self.config.repo_path}[/dim cyan]\n"
-                f"[dim]Model:[/dim] [dim cyan]{self.config.model.value}[/dim cyan]\n"
-                f"[dim]Mode:[/dim] [dim cyan]{self.config.mode.value}[/dim cyan]",
+                f"[dim]Current Directory:[/dim] [dim cyan]{self.agent.config.repo_path}[/dim cyan]\n"
+                f"[dim]Model:[/dim] [dim cyan]{self.agent.config.model.value}[/dim cyan]\n"
+                f"[dim]Mode:[/dim] [dim cyan]{self.agent.config.mode.value}[/dim cyan]",
                 expand=False,
             )
         )
@@ -89,7 +88,7 @@ class ReplConsole:
             erase_when_done=True,
         )
 
-        async with Agent(self.config) as agent:
+        async with self.agent:
             prev_id = None
             continue_loop = True
             while continue_loop:
@@ -110,7 +109,7 @@ class ReplConsole:
 
                     console.print(f"[dim]› {user_input}[/dim]\n")
 
-                    ui_stream, result = await agent.run(user_input, prev_id)
+                    ui_stream, result = await self.agent.run(user_input, prev_id)
                     async for msg in ui_stream:
                         render_message(msg)
 
@@ -118,19 +117,3 @@ class ReplConsole:
 
                 except (KeyboardInterrupt, EOFError):
                     continue_loop = False
-
-
-async def main(config: RuntimeConfig) -> None:
-    """
-    Unified entry point for both interactive REPL and headless modes.
-
-    Args:
-        config: Runtime configuration for the agent.
-    """
-    console: Console
-    if config.prompt:
-        console = HeadlessConsole(config)
-    else:
-        console = ReplConsole(config)
-
-    await console.run()
