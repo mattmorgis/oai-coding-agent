@@ -14,6 +14,36 @@ from .key_bindings import get_key_bindings
 from .rendering import clear_terminal, console, render_message
 from .slash_commands import handle_slash_command, register_slash_commands
 from .state import UIState
+from typing import Protocol
+
+
+class Console(Protocol):
+    """Common interface for console interactions."""
+
+    config: RuntimeConfig
+
+    async def run(self) -> None:
+        ...
+
+
+class HeadlessConsole:
+    """Console that runs headless (single prompt) mode."""
+
+    def __init__(self, config: RuntimeConfig) -> None:
+        self.config = config
+
+    async def run(self) -> None:
+        await headless_main(self.config)
+
+
+class ReplConsole:
+    """Console that runs interactive REPL mode."""
+
+    def __init__(self, config: RuntimeConfig) -> None:
+        self.config = config
+
+    async def run(self) -> None:
+        await repl_main(self.config)
 
 
 async def headless_main(config: RuntimeConfig) -> None:
