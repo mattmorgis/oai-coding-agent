@@ -3,7 +3,7 @@ Map SDK events to UI messages.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 from ..agent.events import (
     AgentEvent,
@@ -22,37 +22,21 @@ def map_sdk_event_to_ui_message(event: AgentEvent) -> Optional[UIMessage]:
     """Map an SDK event to a UI message."""
     logger.debug("SDK event received: type=%s, event=%r", event.type, event)
 
-    if isinstance(event, AgentRunItemStreamEvent):
-        item = event.item
+    if not isinstance(event, AgentRunItemStreamEvent):
+        return None
 
-        # Type-based dispatch using the actual item types
-        if isinstance(item, AgentToolCallItem):
-            # For tool calls, we need to handle the union type of raw_item
-            tool_raw: Any = item.raw_item
-            if hasattr(tool_raw, "name") and hasattr(tool_raw, "arguments"):
-                return {
-                    "role": "tool",
-                    "content": f"{tool_raw.name}({tool_raw.arguments})",
-                }
-        elif isinstance(item, AgentReasoningItem):
-            # For reasoning items, check if summary exists
-            reasoning_raw: Any = item.raw_item
-            if hasattr(reasoning_raw, "summary") and reasoning_raw.summary:
-                text = reasoning_raw.summary[0].text
-                return {"role": "thought", "content": f"💭 {text}"}
-        elif isinstance(item, AgentMessageOutputItem):
-            # For message output, get the content
-            msg_raw: Any = item.raw_item
-            if (
-                hasattr(msg_raw, "content")
-                and msg_raw.content
-                and len(msg_raw.content) > 0
-            ):
-                content_item = msg_raw.content[0]
-                if hasattr(content_item, "text"):
-                    return {
-                        "role": "assistant",
-                        "content": content_item.text,
-                    }
+    item = event.item
+
+    if isinstance(item, AgentToolCallItem):
+        raw = item.raw_item
+        return UIMessage(role="tool", content=f"{raw.name}({raw.arguments})")
+
+    if isinstance(item, AgentReasoningItem) and item.raw_item.summary:
+        raw = item.raw_item
+        return UIMessage(role="thought", content=f"💭 {raw.summary[0].text}")
+
+    if isinstance(item, AgentMessageOutputItem) and item.raw_item.content:
+        raw = item.raw_item
+        return UIMessage(role="assistant", content=raw.content[0].text)
 
     return None
