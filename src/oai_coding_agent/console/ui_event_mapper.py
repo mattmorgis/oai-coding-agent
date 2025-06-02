@@ -5,9 +5,13 @@ Map SDK events to UI messages.
 import logging
 from typing import Any, Optional
 
-from agents import RunItemStreamEvent
-from ..agent.events import AgentEvent
-from agents.items import MessageOutputItem, ReasoningItem, ToolCallItem
+from ..agent.events import (
+    AgentEvent,
+    AgentRunItemStreamEvent,
+    AgentToolCallItem,
+    AgentReasoningItem,
+    AgentMessageOutputItem,
+)
 
 from .state import UIMessage
 
@@ -18,11 +22,11 @@ def map_sdk_event_to_ui_message(event: AgentEvent) -> Optional[UIMessage]:
     """Map an SDK event to a UI message."""
     logger.debug("SDK event received: type=%s, event=%r", event.type, event)
 
-    if isinstance(event, RunItemStreamEvent):
+    if isinstance(event, AgentRunItemStreamEvent):
         item = event.item
 
         # Type-based dispatch using the actual item types
-        if isinstance(item, ToolCallItem):
+        if isinstance(item, AgentToolCallItem):
             # For tool calls, we need to handle the union type of raw_item
             tool_raw: Any = item.raw_item
             if hasattr(tool_raw, "name") and hasattr(tool_raw, "arguments"):
@@ -30,13 +34,13 @@ def map_sdk_event_to_ui_message(event: AgentEvent) -> Optional[UIMessage]:
                     "role": "tool",
                     "content": f"{tool_raw.name}({tool_raw.arguments})",
                 }
-        elif isinstance(item, ReasoningItem):
+        elif isinstance(item, AgentReasoningItem):
             # For reasoning items, check if summary exists
             reasoning_raw: Any = item.raw_item
             if hasattr(reasoning_raw, "summary") and reasoning_raw.summary:
                 text = reasoning_raw.summary[0].text
                 return {"role": "thought", "content": f"💭 {text}"}
-        elif isinstance(item, MessageOutputItem):
+        elif isinstance(item, AgentMessageOutputItem):
             # For message output, get the content
             msg_raw: Any = item.raw_item
             if (

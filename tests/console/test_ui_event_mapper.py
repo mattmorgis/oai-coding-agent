@@ -3,8 +3,12 @@
 from typing import Any
 from unittest.mock import Mock
 
-from agents import RunItemStreamEvent
-from agents.items import MessageOutputItem, ReasoningItem, ToolCallItem
+from oai_coding_agent.agent.events import (
+    AgentRunItemStreamEvent as RunItemStreamEvent,
+    AgentToolCallItem as ToolCallItem,
+    AgentReasoningItem as ReasoningItem,
+    AgentMessageOutputItem as MessageOutputItem,
+)
 
 from oai_coding_agent.console.ui_event_mapper import map_sdk_event_to_ui_message
 
