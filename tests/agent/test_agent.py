@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Any, AsyncGenerator, cast
+from unittest.mock import Mock
 
 import pytest
 from agents import Agent as SDKAgent
@@ -61,8 +62,6 @@ def test_quiet_mcp_server_stdio_create_streams(monkeypatch: pytest.MonkeyPatch) 
 @pytest.mark.asyncio
 async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     # Mock SDK events
-    from unittest.mock import Mock
-
     # Create mock events
     events = [Mock(), Mock(), Mock()]
 
