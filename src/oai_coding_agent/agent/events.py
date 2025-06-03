@@ -10,14 +10,18 @@ from typing import Optional, Union
 
 from agents import RunItemStreamEvent, StreamEvent
 from agents.items import (
+    ImageGenerationCall,
+    LocalShellCall,
+    McpCall,
     MessageOutputItem,
     ReasoningItem,
+    ResponseCodeInterpreterToolCall,
+    ResponseComputerToolCall,
+    ResponseFileSearchToolCall,
+    ResponseFunctionToolCall,
+    ResponseFunctionWebSearch,
     ToolCallItem,
     ToolCallItemTypes,
-)
-from openai.types.responses import (
-    ResponseOutputMessage,
-    ResponseReasoningItem,
 )
 
 
@@ -50,39 +54,49 @@ AgentEvent = Union[ToolCallEvent, ReasoningEvent, MessageOutputEvent]
 
 def _extract_tool_call_info(raw_item: ToolCallItemTypes) -> Optional[ToolCallEvent]:
     """Extract name and arguments from a tool call item."""
-    # Most tool call types have direct name/arguments attributes
-    if hasattr(raw_item, "name") and hasattr(raw_item, "arguments"):
-        return ToolCallEvent(name=raw_item.name, arguments=raw_item.arguments)
+    match raw_item:
+        case raw if hasattr(raw, "name") and hasattr(raw, "arguments"):
+            return ToolCallEvent(name=raw.name, arguments=raw.arguments)
 
-    # Some types might nest them under a function attribute
-    if hasattr(raw_item, "function"):
-        func = raw_item.function
-        if hasattr(func, "name") and hasattr(func, "arguments"):
-            return ToolCallEvent(name=func.name, arguments=func.arguments)
+        case raw if hasattr(raw, "function"):
+            fn = raw.function
+            return ToolCallEvent(name=fn.name, arguments=fn.arguments)
+        case ResponseFunctionToolCall(name=name, arguments=arguments):
+            return ToolCallEvent(name=name, arguments=arguments)
 
-    return None
+        case McpCall(name=name, arguments=arguments):
+            return ToolCallEvent(name=name, arguments=arguments)
 
+        case LocalShellCall(action=action):
+            # LocalShellCall has action with command array
+            command_str = " ".join(action.command) if action.command else ""
+            return ToolCallEvent(name="shell", arguments=command_str)
 
-def _extract_reasoning_text(
-    raw_item: ResponseReasoningItem,
-) -> Optional[ReasoningEvent]:
-    """Extract text from a reasoning item."""
-    if raw_item.summary and len(raw_item.summary) > 0:
-        summary_item = raw_item.summary[0]
-        if hasattr(summary_item, "text"):
-            return ReasoningEvent(text=summary_item.text)
-    return None
+        case ResponseComputerToolCall(action=action):
+            # Computer tool calls have action instead of name/arguments
+            # Convert action to a string representation
+            return ToolCallEvent(name="computer", arguments=str(action))
 
+        case ResponseCodeInterpreterToolCall(code=code):
+            # Code interpreter has code instead of name/arguments
+            return ToolCallEvent(name="code_interpreter", arguments=code)
 
-def _extract_message_text(
-    raw_item: ResponseOutputMessage,
-) -> Optional[MessageOutputEvent]:
-    """Extract text from a message output item."""
-    if raw_item.content and len(raw_item.content) > 0:
-        content_item = raw_item.content[0]
-        if hasattr(content_item, "text"):
-            return MessageOutputEvent(text=content_item.text)
-    return None
+        case ResponseFileSearchToolCall(queries=queries):
+            # File search has queries instead of name/arguments
+            # Join queries into a single string
+            return ToolCallEvent(name="file_search", arguments=", ".join(queries))
+
+        case ResponseFunctionWebSearch():
+            # Web search doesn't have query attribute, just status
+            return ToolCallEvent(name="web_search", arguments="")
+
+        case ImageGenerationCall():
+            # Image generation doesn't have prompt attribute, just result
+            return ToolCallEvent(name="image_generation", arguments="")
+
+        case _:
+            # Unknown tool call type
+            return None
 
 
 def map_sdk_event_to_agent_event(
@@ -107,11 +121,13 @@ def map_sdk_event_to_agent_event(
                 case ToolCallItem(raw_item=raw_item):
                     return _extract_tool_call_info(raw_item)
 
-                case ReasoningItem(raw_item=raw_item):
-                    return _extract_reasoning_text(raw_item)
+                case ReasoningItem(raw_item=raw_item) if raw_item.summary:
+                    first = raw_item.summary[0]
+                    return ReasoningEvent(text=first.text)
 
-                case MessageOutputItem(raw_item=raw_item):
-                    return _extract_message_text(raw_item)
+                case MessageOutputItem(raw_item=raw_item) if raw_item.content:
+                    first = raw_item.content[0]
+                    return MessageOutputEvent(text=first.text)
 
                 case _:
                     # Other item types we don't handle
