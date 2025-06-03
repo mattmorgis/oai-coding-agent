@@ -3,7 +3,7 @@
 from unittest.mock import Mock
 
 from agents import RunItemStreamEvent
-from agents.items import MessageOutputItem, ReasoningItem, ToolCallItem
+from agents.items import MessageOutputItem, ReasoningItem, ToolCallItem, ResponseFunctionToolCall
 
 from oai_coding_agent.agent.events import (
     MessageOutputEvent,
@@ -13,14 +13,10 @@ from oai_coding_agent.agent.events import (
 )
 
 
-def test_map_tool_call_with_direct_attributes() -> None:
-    """Test mapping tool call with direct name/arguments attributes."""
-    # Create mock tool call item with direct attributes
-    tool_call_item = Mock(spec=ToolCallItem)
-    tool_call_raw = Mock()
-    tool_call_raw.name = "test_tool"
-    tool_call_raw.arguments = '{"arg": "value"}'
-    tool_call_item.raw_item = tool_call_raw
+def test_map_tool_call_with_response_function_tool_call() -> None:
+    """Test mapping a ResponseFunctionToolCall using the typed branch."""
+    rf = ResponseFunctionToolCall(name="test_tool", arguments='{"arg": "value"}', call_id="cid", type="function_call")
+    tool_call_item = ToolCallItem(agent=Mock(), raw_item=rf)
 
     event = Mock(spec=RunItemStreamEvent)
     event.item = tool_call_item
@@ -32,27 +28,6 @@ def test_map_tool_call_with_direct_attributes() -> None:
     assert result.arguments == '{"arg": "value"}'
 
 
-def test_map_tool_call_with_function_attributes() -> None:
-    """Test mapping tool call with function.name/arguments attributes."""
-    # Create mock tool call item with function attributes
-    tool_call_item = Mock(spec=ToolCallItem)
-    tool_call_raw = Mock()
-    # Explicitly make sure the raw item doesn't have direct name/arguments
-    del tool_call_raw.name
-    del tool_call_raw.arguments
-    tool_call_raw.function = Mock()
-    tool_call_raw.function.name = "function_tool"
-    tool_call_raw.function.arguments = '{"func": "args"}'
-    tool_call_item.raw_item = tool_call_raw
-
-    event = Mock(spec=RunItemStreamEvent)
-    event.item = tool_call_item
-
-    result = map_sdk_event_to_agent_event(event)
-
-    assert isinstance(result, ToolCallEvent)
-    assert result.name == "function_tool"
-    assert result.arguments == '{"func": "args"}'
 
 
 def test_map_reasoning_event() -> None:

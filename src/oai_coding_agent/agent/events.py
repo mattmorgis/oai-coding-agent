@@ -55,12 +55,6 @@ AgentEvent = Union[ToolCallEvent, ReasoningEvent, MessageOutputEvent]
 def _extract_tool_call_info(raw_item: ToolCallItemTypes) -> Optional[ToolCallEvent]:
     """Extract name and arguments from a tool call item."""
     match raw_item:
-        case raw if hasattr(raw, "name") and hasattr(raw, "arguments"):
-            return ToolCallEvent(name=raw.name, arguments=raw.arguments)
-
-        case raw if hasattr(raw, "function"):
-            fn = raw.function
-            return ToolCallEvent(name=fn.name, arguments=fn.arguments)
         case ResponseFunctionToolCall(name=name, arguments=arguments):
             return ToolCallEvent(name=name, arguments=arguments)
 
