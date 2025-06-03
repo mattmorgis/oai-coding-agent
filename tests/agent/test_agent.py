@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, AsyncGenerator, cast
+from typing import Any, AsyncGenerator, Optional, cast
 from unittest.mock import Mock
 
 import pytest
@@ -106,6 +106,8 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeResult:
         def __init__(self, evts: list[Any]) -> None:
             self._events = evts
+            # expose last_response_id so Agent.run can store it
+            self.last_response_id: Optional[str] = None
 
         def stream_events(self) -> AsyncGenerator[Any, None]:
             async def gen() -> AsyncGenerator[Any, None]:
@@ -115,8 +117,6 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
             return gen()
 
     fake_result = FakeResult(events)
-    # Provide a last_response_id so Agent.run can store it without error
-    fake_result.last_response_id = None
 
     # Monkeypatch Runner.run_streamed
     monkeypatch.setattr(
