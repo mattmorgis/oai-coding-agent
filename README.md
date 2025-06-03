@@ -1,79 +1,117 @@
 # OAI Coding Agent
 
-An interactive command-line AI assistant for exploring, understanding, and editing code using the OpenAI Agents SDK and the Model Context Protocol (MCP).
+A terminal-based coding agent designed for lightweight, asynchronous development tasks. Unlike traditional coding agents that require constant steering, this agent can work independently or collaboratively, enabling developers to run entire agent fleets for parallel development workflows.
+
+> **Status**: Work in progress
+
+## Overview
+
+This agent is built on OpenAI's codex-mini model and supports three distinct modes that enable a progressive trust-building journey:
+
+1. **Default Mode** - Interactive agent that checks in when decisions are needed
+2. **Async Mode** - Fully autonomous agent that completes tasks independently
+3. **Plan Mode** - Read-only brainstorming mode to create tasks for agent fleets
 
 ## Features
 
-- **Interactive REPL** powered by `prompt-toolkit` and `Rich` for smooth AI-driven coding assistance
-- **Headless mode** for running one-off prompts non-interactively
-- **Dynamic mode selection**: `default`, `async`, or `plan` to suit different workflows
+- **Agent Fleets** - Run multiple agents in parallel using git worktrees locally or GitHub runners in CI
+- **Progressive Workflow** - Start interactive, build trust, then scale to autonomous agent fleets
+- **Environment Integration** - Automatically loads `.env` files from your project directory
+- **MCP Support** - Leverages Model Context Protocol for enhanced tool capabilities
+
+## The Progressive Workflow
+
+Most developers follow this natural progression:
+
+1. **Start with Default Mode** - Get familiar with the agent's capabilities and build trust through interactive sessions
+2. **Scale with Multiple Agents** - Run parallel agents using git worktrees for independent tasks
+3. **Deploy Agent Fleets** - Use plan mode to design workflows, then spawn agents on GitHub runners for automated PR generation
 
 ## Installation
 
-### 1. Clone the repository
+### 1. Clone and install
 
 ```bash
-git clone https://github.com/<your-org>/oai-coding-agent.git
+git clone https://github.com/MattMorgis/oai-coding-agent.git
 cd oai-coding-agent
-```
-
-### 2. Configure environment variables
-
-Copy the example file and set your OpenAI API key:
-
-```bash
-cp .env-example .env
-# Edit .env and set OPENAI_API_KEY and GITHUB_PERSONAL_ACCESS_TOKEN (and other variables as needed)
-```
-
-> **Tip:** Instead of creating a new token on GitHub.com, you can quickly export one with:
-
-```bash
-export GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token)
-```
-
-### 3. Install dependencies
-
-Using `uv` (recommended):
-
-```bash
-uv sync
+uv venv
 ```
 
 ## Usage
 
-### Interactive mode
-
-Launch the REPL and start chatting:
+Navigate to any codebase and run:
 
 ```bash
-uv run oai [OPTIONS]
+oai [OPTIONS]
 ```
 
-Common options:
+### Configure your environment
 
-- `--model, -m <model>` — OpenAI model to use (default: `codex-mini-latest`)
-- `--mode <mode>` — Agent mode: `default`, `async`, or `plan` (default: `default`)
-- `--repo-path <path>` — Path to the repository (default: current directory)
-- `--prompt, -p <text|->` — Run a one-off prompt in headless async mode (use `-` to read from stdin)
-
-See [docs/cli.md](docs/cli.md) for full CLI reference and a flow diagram.
-
-### Headless mode
-
-Run a single prompt non-interactively:
+The agent will automatically load environment variables from your project's `.env` file. At minimum, you'll need:
 
 ```bash
-# Literal prompt
-uv run oai --prompt "Explain this function in simple terms."
-
-# From stdin (for huge inputs / GitHub Actions)
-echo "${{ github.event.issue.body }}" | uv run oai --prompt -
+# In your project directory (not the agent's directory)
+echo "OPENAI_API_KEY=your-key-here" >> .env
 ```
+
+Optional variables:
+
+- `OPENAI_BASE_URL` - Custom OpenAI API endpoint
+- `GITHUB_PERSONAL_ACCESS_TOKEN` - For GitHub operations (or use `export GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token)`)
+
+### Agent Modes
+
+#### Default Mode (Interactive)
+
+The agent works alongside you, checking in when decisions are needed:
+
+```bash
+oai  # or explicitly: oai --mode default
+```
+
+#### Async Mode (Autonomous)
+
+The agent completes tasks independently, documenting assumptions and alternatives:
+
+```bash
+oai --mode async --prompt "Add error handling to all API endpoints"
+```
+
+#### Plan Mode (Brainstorming)
+
+Read-only mode for designing tasks that async agents can execute:
+
+```bash
+oai --mode plan
+```
+
+### Running Agent Fleets
+
+#### Local Fleet with Git Worktrees
+
+```bash
+# Create worktrees for parallel development
+git worktree add -b feature-1 ../agent-1
+git worktree add -b feature-2 ../agent-2
+
+# Run agents in each worktree
+cd ../agent-1 && oai --mode async --prompt "Implement user authentication"
+cd ../agent-2 && oai --mode async --prompt "Add API rate limiting"
+```
+
+#### GitHub Runner Fleet
+
+1. Use plan mode to create independent tasks
+2. Agents spawn on GitHub runners
+3. Review PRs in 5-20 minutes
+
+### Common Options
+
+- `--model, -m <model>` — OpenAI model (default: `codex-mini-latest`)
+- `--repo-path <path>` — Target repository (default: current directory)
+- `--prompt, -p <text | ->` — Headless mode prompt (`-` for stdin)
 
 ## Testing
-
-Run the test suite with:
 
 ```bash
 uv run pytest

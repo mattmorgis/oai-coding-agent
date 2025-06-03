@@ -74,6 +74,24 @@ def test_runtime_config_constructor(
     assert cfg.model == model
     assert cfg.repo_path == expected_repo_path
     assert cfg.mode == (mode or ModeChoice.default)
+    assert cfg.openai_base_url is None
+
+
+def test_runtime_config_constructor_with_base_url(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that RuntimeConfig accepts an explicit openai_base_url."""
+    monkeypatch.chdir(tmp_path)
+    custom_url = "https://custom.openai"
+    cfg = RuntimeConfig(
+        openai_api_key="KEY",
+        openai_base_url=custom_url,
+        github_personal_access_token="GH",
+        model=ModelChoice.o3,
+    )
+    assert cfg.openai_base_url == custom_url
+    assert cfg.repo_path == tmp_path
+    assert cfg.mode == ModeChoice.default
 
 
 @pytest.fixture
@@ -133,18 +151,51 @@ def test_load_envs_behavior(
     )
 
 
+@pytest.mark.parametrize(
+    "existing_env,dotenv_vals,expected_url",
+    [
+        # Test loading base URL when not set
+        ({}, {"OPENAI_BASE_URL": "FROM_ENV"}, "FROM_ENV"),
+        # Test not overriding existing base URL
+        (
+            {"OPENAI_BASE_URL": "SHELL_URL"},
+            {"OPENAI_BASE_URL": "FROM_ENV"},
+            "SHELL_URL",
+        ),
+    ],
+)
+def test_load_envs_openai_base_url(
+    existing_env: Dict[str, str],
+    dotenv_vals: Dict[str, str],
+    expected_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+    mock_dotenv: Callable[[Dict[str, str]], None],
+) -> None:
+    """Test that load_envs loads or preserves OPENAI_BASE_URL correctly."""
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    for key, value in existing_env.items():
+        monkeypatch.setenv(key, value)
+    mock_dotenv(dotenv_vals)
+
+    load_envs()
+
+    assert os.environ.get("OPENAI_BASE_URL") == expected_url
+
+
 def test_load_envs_with_explicit_env_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Ensure load_envs loads keys from an explicit .env file path
     env_file = tmp_path / ".custom_env"
     env_file.write_text(
-        "OPENAI_API_KEY=EXPLICIT_KEY\nGITHUB_PERSONAL_ACCESS_TOKEN=EXPLICIT_GH\n"
+        "OPENAI_API_KEY=EXPLICIT_KEY\nGITHUB_PERSONAL_ACCESS_TOKEN=EXPLICIT_GH\nOPENAI_BASE_URL=EXPLICIT_URL\n"
     )
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
 
     load_envs(env_file=str(env_file))
 
     assert os.environ.get("OPENAI_API_KEY") == "EXPLICIT_KEY"
     assert os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") == "EXPLICIT_GH"
+    assert os.environ.get("OPENAI_BASE_URL") == "EXPLICIT_URL"

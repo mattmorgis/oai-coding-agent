@@ -14,6 +14,7 @@ from .preflight import run_preflight_checks
 from .runtime_config import (
     GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
     OPENAI_API_KEY_ENV,
+    OPENAI_BASE_URL_ENV,
     ModeChoice,
     ModelChoice,
     RuntimeConfig,
@@ -82,6 +83,10 @@ def create_app(
                 "are the only files the agent has permission to access"
             ),
         ),
+        openai_base_url: Annotated[
+            Optional[str],
+            typer.Option(envvar=OPENAI_BASE_URL_ENV, help="OpenAI base URL"),
+        ] = None,
         prompt: Annotated[
             Optional[str],
             typer.Option(
@@ -110,6 +115,7 @@ def create_app(
 
         cfg = RuntimeConfig(
             openai_api_key=openai_api_key,
+            openai_base_url=openai_base_url,
             github_personal_access_token=github_personal_access_token,
             model=model,
             repo_path=repo_path,
@@ -136,7 +142,7 @@ def create_app(
     return app
 
 
-# Load API keys from .env if not already set in the environment
+# Load API keys and related settings from .env if not already set in the environment
 load_envs()
 
 # Create default app instance for backward compatibility

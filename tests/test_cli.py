@@ -76,6 +76,8 @@ def test_cli_invokes_console_with_explicit_flags(
         [
             "--openai-api-key",
             "TESTKEY",
+            "--openai-base-url",
+            "https://api.custom",
             "--github-personal-access-token",
             "GHKEY",
             "--model",
@@ -92,6 +94,7 @@ def test_cli_invokes_console_with_explicit_flags(
     assert agent.config.repo_path == tmp_path
     assert agent.config.model == ModelChoice.o3
     assert agent.config.openai_api_key == "TESTKEY"
+    assert agent.config.openai_base_url == "https://api.custom"
     assert agent.config.mode == ModeChoice.default
 
     assert mock_console_factory.console.run_called
@@ -103,8 +106,9 @@ def test_cli_uses_environment_defaults(
     mock_console_factory: Any,
     tmp_path: Path,
 ) -> None:
-    # Set environment variables for API keys
+    # Set environment variables for API keys and base URL
     monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
+    monkeypatch.setenv("OPENAI_BASE_URL", "ENVURL")
     monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "ENVGH")
 
     app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
@@ -117,6 +121,7 @@ def test_cli_uses_environment_defaults(
     assert agent.config.repo_path == tmp_path
     assert agent.config.model == ModelChoice.codex_mini_latest
     assert agent.config.openai_api_key == "ENVKEY"
+    assert agent.config.openai_base_url == "ENVURL"
     assert agent.config.mode == ModeChoice.default
 
 
@@ -142,6 +147,7 @@ def test_cli_uses_cwd_as_default_repo_path(
     assert agent.config.repo_path == expected_cwd
     assert agent.config.model == ModelChoice.codex_mini_latest
     assert agent.config.openai_api_key == "ENVKEY"
+    assert agent.config.openai_base_url is None
     assert agent.config.mode == ModeChoice.default
 
 
@@ -167,6 +173,7 @@ def test_cli_prompt_invokes_headless_main(
     assert agent.config.repo_path == tmp_path
     assert agent.config.model == ModelChoice.codex_mini_latest
     assert agent.config.openai_api_key == "ENVKEY"
+    assert agent.config.openai_base_url is None
     assert agent.config.mode == ModeChoice.async_
     assert agent.config.prompt == "Do awesome things"
 
@@ -194,5 +201,6 @@ def test_cli_prompt_stdin_invokes_headless_main(
     assert agent.config.repo_path == tmp_path
     assert agent.config.model == ModelChoice.codex_mini_latest
     assert agent.config.openai_api_key == "ENVKEY"
+    assert agent.config.openai_base_url is None
     assert agent.config.mode == ModeChoice.async_
     assert agent.config.prompt == prompt_str

@@ -2,9 +2,9 @@
 Runtime configuration for the OAI coding agent.
 
 This module provides:
-- load_envs(): load OPENAI_API_KEY and GITHUB_PERSONAL_ACCESS_TOKEN from a .env file
+- load_envs(): load OPENAI_API_KEY, GITHUB_PERSONAL_ACCESS_TOKEN, and OPENAI_BASE_URL from a .env file
   if they are not already present in the environment.
-- RuntimeConfig: a dataclass holding runtime settings, including API keys,
+- RuntimeConfig: a dataclass holding runtime settings, including API keys, base URL,
   model choice, repo path, and mode.
 """
 
@@ -16,18 +16,23 @@ from typing import Optional
 
 from dotenv import dotenv_values
 
-# Environment variable names for credentials
+# Environment variable names for credentials and endpoints
 OPENAI_API_KEY_ENV: str = "OPENAI_API_KEY"
+OPENAI_BASE_URL_ENV: str = "OPENAI_BASE_URL"
 GITHUB_PERSONAL_ACCESS_TOKEN_ENV: str = "GITHUB_PERSONAL_ACCESS_TOKEN"
 
 
 def load_envs(env_file: Optional[str] = None) -> None:
     """
-    Load OPENAI_API_KEY and GITHUB_PERSONAL_ACCESS_TOKEN from a .env file
+    Load OPENAI_API_KEY, GITHUB_PERSONAL_ACCESS_TOKEN, and OPENAI_BASE_URL from a .env file
     into the process environment if they are not already set.
     """
     env_values = dotenv_values(env_file) if env_file else dotenv_values()
-    for key in (OPENAI_API_KEY_ENV, GITHUB_PERSONAL_ACCESS_TOKEN_ENV):
+    for key in (
+        OPENAI_API_KEY_ENV,
+        GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
+        OPENAI_BASE_URL_ENV,
+    ):
         if not os.environ.get(key):
             val = env_values.get(key)
             if val:
@@ -57,6 +62,7 @@ class RuntimeConfig:
 
     Attributes:
         openai_api_key: The OpenAI API key to use.
+        openai_base_url: Custom base URL for the OpenAI API endpoint (if provided).
         github_personal_access_token: The GitHub Personal Access Token to use for the GitHub MCP server.
         model: The OpenAI model identifier.
         repo_path: Path to the repository to work on.
@@ -71,6 +77,7 @@ class RuntimeConfig:
     model: ModelChoice
     repo_path: Path = field(default_factory=Path.cwd)
     mode: ModeChoice = ModeChoice.default
+    openai_base_url: Optional[str] = None
     github_repo: Optional[str] = None
     branch_name: Optional[str] = None
     prompt: Optional[str] = None
