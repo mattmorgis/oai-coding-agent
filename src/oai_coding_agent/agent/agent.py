@@ -14,7 +14,6 @@ from agents import (
 from agents import (
     ModelSettings,
     Runner,
-    RunResultStreaming,
     gen_trace_id,
     trace,
 )
@@ -47,10 +46,7 @@ class AgentProtocol(Protocol):
     async def run(
         self,
         user_input: str,
-    ) -> tuple[
-        AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent],
-        RunResultStreaming,
-    ]: ...
+    ) -> AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent]: ...
 
 
 class Agent:
@@ -108,13 +104,9 @@ class Agent:
     async def run(
         self,
         user_input: str,
-    ) -> tuple[
-        AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent],
-        RunResultStreaming,
-    ]:
+    ) -> AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent]:
         """
-        Send one user message to the agent and return an async iterator of agent events
-        plus the underlying RunResultStreaming.
+        Send one user message to the agent and return an async iterator of agent events.
         """
         if self._sdk_agent is None:
             raise RuntimeError("Agent not initialized. Use async with context manager.")
@@ -138,4 +130,4 @@ class Agent:
 
         # Store the last-response ID so subsequent calls continue the dialogue
         self._previous_response_id = result.last_response_id
-        return _map_events(), result
+        return _map_events()

@@ -41,7 +41,7 @@ class HeadlessConsole:
 
         console.print(f"[bold cyan]Prompt:[/bold cyan] {self.agent.config.prompt}")
         async with self.agent:
-            event_stream, _ = await self.agent.run(self.agent.config.prompt)
+            event_stream = await self.agent.run(self.agent.config.prompt)
             async for event in event_stream:
                 ui_msg = map_event_to_ui_message(event)
                 if ui_msg:
@@ -111,7 +111,7 @@ class ReplConsole:
 
                     console.print(f"[dim]› {user_input}[/dim]\n")
 
-                    event_stream, result = await self.agent.run(user_input)
+                    event_stream = await self.agent.run(user_input)
                     async for event in event_stream:
                         ui_msg = map_event_to_ui_message(event)
                         render_message(ui_msg)
