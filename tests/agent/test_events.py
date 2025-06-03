@@ -3,7 +3,7 @@
 from unittest.mock import Mock
 
 from agents import RunItemStreamEvent
-from agents.items import (
+from agents.items import (  # type: ignore[attr-defined]
     MessageOutputItem,
     ReasoningItem,
     ResponseFunctionToolCall,
