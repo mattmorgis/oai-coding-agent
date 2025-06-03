@@ -3,7 +3,12 @@
 from unittest.mock import Mock
 
 from agents import RunItemStreamEvent
-from agents.items import MessageOutputItem, ReasoningItem, ToolCallItem, ResponseFunctionToolCall
+from agents.items import (
+    MessageOutputItem,
+    ReasoningItem,
+    ResponseFunctionToolCall,
+    ToolCallItem,
+)
 
 from oai_coding_agent.agent.events import (
     MessageOutputEvent,
@@ -15,7 +20,12 @@ from oai_coding_agent.agent.events import (
 
 def test_map_tool_call_with_response_function_tool_call() -> None:
     """Test mapping a ResponseFunctionToolCall using the typed branch."""
-    rf = ResponseFunctionToolCall(name="test_tool", arguments='{"arg": "value"}', call_id="cid", type="function_call")
+    rf = ResponseFunctionToolCall(
+        name="test_tool",
+        arguments='{"arg": "value"}',
+        call_id="cid",
+        type="function_call",
+    )
     tool_call_item = ToolCallItem(agent=Mock(), raw_item=rf)
 
     event = Mock(spec=RunItemStreamEvent)
@@ -26,8 +36,6 @@ def test_map_tool_call_with_response_function_tool_call() -> None:
     assert isinstance(result, ToolCallEvent)
     assert result.name == "test_tool"
     assert result.arguments == '{"arg": "value"}'
-
-
 
 
 def test_map_reasoning_event() -> None:

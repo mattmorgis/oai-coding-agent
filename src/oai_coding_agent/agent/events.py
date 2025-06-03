@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Optional, Union
 
 from agents import RunItemStreamEvent, StreamEvent
-from agents.items import (
+from agents.items import (  # type: ignore[attr-defined]
     ImageGenerationCall,
     LocalShellCall,
     McpCall,
@@ -116,12 +116,12 @@ def map_sdk_event_to_agent_event(
                     return _extract_tool_call_info(raw_item)
 
                 case ReasoningItem(raw_item=raw_item) if raw_item.summary:
-                    first = raw_item.summary[0]
-                    return ReasoningEvent(text=first.text)
+                    summary_item = raw_item.summary[0]
+                    return ReasoningEvent(text=summary_item.text)
 
                 case MessageOutputItem(raw_item=raw_item) if raw_item.content:
-                    first = raw_item.content[0]
-                    return MessageOutputEvent(text=first.text)
+                    content_item = raw_item.content[0]
+                    return MessageOutputEvent(text=content_item.text)  # type: ignore[union-attr]
 
                 case _:
                     # Other item types we don't handle
