@@ -47,7 +47,6 @@ class AgentProtocol(Protocol):
     async def run(
         self,
         user_input: str,
-        previous_response_id: Optional[str] = None,
     ) -> tuple[
         AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent],
         RunResultStreaming,
@@ -60,6 +59,8 @@ class Agent:
     def __init__(self, config: RuntimeConfig, max_turns: int = 100):
         self.config = config
         self.max_turns = max_turns
+        # track the last response ID internally
+        self._previous_response_id: Optional[str] = None
         self._exit_stack: Optional[AsyncExitStack] = None
         self._sdk_agent: Optional[SDKAgent] = None
 
@@ -107,7 +108,6 @@ class Agent:
     async def run(
         self,
         user_input: str,
-        previous_response_id: Optional[str] = None,
     ) -> tuple[
         AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent],
         RunResultStreaming,
@@ -122,10 +122,11 @@ class Agent:
         result = Runner.run_streamed(
             self._sdk_agent,
             user_input,
-            previous_response_id=previous_response_id,
+            previous_response_id=self._previous_response_id,
             max_turns=self.max_turns,
         )
 
+        # Automatically resume from the last_response_id set on previous runs
         async def _map_events() -> AsyncIterator[
             ToolCallEvent | ReasoningEvent | MessageOutputEvent
         ]:
@@ -135,4 +136,6 @@ class Agent:
                 if agent_event is not None:
                     yield agent_event
 
+        # Store the last-response ID so subsequent calls continue the dialogue
+        self._previous_response_id = result.last_response_id
         return _map_events(), result

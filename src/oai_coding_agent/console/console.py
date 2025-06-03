@@ -92,7 +92,6 @@ class ReplConsole:
         )
 
         async with self.agent:
-            prev_id = None
             continue_loop = True
             while continue_loop:
                 try:
@@ -112,12 +111,10 @@ class ReplConsole:
 
                     console.print(f"[dim]› {user_input}[/dim]\n")
 
-                    event_stream, result = await self.agent.run(user_input, prev_id)
+                    event_stream, result = await self.agent.run(user_input)
                     async for event in event_stream:
                         ui_msg = map_event_to_ui_message(event)
                         render_message(ui_msg)
-
-                    prev_id = result.last_response_id
 
                 except (KeyboardInterrupt, EOFError):
                     continue_loop = False

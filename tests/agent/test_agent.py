@@ -115,12 +115,14 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
             return gen()
 
     fake_result = FakeResult(events)
+    # Provide a last_response_id so Agent.run can store it without error
+    fake_result.last_response_id = None
 
     # Monkeypatch Runner.run_streamed
     monkeypatch.setattr(
         Runner,
         "run_streamed",
-        lambda agent, u, previous_response_id, max_turns: fake_result,
+        lambda *args, **kwargs: fake_result,
     )
     # Initialize agent and set dummy SDK agent
     config = RuntimeConfig(
@@ -133,7 +135,7 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     agent = Agent(config, max_turns=1)
     agent._sdk_agent = cast(SDKAgent, object())
 
-    event_stream, returned = await agent.run("input text", previous_response_id="prev")
+    event_stream, returned = await agent.run("input text")
     # Should return the underlying result as is
     assert returned is fake_result  # type: ignore[comparison-overlap]
     # Verify we can iterate the mapped events from the stream
