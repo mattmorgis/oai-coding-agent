@@ -116,12 +116,16 @@ def map_sdk_event_to_agent_event(
                     return _extract_tool_call_info(raw_item)
 
                 case ReasoningItem(raw_item=raw_item) if raw_item.summary:
-                    summary_item = raw_item.summary[0]
-                    return ReasoningEvent(text=summary_item.text)
+                    # Concatenate all summary items
+                    summary_texts = [item.text for item in raw_item.summary]
+                    combined_text = "\n".join(summary_texts)
+                    return ReasoningEvent(text=combined_text)
 
                 case MessageOutputItem(raw_item=raw_item) if raw_item.content:
-                    content_item = raw_item.content[0]
-                    return MessageOutputEvent(text=content_item.text)  # type: ignore[union-attr]
+                    # Concatenate all content items
+                    content_texts = [item.text for item in raw_item.content]  # type: ignore[union-attr]
+                    combined_text = "\n".join(content_texts)
+                    return MessageOutputEvent(text=combined_text)
 
                 case _:
                     # Other item types we don't handle

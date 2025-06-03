@@ -6,7 +6,12 @@ from unittest.mock import Mock
 import pytest
 from agents import Agent as SDKAgent
 from agents import RunItemStreamEvent, Runner
-from agents.items import MessageOutputItem, ReasoningItem, ToolCallItem
+from agents.items import (  # type: ignore[attr-defined]
+    MessageOutputItem,
+    ReasoningItem,
+    ResponseFunctionToolCall,
+    ToolCallItem,
+)
 from agents.mcp import MCPServerStdioParams
 
 import oai_coding_agent.agent.mcp_servers as mcp_servers_module
@@ -70,9 +75,12 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     # Create mock SDK events with proper structure
     # Mock tool call event
     tool_call_item = Mock(spec=ToolCallItem)
-    tool_call_raw = Mock()
-    tool_call_raw.name = "test_tool"
-    tool_call_raw.arguments = '{"arg": "value"}'
+    tool_call_raw = ResponseFunctionToolCall(
+        name="test_tool",
+        arguments='{"arg": "value"}',
+        call_id="test_call_id",
+        type="function_call",
+    )
     tool_call_item.raw_item = tool_call_raw
     tool_call_event = Mock(spec=RunItemStreamEvent)
     tool_call_event.item = tool_call_item

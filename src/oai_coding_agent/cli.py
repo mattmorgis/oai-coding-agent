@@ -39,14 +39,14 @@ def create_app(
     console_factory: Optional[Callable[[AgentProtocol], Console]] = None,
 ) -> typer.Typer:
     """
-    Create and configure the Typer application with dependency injection.
+    Create and configure the Typer application.
 
     Args:
         agent_factory: Factory function to create Agent instances
         console_factory: Factory function to create Console instances
 
     Returns:
-        Configured Typer application
+        Typer application
     """
     if agent_factory is None:
         agent_factory = default_agent_factory

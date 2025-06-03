@@ -118,6 +118,46 @@ def test_map_empty_message_content_returns_none() -> None:
     assert result is None
 
 
+def test_map_reasoning_with_multiple_summaries() -> None:
+    """Test that reasoning event with multiple summaries concatenates all of them."""
+    reasoning_item = Mock(spec=ReasoningItem)
+    reasoning_raw = Mock()
+    reasoning_raw.summary = [
+        Mock(text="First summary"),
+        Mock(text="Second summary"),
+        Mock(text="Third summary"),
+    ]
+    reasoning_item.raw_item = reasoning_raw
+
+    event = Mock(spec=RunItemStreamEvent)
+    event.item = reasoning_item
+
+    result = map_sdk_event_to_agent_event(event)
+
+    assert isinstance(result, ReasoningEvent)
+    assert result.text == "First summary\nSecond summary\nThird summary"
+
+
+def test_map_message_with_multiple_content_items() -> None:
+    """Test that message event with multiple content items concatenates all of them."""
+    message_item = Mock(spec=MessageOutputItem)
+    message_raw = Mock()
+    message_raw.content = [
+        Mock(text="First content"),
+        Mock(text="Second content"),
+        Mock(text="Third content"),
+    ]
+    message_item.raw_item = message_raw
+
+    event = Mock(spec=RunItemStreamEvent)
+    event.item = message_item
+
+    result = map_sdk_event_to_agent_event(event)
+
+    assert isinstance(result, MessageOutputEvent)
+    assert result.text == "First content\nSecond content\nThird content"
+
+
 def test_map_non_run_item_event_returns_none() -> None:
     """Test that non-RunItemStreamEvent returns None."""
     event = Mock()  # Not a RunItemStreamEvent
