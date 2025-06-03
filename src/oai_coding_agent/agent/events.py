@@ -2,7 +2,7 @@
 Map SDK stream events to our internal agent events.
 
 This module provides a mapping layer between the OpenAI SDK's stream events
-and our internal event types, providing a stable interface for the UI.
+and our internal agent event types, providing a stable interface for the UI.
 """
 
 from dataclasses import dataclass

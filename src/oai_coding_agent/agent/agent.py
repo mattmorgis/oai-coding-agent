@@ -113,7 +113,7 @@ class Agent:
         RunResultStreaming,
     ]:
         """
-        Send one user message to the agent and return an async iterator of internal events
+        Send one user message to the agent and return an async iterator of agent events
         plus the underlying RunResultStreaming.
         """
         if self._sdk_agent is None:
@@ -129,10 +129,10 @@ class Agent:
         async def _map_events() -> AsyncIterator[
             ToolCallEvent | ReasoningEvent | MessageOutputEvent
         ]:
-            """Map SDK events to internal events, filtering out None values."""
+            """Map SDK events to agent events, filtering out None values."""
             async for sdk_event in result.stream_events():
-                internal_event = map_sdk_event_to_agent_event(sdk_event)
-                if internal_event is not None:
-                    yield internal_event
+                agent_event = map_sdk_event_to_agent_event(sdk_event)
+                if agent_event is not None:
+                    yield agent_event
 
         return _map_events(), result

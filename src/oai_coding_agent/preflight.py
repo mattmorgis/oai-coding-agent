@@ -19,6 +19,7 @@ def is_inside_git_repo(repo_path: Path) -> bool:
     Return True if the given path is inside a Git worktree.
     """
     try:
+        # TODO: switch to python's git library for this check
         result = subprocess.run(
             ["git", "rev-parse", "--is-inside-work-tree"],
             cwd=repo_path,
@@ -69,6 +70,7 @@ def check_docker() -> str:
     if not docker_path:
         raise RuntimeError("Docker binary not found on PATH")
 
+    # TODO: Switch to Docker SDK for Python for this check
     # Verify that the Docker daemon is up and running
     try:
         subprocess.run(
@@ -94,6 +96,7 @@ def get_github_repo(repo_path: Path) -> Optional[str]:
     Returns None if extraction fails.
     """
     try:
+        # TODO: switch to python's git library for this check
         raw = (
             subprocess.check_output(
                 ["git", "config", "--get", "remote.origin.url"],
@@ -125,6 +128,7 @@ def get_git_branch(repo_path: Path) -> Optional[str]:
     Returns None if extraction fails.
     """
     try:
+        # TODO: switch to python's git library for this check
         branch_name = (
             subprocess.check_output(
                 ["git", "rev-parse", "--abbrev-ref", "HEAD"],

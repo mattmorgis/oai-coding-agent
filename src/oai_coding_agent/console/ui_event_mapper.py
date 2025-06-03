@@ -1,21 +1,17 @@
 """
-Map internal agent events to UI messages.
+Map agent events to UI messages.
 """
 
 import logging
-from typing import Union
 
-from ..agent.events import MessageOutputEvent, ReasoningEvent, ToolCallEvent
+from ..agent.events import AgentEvent, MessageOutputEvent, ReasoningEvent, ToolCallEvent
 from .state import UIMessage
 
 logger = logging.getLogger(__name__)
 
 
-InternalEvent = Union[ToolCallEvent, ReasoningEvent, MessageOutputEvent]
-
-
-def map_event_to_ui_message(event: InternalEvent) -> UIMessage:
-    """Map an internal agent event to a UI message."""
+def map_event_to_ui_message(event: AgentEvent) -> UIMessage:
+    """Map an agent event to a UI message."""
     logger.debug("Internal event received: %r", event)
 
     match event:
