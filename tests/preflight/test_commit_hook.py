@@ -1,11 +1,14 @@
 import stat
-import subprocess
 from pathlib import Path
+from unittest.mock import MagicMock
 
+import git
 import pytest
-from jinja2 import Environment, PackageLoader, select_autoescape
 
-from oai_coding_agent.preflight import install_commit_msg_hook
+from oai_coding_agent.preflight.commit_hook import (
+    COMMIT_MSG_HOOK_SCRIPT,
+    install_commit_msg_hook,
+)
 
 
 def test_install_commit_msg_hook_creates_hook_and_configures_git(
@@ -24,17 +27,22 @@ def test_install_commit_msg_hook_creates_hook_and_configures_git(
     repo = tmp_path / "repo"
     repo.mkdir()
 
-    # Capture subprocess.run calls
-    runs = []
+    # Mock GitPython
+    mock_repo = MagicMock()
+    mock_config_writer = MagicMock()
 
-    def fake_run(
-        cmd: list[str],
-        cwd: Path | None = None,
-        check: bool = False,
-    ) -> None:
-        runs.append((cmd, cwd, check))
+    # Track calls to set_value
+    set_value_calls = []
 
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    def track_set_value(section: str, option: str, value: str) -> MagicMock:
+        set_value_calls.append((section, option, value))
+        return mock_config_writer
+
+    mock_config_writer.set_value = track_set_value
+    mock_config_writer.release = MagicMock()
+    mock_repo.config_writer = MagicMock(return_value=mock_config_writer)
+
+    monkeypatch.setattr(git, "Repo", lambda *args, **kwargs: mock_repo)
 
     # Run the installer
     install_commit_msg_hook(repo)
@@ -44,22 +52,20 @@ def test_install_commit_msg_hook_creates_hook_and_configures_git(
     hook_file = hooks_dir / "commit-msg"
     assert hook_file.exists(), "Expected commit-msg hook file to be created"
 
-    # Verify the content matches the Jinja2 template rendering
-    env = Environment(
-        loader=PackageLoader("oai_coding_agent", "templates"),
-        autoescape=select_autoescape([]),
-    )
-    expected_script = env.get_template("commit_msg_hook.jinja2").render()
+    # Verify the content matches the expected script
     actual_script = hook_file.read_text(encoding="utf-8")
-    assert actual_script == expected_script
+    assert actual_script == COMMIT_MSG_HOOK_SCRIPT
 
     # Verify file is executable (user executable bit should be set)
     mode = stat.S_IMODE(hook_file.stat().st_mode)
     assert mode & stat.S_IXUSR, "Expected commit-msg hook to be executable"
 
-    # Verify subprocess.run was called once with git config core.hooksPath
-    assert len(runs) == 1
-    cmd, cwd, check_flag = runs[0]
-    assert cmd == ["git", "config", "--local", "core.hooksPath", str(hooks_dir)]
-    assert cwd == repo
-    assert check_flag is False
+    # Verify GitPython config was called to set core.hooksPath
+    assert len(set_value_calls) == 1
+    section, option, value = set_value_calls[0]
+    assert section == "core"
+    assert option == "hooksPath"
+    assert value == str(hooks_dir)
+
+    # Verify release was called
+    mock_config_writer.release.assert_called_once()
