@@ -16,7 +16,7 @@ from .console.console import Console, HeadlessConsole, ReplConsole
 from .logger import setup_logging
 from .preflight import PreflightCheckError, run_preflight_checks
 from .runtime_config import (
-    GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
+    GITHUB_TOKEN,
     OPENAI_API_KEY_ENV,
     OPENAI_BASE_URL_ENV,
     ModeChoice,
@@ -68,7 +68,7 @@ def create_app(
         github_personal_access_token: Annotated[
             Optional[str],
             typer.Option(
-                envvar=GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
+                envvar=GITHUB_TOKEN,
                 help="GitHub Personal Access Token",
             ),
         ] = None,
@@ -140,12 +140,12 @@ def create_app(
                     github_personal_access_token = token
                 else:
                     typer.echo("\n❌ Browser authentication failed.")
-                    typer.echo("Please set GITHUB_PERSONAL_ACCESS_TOKEN_ENV manually.")
+                    typer.echo("Please set GITHUB_TOKEN manually.")
                     raise typer.Exit(code=1)
             else:
                 typer.echo("\nAlternatively, you can:")
                 typer.echo(
-                    "  • Set environment variable: export GITHUB_PERSONAL_ACCESS_TOKEN_ENV=your_token"
+                    "  • Set environment variable: export GITHUB_TOKEN=your_token"
                 )
                 typer.echo(
                     "  • Use command line option: --github-personal-access-token your_token"

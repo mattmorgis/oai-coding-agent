@@ -65,7 +65,7 @@ jobs:
           RICH_FORCE_TERMINAL: "1"
           TTY_COMPATIBLE: "1"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_PERSONAL_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           uv run oai --prompt '${{ github.event.issue.body }}'
