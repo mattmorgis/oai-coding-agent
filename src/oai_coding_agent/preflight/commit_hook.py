@@ -1,0 +1,49 @@
+"""
+Git commit hook setup for OAI Coding Agent.
+"""
+
+import logging
+import os
+from pathlib import Path
+
+import git
+
+logger = logging.getLogger(__name__)
+
+COMMIT_MSG_HOOK_SCRIPT = """#!/usr/bin/env sh
+# commit-msg hook: append Co-Authored-By stanza when OAI_AGENT is set
+
+if [ -n "$OAI_AGENT" ]; then
+  printf "\\n🤖 Generated with oai-coding-agent\\nCo-Authored-By: OAI <noreply@oai-coding-agent.com>\\n" >> "$1"
+fi
+"""
+
+
+def install_commit_msg_hook(repo_path: Path) -> None:
+    """
+    Install the commit-msg hook into the user's config dir so it's not tracked in the repo.
+    """
+    config_home = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    hooks_dir = config_home / "oai_coding_agent" / "hooks"
+    hook_file = hooks_dir / "commit-msg"
+
+    if not hooks_dir.exists():
+        hooks_dir.mkdir(parents=True, exist_ok=True)
+
+    existing = None
+    if hook_file.exists():
+        with open(hook_file, "r", encoding="utf-8") as f:
+            existing = f.read()
+
+    if existing != COMMIT_MSG_HOOK_SCRIPT:
+        with open(hook_file, "w", encoding="utf-8") as f:
+            f.write(COMMIT_MSG_HOOK_SCRIPT)
+        hook_file.chmod(0o755)
+        logger.info(f"Installed commit-msg hook into {hooks_dir}")
+
+    try:
+        repo = git.Repo(str(repo_path), search_parent_directories=True)
+        repo.config_writer().set_value("core", "hooksPath", str(hooks_dir)).release()
+        logger.info(f"Configured repo to use commit-msg hook from {hooks_dir}")
+    except Exception as e:
+        logger.warning(f"Failed to set git hooks path: {e}")

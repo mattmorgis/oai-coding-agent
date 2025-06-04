@@ -9,6 +9,7 @@ import oai_coding_agent.cli as cli_module
 from oai_coding_agent.agent import AgentProtocol
 from oai_coding_agent.cli import create_app
 from oai_coding_agent.console.console import Console
+from oai_coding_agent.preflight import PreflightCheckError
 from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConfig
 
 
@@ -204,3 +205,37 @@ def test_cli_prompt_stdin_invokes_headless_main(
     assert agent.config.openai_base_url is None
     assert agent.config.mode == ModeChoice.async_
     assert agent.config.prompt == prompt_str
+
+
+def test_cli_exits_on_preflight_error(
+    monkeypatch: pytest.MonkeyPatch,
+    mock_agent_factory: Any,
+    mock_console_factory: Any,
+    tmp_path: Path,
+) -> None:
+    # Set environment variables for API keys
+    monkeypatch.setenv("OPENAI_API_KEY", "ENVKEY")
+    monkeypatch.setenv("GITHUB_PERSONAL_ACCESS_TOKEN", "ENVGH")
+
+    # Mock run_preflight_checks to raise PreflightCheckError
+    def mock_preflight_failure(repo_path: Path) -> tuple[None, None]:
+        raise PreflightCheckError(
+            ["Node.js binary not found on PATH", "Docker daemon is not running"]
+        )
+
+    monkeypatch.setattr(cli_module, "run_preflight_checks", mock_preflight_failure)
+
+    app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
+    runner = CliRunner()
+    result = runner.invoke(app, ["--repo-path", str(tmp_path)])
+
+    # Should exit with code 1
+    assert result.exit_code == 1
+
+    # Should print both error messages to stderr
+    assert "Error: Node.js binary not found on PATH" in result.output
+    assert "Error: Docker daemon is not running" in result.output
+
+    # Agent and console should NOT be created
+    assert mock_agent_factory.agent is None
+    assert mock_console_factory.console is None

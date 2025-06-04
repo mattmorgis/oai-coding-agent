@@ -10,7 +10,7 @@ from typing_extensions import Annotated
 from .agent import Agent, AgentProtocol
 from .console.console import Console, HeadlessConsole, ReplConsole
 from .logger import setup_logging
-from .preflight import run_preflight_checks
+from .preflight import PreflightCheckError, run_preflight_checks
 from .runtime_config import (
     GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
     OPENAI_API_KEY_ENV,
@@ -103,7 +103,12 @@ def create_app(
         logger = logging.getLogger(__name__)
 
         # Run preflight checks and get git info
-        github_repo, branch_name = run_preflight_checks(repo_path)
+        try:
+            github_repo, branch_name = run_preflight_checks(repo_path)
+        except PreflightCheckError as e:
+            for error in e.errors:
+                typer.echo(f"Error: {error}", err=True)
+            raise typer.Exit(code=1)
 
         # Read prompt text if provided
         prompt_text = None
