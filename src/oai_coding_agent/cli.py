@@ -8,6 +8,10 @@ import typer
 from typing_extensions import Annotated
 
 from .agent import Agent, AgentProtocol
+from .auth.github_browser_auth import authenticate_github_browser
+from .auth.token_storage import (
+    load_auth_to_environment,
+)
 from .console.console import Console, HeadlessConsole, ReplConsole
 from .logger import setup_logging
 from .preflight import PreflightCheckError, run_preflight_checks
@@ -62,12 +66,12 @@ def create_app(
             str, typer.Option(envvar=OPENAI_API_KEY_ENV, help="OpenAI API key")
         ],
         github_personal_access_token: Annotated[
-            str,
+            Optional[str],
             typer.Option(
                 envvar=GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
                 help="GitHub Personal Access Token",
             ),
-        ],
+        ] = None,
         model: Annotated[
             ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
         ] = ModelChoice.codex_mini_latest,
@@ -99,6 +103,9 @@ def create_app(
         """
         OAI CODING AGENT - starts an interactive or batch session
         """
+        # Load authentication from ~/.oai/auth file into environment
+        load_auth_to_environment()
+
         setup_logging()
         logger = logging.getLogger(__name__)
 
@@ -117,6 +124,35 @@ def create_app(
                 prompt_text = sys.stdin.read()
             else:
                 prompt_text = prompt
+
+        # Handle GitHub authentication
+        if (
+            not github_personal_access_token
+            and mode == ModeChoice.default
+            and not prompt
+        ):
+            # Only prompt for browser auth in interactive Default mode
+            typer.echo("\n⚠️  No GitHub Personal Access Token found.")
+            typer.echo("Would you like to authenticate with GitHub using your browser?")
+            if typer.confirm("Authenticate now?"):
+                token = authenticate_github_browser()
+                if token:
+                    github_personal_access_token = token
+                else:
+                    typer.echo("\n❌ Browser authentication failed.")
+                    typer.echo("Please set GITHUB_PERSONAL_ACCESS_TOKEN_ENV manually.")
+                    raise typer.Exit(code=1)
+            else:
+                typer.echo("\nAlternatively, you can:")
+                typer.echo(
+                    "  • Set environment variable: export GITHUB_PERSONAL_ACCESS_TOKEN_ENV=your_token"
+                )
+                typer.echo(
+                    "  • Use command line option: --github-personal-access-token your_token"
+                )
+                typer.echo("  • The agent will continue without GitHub integration")
+
+        # Note: github_personal_access_token can be None - the agent will handle this gracefully
 
         cfg = RuntimeConfig(
             openai_api_key=openai_api_key,
