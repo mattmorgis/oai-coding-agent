@@ -506,6 +506,7 @@ source = { editable = "." }
 dependencies = [
     { name = "cli-mcp-server" },
     { name = "concurrent-log-handler" },
+    { name = "gitpython" },
     { name = "jinja2" },
     { name = "mcp-server-git" },
     { name = "openai-agents" },
@@ -529,6 +530,7 @@ dev = [
 requires-dist = [
     { name = "cli-mcp-server", specifier = ">=0.1.0" },
     { name = "concurrent-log-handler", specifier = ">=0.9.26" },
+    { name = "gitpython", specifier = ">=3.1.44" },
     { name = "jinja2", specifier = ">=3.0.0" },
     { name = "mcp-server-git", specifier = ">=2025.1.14" },
     { name = "openai-agents", specifier = ">=0.0.16" },

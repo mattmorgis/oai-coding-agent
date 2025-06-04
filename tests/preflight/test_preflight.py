@@ -2,8 +2,10 @@ import logging
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
+from unittest.mock import MagicMock
 
+import git
 import pytest
 import typer
 
@@ -18,6 +20,25 @@ def test_run_preflight_success(
     # Simulate git, node, and docker all present and returning versions
     monkeypatch.setattr(shutil, "which", lambda tool: f"/usr/bin/{tool}")
 
+    # Mock GitPython
+    mock_repo = MagicMock()
+    mock_origin = MagicMock()
+    mock_origin.url = "https://github.com/owner/repo.git"
+    mock_remotes = MagicMock()
+    mock_remotes.__contains__ = lambda self, key: key == "origin"
+    mock_remotes.origin = mock_origin
+    mock_repo.remotes = mock_remotes
+    mock_branch = MagicMock()
+    mock_branch.name = "main"
+    mock_repo.active_branch = mock_branch
+    mock_repo.head.is_detached = False
+    mock_config_writer = MagicMock()
+    mock_config_writer.set_value = MagicMock(return_value=mock_config_writer)
+    mock_config_writer.release = MagicMock()
+    mock_repo.config_writer = MagicMock(return_value=mock_config_writer)
+
+    monkeypatch.setattr(git, "Repo", lambda *args, **kwargs: mock_repo)
+
     def fake_run(
         cmd: Sequence[str],
         cwd: Path | None = None,
@@ -25,8 +46,6 @@ def test_run_preflight_success(
         text: bool | None = None,
         check: bool | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
-            return subprocess.CompletedProcess(cmd, 0, stdout="true\n")
         if cmd[:2] == ["node", "--version"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="v14.17.0\n")
         if cmd[:2] == ["docker", "info"]:
@@ -35,23 +54,9 @@ def test_run_preflight_success(
             return subprocess.CompletedProcess(
                 cmd, 0, stdout="Docker version 20.10.7, build abcdef1\n"
             )
-        # Git config hook-path install
-        if cmd[:3] == ["git", "config", "--local"]:
-            return subprocess.CompletedProcess(cmd, 0)
         pytest.fail(f"Unexpected command: {cmd}")
 
-    def fake_check_output(
-        cmd: Sequence[str],
-        cwd: Path | None = None,
-    ) -> bytes:
-        if cmd == ["git", "config", "--get", "remote.origin.url"]:
-            return b"https://github.com/owner/repo.git\n"
-        if cmd == ["git", "rev-parse", "--abbrev-ref", "HEAD"]:
-            return b"main\n"
-        pytest.fail(f"Unexpected check_output command: {cmd}")
-
     monkeypatch.setattr(subprocess, "run", fake_run)
-    monkeypatch.setattr(subprocess, "check_output", fake_check_output)
 
     caplog.set_level(logging.INFO)
     github_repo, branch_name = run_preflight_checks(Path("/some/repo"))
@@ -77,6 +82,12 @@ def test_run_preflight_git_failure(
     # Simulate git not inside worktree, node and docker ok
     monkeypatch.setattr(shutil, "which", lambda tool: f"/usr/bin/{tool}")
 
+    # Mock GitPython to raise InvalidGitRepositoryError
+    def raise_invalid(*args: Any, **kwargs: Any) -> None:
+        raise git.InvalidGitRepositoryError()
+
+    monkeypatch.setattr(git, "Repo", raise_invalid)
+
     def fake_run(
         cmd: Sequence[str],
         cwd: Path | None = None,
@@ -84,8 +95,6 @@ def test_run_preflight_git_failure(
         text: bool | None = None,
         check: bool | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
-            return subprocess.CompletedProcess(cmd, 1, stdout="false\n")
         if cmd[:2] == ["node", "--version"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="v14.17.0\n")
         if cmd[:2] == ["docker", "info"]:
@@ -112,6 +121,10 @@ def test_run_preflight_node_missing(
         shutil, "which", lambda tool: None if tool == "node" else f"/usr/bin/{tool}"
     )
 
+    # Mock GitPython
+    mock_repo = MagicMock()
+    monkeypatch.setattr(git, "Repo", lambda *args, **kwargs: mock_repo)
+
     def fake_run(
         cmd: Sequence[str],
         cwd: Path | None = None,
@@ -119,8 +132,6 @@ def test_run_preflight_node_missing(
         text: bool | None = None,
         check: bool | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
-            return subprocess.CompletedProcess(cmd, 0, stdout="true\n")
         if cmd[:2] == ["docker", "info"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
         if cmd[:2] == ["docker", "--version"]:
@@ -145,6 +156,10 @@ def test_run_preflight_docker_missing(
         shutil, "which", lambda tool: None if tool == "docker" else f"/usr/bin/{tool}"
     )
 
+    # Mock GitPython
+    mock_repo = MagicMock()
+    monkeypatch.setattr(git, "Repo", lambda *args, **kwargs: mock_repo)
+
     def fake_run(
         cmd: Sequence[str],
         cwd: Path | None = None,
@@ -152,8 +167,6 @@ def test_run_preflight_docker_missing(
         text: bool | None = None,
         check: bool | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        if cmd[:3] == ["git", "rev-parse", "--is-inside-work-tree"]:
-            return subprocess.CompletedProcess(cmd, 0, stdout="true\n")
         if cmd[:2] == ["node", "--version"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="v14.17.0\n")
         pytest.fail(f"Unexpected command: {cmd}")
