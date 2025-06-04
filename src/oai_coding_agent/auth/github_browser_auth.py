@@ -7,8 +7,8 @@ import requests
 from .token_storage import save_github_token
 
 # Using GitHub CLI's client ID for device flow
-# This is a public client ID that any application can use
-GITHUB_APP_CLIENT_ID = "178c6fc778ccc68e1d6a"
+# This is a public client ID the GitHub Coding Agent application
+GITHUB_APP_CLIENT_ID = "Ov23liCVY3S4HY5FMODo"
 
 
 def authenticate_github_browser() -> Optional[str]:
