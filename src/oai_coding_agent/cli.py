@@ -9,9 +9,6 @@ from typing_extensions import Annotated
 
 from .agent import Agent, AgentProtocol
 from .auth.github_browser_auth import authenticate_github_browser
-from .auth.token_storage import (
-    load_auth_to_environment,
-)
 from .console.console import Console, HeadlessConsole, ReplConsole
 from .logger import setup_logging
 from .preflight import PreflightCheckError, run_preflight_checks
@@ -69,7 +66,7 @@ def create_app(
             Optional[str],
             typer.Option(
                 envvar=GITHUB_TOKEN,
-                help="GitHub Personal Access Token",
+                help="GitHub Token",
             ),
         ] = None,
         model: Annotated[
@@ -103,9 +100,6 @@ def create_app(
         """
         OAI CODING AGENT - starts an interactive or batch session
         """
-        # Load authentication from ~/.oai/auth file into environment
-        load_auth_to_environment()
-
         setup_logging()
         logger = logging.getLogger(__name__)
 

@@ -185,11 +185,19 @@ def test_load_envs_with_explicit_env_file(
     # Ensure load_envs loads keys from an explicit .env file path
     env_file = tmp_path / ".custom_env"
     env_file.write_text(
-        "OPENAI_API_KEY=EXPLICIT_KEY\nGITHUB_PERSONAL_ACCESS_TOKEN=EXPLICIT_GH\nOPENAI_BASE_URL=EXPLICIT_URL\n"
+        "OPENAI_API_KEY=EXPLICIT_KEY\nGITHUB_TOKEN=EXPLICIT_GH\nOPENAI_BASE_URL=EXPLICIT_URL\n"
     )
+
+    # Clear environment variables first
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+
+    # Mock get_auth_file_path to return a non-existent file to avoid loading auth file
+    monkeypatch.setattr(
+        "oai_coding_agent.runtime_config.get_auth_file_path",
+        lambda: Path("/nonexistent/auth/file"),
+    )
 
     load_envs(env_file=str(env_file))
 
