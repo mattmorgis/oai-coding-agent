@@ -6,7 +6,7 @@ import logging
 import os
 from contextlib import AsyncExitStack
 from pathlib import Path
-from typing import Any, List
+from typing import Any, List, Optional
 
 from agents.mcp import MCPServer, MCPServerStdio
 from mcp.client.stdio import stdio_client
@@ -54,7 +54,9 @@ class QuietMCPServerStdio(MCPServerStdio):
 
 
 async def start_mcp_servers(
-    repo_path: Path, github_personal_access_token: str, exit_stack: AsyncExitStack
+    repo_path: Path,
+    github_personal_access_token: Optional[str],
+    exit_stack: AsyncExitStack,
 ) -> List[MCPServer]:
     """
     Start filesystem, CLI, Git, and GitHub MCP servers, registering cleanup on the provided exit_stack.
@@ -127,30 +129,35 @@ async def start_mcp_servers(
     except OSError:
         logger.exception("Failed to start Git MCP server")
 
-    # GitHub MCP server
-    try:
-        gh_ctx = QuietMCPServerStdio(
-            name="github-mcp-server",
-            params={
-                "command": "docker",
-                "args": [
-                    "run",
-                    "-i",
-                    "--rm",
-                    "-e",
-                    GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
-                    "ghcr.io/github/github-mcp-server",
-                ],
-                "env": {GITHUB_PERSONAL_ACCESS_TOKEN_ENV: github_personal_access_token},
-            },
-            client_session_timeout_seconds=120,
-            cache_tools_list=True,
-        )
-        gh = await exit_stack.enter_async_context(gh_ctx)
+    # GitHub MCP server (only if token is available)
+    if github_personal_access_token:
+        try:
+            gh_ctx = QuietMCPServerStdio(
+                name="github-mcp-server",
+                params={
+                    "command": "docker",
+                    "args": [
+                        "run",
+                        "-i",
+                        "--rm",
+                        "-e",
+                        GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
+                        "ghcr.io/github/github-mcp-server",
+                    ],
+                    "env": {
+                        GITHUB_PERSONAL_ACCESS_TOKEN_ENV: github_personal_access_token
+                    },
+                },
+                client_session_timeout_seconds=120,
+                cache_tools_list=True,
+            )
+            gh = await exit_stack.enter_async_context(gh_ctx)
 
-        servers.append(gh)
-        logger.info("GitHub MCP server started successfully")
-    except OSError:
-        logger.exception("Failed to start GitHub MCP server")
+            servers.append(gh)
+            logger.info("GitHub MCP server started successfully")
+        except OSError:
+            logger.exception("Failed to start GitHub MCP server")
+    else:
+        logger.info("No GitHub token available, skipping GitHub MCP server")
 
     return servers

@@ -73,7 +73,7 @@ class RuntimeConfig:
     """
 
     openai_api_key: str
-    github_personal_access_token: str
+    github_personal_access_token: Optional[str]
     model: ModelChoice
     repo_path: Path = field(default_factory=Path.cwd)
     mode: ModeChoice = ModeChoice.default
