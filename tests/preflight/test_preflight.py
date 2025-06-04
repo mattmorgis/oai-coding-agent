@@ -7,9 +7,9 @@ from unittest.mock import MagicMock
 
 import git
 import pytest
-import typer
 
 from oai_coding_agent.preflight import (
+    PreflightCheckError,
     run_preflight_checks,
 )
 
@@ -76,9 +76,7 @@ def test_run_preflight_success(
     )
 
 
-def test_run_preflight_git_failure(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_run_preflight_git_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     # Simulate git not inside worktree, node and docker ok
     monkeypatch.setattr(shutil, "which", lambda tool: f"/usr/bin/{tool}")
 
@@ -105,17 +103,14 @@ def test_run_preflight_git_failure(
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    with pytest.raises(typer.Exit) as excinfo:
+    with pytest.raises(PreflightCheckError) as excinfo:
         run_preflight_checks(Path("/not/a/repo"))
-    captured = capsys.readouterr()
 
-    assert "Path '/not/a/repo' is not inside a Git worktree." in captured.err
-    assert excinfo.value.exit_code == 1
+    assert "Path '/not/a/repo' is not inside a Git worktree." in str(excinfo.value)
+    assert len(excinfo.value.errors) == 1
 
 
-def test_run_preflight_node_missing(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_run_preflight_node_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     # Simulate node missing, git and docker ok
     monkeypatch.setattr(
         shutil, "which", lambda tool: None if tool == "node" else f"/usr/bin/{tool}"
@@ -140,17 +135,14 @@ def test_run_preflight_node_missing(
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    with pytest.raises(typer.Exit) as excinfo:
+    with pytest.raises(PreflightCheckError) as excinfo:
         run_preflight_checks(Path("/repo"))
-    captured = capsys.readouterr()
 
-    assert "Node.js binary not found on PATH" in captured.err
-    assert excinfo.value.exit_code == 1
+    assert "Node.js binary not found on PATH" in str(excinfo.value)
+    assert len(excinfo.value.errors) == 1
 
 
-def test_run_preflight_docker_missing(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_run_preflight_docker_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     # Simulate docker missing, git and node ok
     monkeypatch.setattr(
         shutil, "which", lambda tool: None if tool == "docker" else f"/usr/bin/{tool}"
@@ -173,9 +165,46 @@ def test_run_preflight_docker_missing(
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    with pytest.raises(typer.Exit) as excinfo:
+    with pytest.raises(PreflightCheckError) as excinfo:
         run_preflight_checks(Path())
-    captured = capsys.readouterr()
 
-    assert "Docker binary not found on PATH" in captured.err
-    assert excinfo.value.exit_code == 1
+    assert "Docker binary not found on PATH" in str(excinfo.value)
+    assert len(excinfo.value.errors) == 1
+
+
+def test_run_preflight_multiple_failures(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Simulate multiple failures: git not in worktree, node missing, docker daemon not running
+    monkeypatch.setattr(
+        shutil, "which", lambda tool: None if tool == "node" else f"/usr/bin/{tool}"
+    )
+
+    # Mock GitPython to raise InvalidGitRepositoryError
+    def raise_invalid(*args: Any, **kwargs: Any) -> None:
+        raise git.InvalidGitRepositoryError()
+
+    monkeypatch.setattr(git, "Repo", raise_invalid)
+
+    def fake_run(
+        cmd: Sequence[str],
+        cwd: Path | None = None,
+        capture_output: bool | None = None,
+        text: bool | None = None,
+        check: bool | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        if cmd[:2] == ["docker", "info"]:
+            raise subprocess.CalledProcessError(
+                1, cmd, stderr="Cannot connect to the Docker daemon"
+            )
+        pytest.fail(f"Unexpected command: {cmd}")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(PreflightCheckError) as excinfo:
+        run_preflight_checks(Path("/not/a/repo"))
+
+    # Should have 3 errors
+    assert len(excinfo.value.errors) == 3
+    error_messages = str(excinfo.value)
+    assert "not inside a Git worktree" in error_messages
+    assert "Node.js binary not found" in error_messages
+    assert "Failed to connect to Docker daemon" in error_messages

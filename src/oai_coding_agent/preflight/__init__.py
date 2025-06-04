@@ -10,12 +10,31 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import git
-import typer
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from .git_repo import get_git_branch, get_github_repo, is_inside_git_repo
 
 logger = logging.getLogger(__name__)
+
+
+# -----------------------------------------------------------------------------
+# Custom exceptions for preflight checks
+# -----------------------------------------------------------------------------
+
+
+class PreflightError(Exception):
+    """Base exception for preflight check failures."""
+
+    pass
+
+
+class PreflightCheckError(PreflightError):
+    """Raised when one or more preflight checks fail."""
+
+    def __init__(self, errors: list[str]) -> None:
+        self.errors = errors
+        super().__init__(f"Preflight checks failed: {'; '.join(errors)}")
+
 
 # -----------------------------------------------------------------------------
 # Install commit-msg hook into user XDG_CONFIG_HOME so it's not tracked in the repo
@@ -116,7 +135,9 @@ def run_preflight_checks(repo_path: Path) -> Tuple[Optional[str], Optional[str]]
       - Git worktree check
       - Node.js binary + version
       - Docker binary + version
-    On failure, prints errors and exits (typer.Exit).
+
+    Raises:
+        PreflightCheckError: If any preflight checks fail
 
     Returns:
         Tuple of (github_repo, branch_name) - both may be None if extraction fails
@@ -139,9 +160,7 @@ def run_preflight_checks(repo_path: Path) -> Tuple[Optional[str], Optional[str]]
         errors.append(str(e))
 
     if errors:
-        for err in errors:
-            typer.echo(f"Error: {err}", err=True)
-        raise typer.Exit(code=1)
+        raise PreflightCheckError(errors)
 
     logger.info(f"Detected Node.js version: {node_version}")
     logger.info(f"Detected Docker version: {docker_version}")
