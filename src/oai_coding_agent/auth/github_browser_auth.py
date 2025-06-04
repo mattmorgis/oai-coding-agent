@@ -60,9 +60,9 @@ def authenticate_github_browser() -> Optional[str]:
     # Display authentication instructions
     print("\n🔐 Opening browser for GitHub authentication...")
     print("\n┌─────────────────────────────────┐")
-    print("│  Your authentication code:     │")
+    print("│  Your authentication code:      │")
     print("│                                 │")
-    print(f"│         {user_code}              │")
+    print(f"│         {user_code}               │")
     print("│                                 │")
     print("│  (Copy this - GitHub will ask)  │")
     print("└─────────────────────────────────┘")
@@ -113,9 +113,11 @@ def authenticate_github_browser() -> Optional[str]:
                 print("✓ Successfully authenticated with GitHub!")
                 access_token = result["access_token"]
                 if isinstance(access_token, str):
-                    # Automatically save token to ~/.oai/auth file
+                    # Automatically save token to ~/.oai_coding_agent/auth file
                     if save_github_token(access_token):
-                        print("✓ Token saved to ~/.oai/auth for future sessions")
+                        print(
+                            "✓ Token saved to ~/.oai_coding_agent/auth for future sessions"
+                        )
                     else:
                         print(
                             "⚠️  Could not save token (will need to re-authenticate next time)"

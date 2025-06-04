@@ -79,7 +79,7 @@ def test_cli_invokes_console_with_explicit_flags(
             "TESTKEY",
             "--openai-base-url",
             "https://api.custom",
-            "--github-personal-access-token",
+            "--github-token",
             "GHKEY",
             "--model",
             "o3",
