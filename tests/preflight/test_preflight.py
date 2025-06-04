@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import git
 import pytest
 
-from oai_coding_agent.preflight import (
+from oai_coding_agent.preflight.preflight import (
     PreflightCheckError,
     run_preflight_checks,
 )

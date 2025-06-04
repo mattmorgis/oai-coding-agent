@@ -6,7 +6,7 @@ import git
 import pytest
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from oai_coding_agent.preflight import install_commit_msg_hook
+from oai_coding_agent.preflight.commit_hook import install_commit_msg_hook
 
 
 def test_install_commit_msg_hook_creates_hook_and_configures_git(
