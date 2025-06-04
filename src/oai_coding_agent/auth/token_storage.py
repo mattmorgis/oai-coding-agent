@@ -11,25 +11,25 @@ def get_auth_file_path() -> Path:
 def save_github_token(token: str) -> bool:
     """
     Save GitHub token to ~/.oai/auth file.
-    
+
     Args:
         token: GitHub personal access token
-        
+
     Returns:
         True if saved successfully, False otherwise
     """
     try:
         auth_file = get_auth_file_path()
-        
+
         # Create .oai directory if it doesn't exist
         auth_file.parent.mkdir(exist_ok=True)
-        
+
         # Write token to auth file
-        auth_file.write_text(f"GITHUB_PERSONAL_ACCESS_TOKEN={token}\n")
-        
+        auth_file.write_text(f"GITHUB_TOKEN={token}\n")
+
         # Set secure permissions (read/write for user only)
         auth_file.chmod(0o600)
-        
+
         return True
     except Exception:
         return False
@@ -38,25 +38,25 @@ def save_github_token(token: str) -> bool:
 def get_github_token() -> Optional[str]:
     """
     Retrieve GitHub token from ~/.oai/auth file.
-    
+
     Returns:
         GitHub token if found, None otherwise
     """
     try:
         auth_file = get_auth_file_path()
-        
+
         if not auth_file.exists():
             return None
-            
+
         content = auth_file.read_text().strip()
-        
-        # Parse the GITHUB_PERSONAL_ACCESS_TOKEN=value format
-        for line in content.split('\n'):
+
+        # Parse the GITHUB_TOKEN=value format
+        for line in content.split("\n"):
             line = line.strip()
-            if line.startswith('GITHUB_PERSONAL_ACCESS_TOKEN='):
-                token = line.split('=', 1)[1]
+            if line.startswith("GITHUB_TOKEN="):
+                token = line.split("=", 1)[1]
                 return token if token else None
-                
+
         return None
     except Exception:
         return None
@@ -65,7 +65,7 @@ def get_github_token() -> Optional[str]:
 def delete_github_token() -> bool:
     """
     Delete the ~/.oai/auth file.
-    
+
     Returns:
         True if deleted successfully, False otherwise
     """
@@ -81,7 +81,7 @@ def delete_github_token() -> bool:
 def has_stored_token() -> bool:
     """
     Check if a GitHub token is stored in the auth file.
-    
+
     Returns:
         True if token exists, False otherwise
     """
@@ -95,24 +95,24 @@ def load_auth_to_environment() -> None:
     """
     try:
         auth_file = get_auth_file_path()
-        
+
         if not auth_file.exists():
             return
-            
+
         content = auth_file.read_text().strip()
-        
+
         # Parse each line and set environment variables
-        for line in content.split('\n'):
+        for line in content.split("\n"):
             line = line.strip()
-            if '=' in line and not line.startswith('#'):
-                key, value = line.split('=', 1)
+            if "=" in line and not line.startswith("#"):
+                key, value = line.split("=", 1)
                 key = key.strip()
                 value = value.strip()
-                
+
                 # Only set if not already in environment
                 if key and value and not os.environ.get(key):
                     os.environ[key] = value
-                    
+
     except Exception:
         # Silently ignore errors when loading auth file
         pass
