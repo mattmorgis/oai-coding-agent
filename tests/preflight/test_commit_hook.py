@@ -4,9 +4,8 @@ from unittest.mock import MagicMock
 
 import git
 import pytest
-from jinja2 import Environment, PackageLoader, select_autoescape
 
-from oai_coding_agent.preflight.commit_hook import install_commit_msg_hook
+from oai_coding_agent.preflight.commit_hook import COMMIT_MSG_HOOK_SCRIPT, install_commit_msg_hook
 
 
 def test_install_commit_msg_hook_creates_hook_and_configures_git(
@@ -50,14 +49,9 @@ def test_install_commit_msg_hook_creates_hook_and_configures_git(
     hook_file = hooks_dir / "commit-msg"
     assert hook_file.exists(), "Expected commit-msg hook file to be created"
 
-    # Verify the content matches the Jinja2 template rendering
-    env = Environment(
-        loader=PackageLoader("oai_coding_agent", "templates"),
-        autoescape=select_autoescape([]),
-    )
-    expected_script = env.get_template("commit_msg_hook.jinja2").render()
+    # Verify the content matches the expected script
     actual_script = hook_file.read_text(encoding="utf-8")
-    assert actual_script == expected_script
+    assert actual_script == COMMIT_MSG_HOOK_SCRIPT
 
     # Verify file is executable (user executable bit should be set)
     mode = stat.S_IMODE(hook_file.stat().st_mode)

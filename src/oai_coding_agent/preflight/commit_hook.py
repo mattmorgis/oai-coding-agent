@@ -7,22 +7,22 @@ import os
 from pathlib import Path
 
 import git
-from jinja2 import Environment, PackageLoader, select_autoescape
 
 logger = logging.getLogger(__name__)
+
+COMMIT_MSG_HOOK_SCRIPT = """#!/usr/bin/env sh
+# commit-msg hook: append Co-Authored-By stanza when OAI_AGENT is set
+
+if [ -n "$OAI_AGENT" ]; then
+  printf "\\n🤖 Generated with oai-coding-agent\\nCo-Authored-By: OAI <noreply@oai-coding-agent.com>\\n" >> "$1"
+fi
+"""
 
 
 def install_commit_msg_hook(repo_path: Path) -> None:
     """
     Install the commit-msg hook into the user's config dir so it's not tracked in the repo.
     """
-    env = Environment(
-        loader=PackageLoader("oai_coding_agent", "templates"),
-        autoescape=select_autoescape([]),
-    )
-    template = env.get_template("commit_msg_hook.jinja2")
-    hook_script = template.render()
-
     config_home = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
     hooks_dir = config_home / "oai_coding_agent" / "hooks"
     hook_file = hooks_dir / "commit-msg"
@@ -30,9 +30,14 @@ def install_commit_msg_hook(repo_path: Path) -> None:
     if not hooks_dir.exists():
         hooks_dir.mkdir(parents=True, exist_ok=True)
 
-    existing = hook_file.read_text(encoding="utf-8") if hook_file.exists() else None
-    if existing != hook_script:
-        hook_file.write_text(hook_script, encoding="utf-8")
+    existing = None
+    if hook_file.exists():
+        with open(hook_file, "r", encoding="utf-8") as f:
+            existing = f.read()
+    
+    if existing != COMMIT_MSG_HOOK_SCRIPT:
+        with open(hook_file, "w", encoding="utf-8") as f:
+            f.write(COMMIT_MSG_HOOK_SCRIPT)
         hook_file.chmod(0o755)
 
     try:
