@@ -71,7 +71,7 @@ class Agent:
         # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
         mcp_servers = await start_mcp_servers(
             self.config.repo_path,
-            self.config.github_personal_access_token,
+            self.config.github_token,
             self._exit_stack,
         )
 

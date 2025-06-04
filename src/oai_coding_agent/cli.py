@@ -65,7 +65,7 @@ def create_app(
         openai_api_key: Annotated[
             str, typer.Option(envvar=OPENAI_API_KEY_ENV, help="OpenAI API key")
         ],
-        github_personal_access_token: Annotated[
+        github_token: Annotated[
             Optional[str],
             typer.Option(
                 envvar=GITHUB_TOKEN,
@@ -126,18 +126,14 @@ def create_app(
                 prompt_text = prompt
 
         # Handle GitHub authentication
-        if (
-            not github_personal_access_token
-            and mode == ModeChoice.default
-            and not prompt
-        ):
+        if not github_token and mode == ModeChoice.default and not prompt:
             # Only prompt for browser auth in interactive Default mode
             typer.echo("\n⚠️  No GitHub Personal Access Token found.")
             typer.echo("Would you like to authenticate with GitHub using your browser?")
             if typer.confirm("Authenticate now?"):
                 token = authenticate_github_browser()
                 if token:
-                    github_personal_access_token = token
+                    github_token = token
                 else:
                     typer.echo("\n❌ Browser authentication failed.")
                     typer.echo("Please set GITHUB_TOKEN manually.")
@@ -152,12 +148,12 @@ def create_app(
                 )
                 typer.echo("  • The agent will continue without GitHub integration")
 
-        # Note: github_personal_access_token can be None - the agent will handle this gracefully
+        # Note: github_token can be None - the agent will handle this gracefully
 
         cfg = RuntimeConfig(
             openai_api_key=openai_api_key,
             openai_base_url=openai_base_url,
-            github_personal_access_token=github_personal_access_token,
+            github_token=github_token,
             model=model,
             repo_path=repo_path,
             mode=ModeChoice.async_ if prompt else mode,  # run in async mode if prompt

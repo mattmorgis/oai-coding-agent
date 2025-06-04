@@ -14,7 +14,7 @@ def test_build_instructions_with_async_mode() -> None:
     """Test building instructions with async mode."""
     config = RuntimeConfig(
         openai_api_key="apikey",
-        github_personal_access_token="TOK",
+        github_token="TOK",
         model=ModelChoice.codex_mini_latest,
         repo_path=Path("repo"),
         mode=ModeChoice.async_,
@@ -31,7 +31,7 @@ def test_build_instructions_with_plan_mode() -> None:
     """Test building instructions with plan mode."""
     config = RuntimeConfig(
         openai_api_key="apikey",
-        github_personal_access_token="TOK",
+        github_token="TOK",
         model=ModelChoice.codex_mini_latest,
         repo_path=Path("repo"),
         mode=ModeChoice.plan,
@@ -48,7 +48,7 @@ def test_build_instructions_with_default_mode() -> None:
     """Test building instructions with default mode."""
     config = RuntimeConfig(
         openai_api_key="apikey",
-        github_personal_access_token="TOK",
+        github_token="TOK",
         model=ModelChoice.codex_mini_latest,
         repo_path=Path("repo2"),
         mode=ModeChoice.default,
@@ -68,7 +68,7 @@ def test_build_instructions_fallback_to_default(
     # Create a config with a mode that doesn't have a corresponding template
     config = RuntimeConfig(
         openai_api_key="apikey",
-        github_personal_access_token="TOK",
+        github_token="TOK",
         model=ModelChoice.codex_mini_latest,
         repo_path=Path("repo"),
         mode=ModeChoice.default,
@@ -95,7 +95,7 @@ def test_build_instructions_with_github_info() -> None:
     """Test that GitHub info is included in instructions when provided (for async mode)."""
     config = RuntimeConfig(
         openai_api_key="apikey",
-        github_personal_access_token="TOK",
+        github_token="TOK",
         model=ModelChoice.codex_mini_latest,
         repo_path=Path("/test/repo"),
         mode=ModeChoice.async_,
