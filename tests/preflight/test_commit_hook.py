@@ -5,7 +5,10 @@ from unittest.mock import MagicMock
 import git
 import pytest
 
-from oai_coding_agent.preflight.commit_hook import COMMIT_MSG_HOOK_SCRIPT, install_commit_msg_hook
+from oai_coding_agent.preflight.commit_hook import (
+    COMMIT_MSG_HOOK_SCRIPT,
+    install_commit_msg_hook,
+)
 
 
 def test_install_commit_msg_hook_creates_hook_and_configures_git(

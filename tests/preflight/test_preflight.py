@@ -72,8 +72,7 @@ def test_run_preflight_success(
         for record in caplog.records
     )
     assert any(
-        "Detected Docker version: Docker version 20.10.7"
-        in record.getMessage()
+        "Detected Docker version: Docker version 20.10.7" in record.getMessage()
         for record in caplog.records
     )
 
@@ -180,7 +179,9 @@ def test_run_preflight_docker_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     assert len(excinfo.value.errors) == 1
 
 
-def test_run_preflight_docker_daemon_not_running(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_run_preflight_docker_daemon_not_running(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     # Simulate docker daemon not running, git and node ok
     monkeypatch.setattr(shutil, "which", lambda tool: f"/usr/bin/{tool}")
 
@@ -202,7 +203,10 @@ def test_run_preflight_docker_daemon_not_running(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     # Mock Docker client to raise exception when daemon not running
-    with patch("docker.from_env", side_effect=DockerException("Error while fetching server API version")):
+    with patch(
+        "docker.from_env",
+        side_effect=DockerException("Error while fetching server API version"),
+    ):
         with pytest.raises(PreflightCheckError) as excinfo:
             run_preflight_checks(Path())
 
@@ -234,7 +238,10 @@ def test_run_preflight_multiple_failures(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     # Mock Docker client to raise exception
-    with patch("docker.from_env", side_effect=DockerException("Cannot connect to the Docker daemon")):
+    with patch(
+        "docker.from_env",
+        side_effect=DockerException("Cannot connect to the Docker daemon"),
+    ):
         with pytest.raises(PreflightCheckError) as excinfo:
             run_preflight_checks(Path("/not/a/repo"))
 
