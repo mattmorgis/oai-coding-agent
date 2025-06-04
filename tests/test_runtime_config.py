@@ -59,7 +59,7 @@ def test_runtime_config_constructor(
 
     kwargs: Dict[str, Any] = {
         "openai_api_key": api_key,
-        "github_personal_access_token": github_token,
+        "github_token": github_token,
         "model": model,
     }
     if repo_path is not None:
@@ -70,7 +70,7 @@ def test_runtime_config_constructor(
     cfg = RuntimeConfig(**kwargs)
 
     assert cfg.openai_api_key == api_key
-    assert cfg.github_personal_access_token == github_token
+    assert cfg.github_token == github_token
     assert cfg.model == model
     assert cfg.repo_path == expected_repo_path
     assert cfg.mode == (mode or ModeChoice.default)
@@ -86,7 +86,7 @@ def test_runtime_config_constructor_with_base_url(
     cfg = RuntimeConfig(
         openai_api_key="KEY",
         openai_base_url=custom_url,
-        github_personal_access_token="GH",
+        github_token="GH",
         model=ModelChoice.o3,
     )
     assert cfg.openai_base_url == custom_url

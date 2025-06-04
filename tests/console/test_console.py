@@ -47,7 +47,7 @@ async def test_repl_console_exits_on_exit_and_prints_header(
     recorder = setup_repl
     config = RuntimeConfig(
         openai_api_key="APIKEY",
-        github_personal_access_token="GHTOKEN",
+        github_token="GHTOKEN",
         model=ModelChoice.codex_mini_latest,
         repo_path=tmp_path,
         mode=ModeChoice.default,
