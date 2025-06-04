@@ -112,14 +112,14 @@ def mock_dotenv(monkeypatch: pytest.MonkeyPatch) -> Callable[[Dict[str, str]], N
         # Test loading from dotenv when env vars not set
         (
             {},
-            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"},
-            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"},
+            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_TOKEN": "GH_ENV"},
+            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_TOKEN": "GH_ENV"},
         ),
         # Test not overriding existing env vars
         (
-            {"OPENAI_API_KEY": "SHELL_KEY", "GITHUB_PERSONAL_ACCESS_TOKEN": "SHELL_GH"},
-            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"},
-            {"OPENAI_API_KEY": "SHELL_KEY", "GITHUB_PERSONAL_ACCESS_TOKEN": "SHELL_GH"},
+            {"OPENAI_API_KEY": "SHELL_KEY", "GITHUB_TOKEN": "SHELL_GH"},
+            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_TOKEN": "GH_ENV"},
+            {"OPENAI_API_KEY": "SHELL_KEY", "GITHUB_TOKEN": "SHELL_GH"},
         ),
     ],
 )
@@ -133,7 +133,7 @@ def test_load_envs_behavior(
     """Test load_envs behavior with different environment configurations."""
     # Clear env vars first
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
 
     # Set existing env vars if any
     for key, value in existing_env.items():
@@ -145,10 +145,7 @@ def test_load_envs_behavior(
     load_envs()
 
     assert os.environ.get("OPENAI_API_KEY") == expected["OPENAI_API_KEY"]
-    assert (
-        os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN")
-        == expected["GITHUB_PERSONAL_ACCESS_TOKEN"]
-    )
+    assert os.environ.get("GITHUB_TOKEN") == expected["GITHUB_TOKEN"]
 
 
 @pytest.mark.parametrize(
@@ -191,11 +188,11 @@ def test_load_envs_with_explicit_env_file(
         "OPENAI_API_KEY=EXPLICIT_KEY\nGITHUB_PERSONAL_ACCESS_TOKEN=EXPLICIT_GH\nOPENAI_BASE_URL=EXPLICIT_URL\n"
     )
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
 
     load_envs(env_file=str(env_file))
 
     assert os.environ.get("OPENAI_API_KEY") == "EXPLICIT_KEY"
-    assert os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") == "EXPLICIT_GH"
+    assert os.environ.get("GITHUB_TOKEN") == "EXPLICIT_GH"
     assert os.environ.get("OPENAI_BASE_URL") == "EXPLICIT_URL"

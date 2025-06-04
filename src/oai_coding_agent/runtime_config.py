@@ -2,7 +2,7 @@
 Runtime configuration for the OAI coding agent.
 
 This module provides:
-- load_envs(): load OPENAI_API_KEY, GITHUB_PERSONAL_ACCESS_TOKEN, and OPENAI_BASE_URL from a .env file
+- load_envs(): load OPENAI_API_KEY, GITHUB_TOKEN, and OPENAI_BASE_URL from a .env file
   if they are not already present in the environment.
 - RuntimeConfig: a dataclass holding runtime settings, including API keys, base URL,
   model choice, repo path, and mode.
@@ -19,18 +19,18 @@ from dotenv import dotenv_values
 # Environment variable names for credentials and endpoints
 OPENAI_API_KEY_ENV: str = "OPENAI_API_KEY"
 OPENAI_BASE_URL_ENV: str = "OPENAI_BASE_URL"
-GITHUB_PERSONAL_ACCESS_TOKEN_ENV: str = "GITHUB_PERSONAL_ACCESS_TOKEN"
+GITHUB_TOKEN: str = "GITHUB_TOKEN"
 
 
 def load_envs(env_file: Optional[str] = None) -> None:
     """
-    Load OPENAI_API_KEY, GITHUB_PERSONAL_ACCESS_TOKEN, and OPENAI_BASE_URL from a .env file
+    Load OPENAI_API_KEY, GITHUB_TOKEN, and OPENAI_BASE_URL from a .env file
     into the process environment if they are not already set.
     """
     env_values = dotenv_values(env_file) if env_file else dotenv_values()
     for key in (
         OPENAI_API_KEY_ENV,
-        GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
+        GITHUB_TOKEN,
         OPENAI_BASE_URL_ENV,
     ):
         if not os.environ.get(key):

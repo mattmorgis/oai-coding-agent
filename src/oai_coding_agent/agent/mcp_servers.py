@@ -11,7 +11,7 @@ from typing import Any, List, Optional
 from agents.mcp import MCPServer, MCPServerStdio
 from mcp.client.stdio import stdio_client
 
-from ..runtime_config import GITHUB_PERSONAL_ACCESS_TOKEN_ENV
+from ..runtime_config import GITHUB_TOKEN
 
 logger = logging.getLogger(__name__)
 
@@ -141,12 +141,10 @@ async def start_mcp_servers(
                         "-i",
                         "--rm",
                         "-e",
-                        GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
+                        GITHUB_TOKEN,
                         "ghcr.io/github/github-mcp-server",
                     ],
-                    "env": {
-                        GITHUB_PERSONAL_ACCESS_TOKEN_ENV: github_personal_access_token
-                    },
+                    "env": {GITHUB_TOKEN: github_personal_access_token},
                 },
                 client_session_timeout_seconds=120,
                 cache_tools_list=True,
