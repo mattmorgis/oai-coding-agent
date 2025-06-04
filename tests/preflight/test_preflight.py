@@ -3,10 +3,11 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, Sequence
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import git
 import pytest
+from docker.errors import DockerException
 
 from oai_coding_agent.preflight.preflight import (
     PreflightCheckError,
@@ -48,18 +49,19 @@ def test_run_preflight_success(
     ) -> subprocess.CompletedProcess[str]:
         if cmd[:2] == ["node", "--version"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="v14.17.0\n")
-        if cmd[:2] == ["docker", "info"]:
-            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
-        if cmd[:2] == ["docker", "--version"]:
-            return subprocess.CompletedProcess(
-                cmd, 0, stdout="Docker version 20.10.7, build abcdef1\n"
-            )
         pytest.fail(f"Unexpected command: {cmd}")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    caplog.set_level(logging.INFO)
-    github_repo, branch_name = run_preflight_checks(Path("/some/repo"))
+    # Mock Docker client
+    mock_docker_client = MagicMock()
+    mock_docker_client.ping.return_value = True
+    mock_docker_client.version.return_value = {"Version": "20.10.7"}
+    mock_docker_client.close = MagicMock()
+
+    with patch("docker.from_env", return_value=mock_docker_client):
+        caplog.set_level(logging.INFO)
+        github_repo, branch_name = run_preflight_checks(Path("/some/repo"))
 
     assert github_repo == "owner/repo"
     assert branch_name == "main"
@@ -70,7 +72,7 @@ def test_run_preflight_success(
         for record in caplog.records
     )
     assert any(
-        "Detected Docker version: Docker version 20.10.7, build abcdef1"
+        "Detected Docker version: Docker version 20.10.7"
         in record.getMessage()
         for record in caplog.records
     )
@@ -95,16 +97,19 @@ def test_run_preflight_git_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     ) -> subprocess.CompletedProcess[str]:
         if cmd[:2] == ["node", "--version"]:
             return subprocess.CompletedProcess(cmd, 0, stdout="v14.17.0\n")
-        if cmd[:2] == ["docker", "info"]:
-            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
-        if cmd[:2] == ["docker", "--version"]:
-            return subprocess.CompletedProcess(cmd, 0, stdout="Docker version x\n")
         pytest.fail(f"Unexpected command: {cmd}")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    with pytest.raises(PreflightCheckError) as excinfo:
-        run_preflight_checks(Path("/not/a/repo"))
+    # Mock Docker client
+    mock_docker_client = MagicMock()
+    mock_docker_client.ping.return_value = True
+    mock_docker_client.version.return_value = {"Version": "20.10.7"}
+    mock_docker_client.close = MagicMock()
+
+    with patch("docker.from_env", return_value=mock_docker_client):
+        with pytest.raises(PreflightCheckError) as excinfo:
+            run_preflight_checks(Path("/not/a/repo"))
 
     assert "Path '/not/a/repo' is not inside a Git worktree." in str(excinfo.value)
     assert len(excinfo.value.errors) == 1
@@ -127,16 +132,19 @@ def test_run_preflight_node_missing(monkeypatch: pytest.MonkeyPatch) -> None:
         text: bool | None = None,
         check: bool | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        if cmd[:2] == ["docker", "info"]:
-            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
-        if cmd[:2] == ["docker", "--version"]:
-            return subprocess.CompletedProcess(cmd, 0, stdout="Docker version x\n")
         pytest.fail(f"Unexpected command: {cmd}")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    with pytest.raises(PreflightCheckError) as excinfo:
-        run_preflight_checks(Path("/repo"))
+    # Mock Docker client
+    mock_docker_client = MagicMock()
+    mock_docker_client.ping.return_value = True
+    mock_docker_client.version.return_value = {"Version": "20.10.7"}
+    mock_docker_client.close = MagicMock()
+
+    with patch("docker.from_env", return_value=mock_docker_client):
+        with pytest.raises(PreflightCheckError) as excinfo:
+            run_preflight_checks(Path("/repo"))
 
     assert "Node.js binary not found on PATH" in str(excinfo.value)
     assert len(excinfo.value.errors) == 1
@@ -172,6 +180,36 @@ def test_run_preflight_docker_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     assert len(excinfo.value.errors) == 1
 
 
+def test_run_preflight_docker_daemon_not_running(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Simulate docker daemon not running, git and node ok
+    monkeypatch.setattr(shutil, "which", lambda tool: f"/usr/bin/{tool}")
+
+    # Mock GitPython
+    mock_repo = MagicMock()
+    monkeypatch.setattr(git, "Repo", lambda *args, **kwargs: mock_repo)
+
+    def fake_run(
+        cmd: Sequence[str],
+        cwd: Path | None = None,
+        capture_output: bool | None = None,
+        text: bool | None = None,
+        check: bool | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        if cmd[:2] == ["node", "--version"]:
+            return subprocess.CompletedProcess(cmd, 0, stdout="v14.17.0\n")
+        pytest.fail(f"Unexpected command: {cmd}")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    # Mock Docker client to raise exception when daemon not running
+    with patch("docker.from_env", side_effect=DockerException("Error while fetching server API version")):
+        with pytest.raises(PreflightCheckError) as excinfo:
+            run_preflight_checks(Path())
+
+    assert "Failed to connect to Docker daemon" in str(excinfo.value)
+    assert len(excinfo.value.errors) == 1
+
+
 def test_run_preflight_multiple_failures(monkeypatch: pytest.MonkeyPatch) -> None:
     # Simulate multiple failures: git not in worktree, node missing, docker daemon not running
     monkeypatch.setattr(
@@ -191,16 +229,14 @@ def test_run_preflight_multiple_failures(monkeypatch: pytest.MonkeyPatch) -> Non
         text: bool | None = None,
         check: bool | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        if cmd[:2] == ["docker", "info"]:
-            raise subprocess.CalledProcessError(
-                1, cmd, stderr="Cannot connect to the Docker daemon"
-            )
         pytest.fail(f"Unexpected command: {cmd}")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    with pytest.raises(PreflightCheckError) as excinfo:
-        run_preflight_checks(Path("/not/a/repo"))
+    # Mock Docker client to raise exception
+    with patch("docker.from_env", side_effect=DockerException("Cannot connect to the Docker daemon")):
+        with pytest.raises(PreflightCheckError) as excinfo:
+            run_preflight_checks(Path("/not/a/repo"))
 
     # Should have 3 errors
     assert len(excinfo.value.errors) == 3

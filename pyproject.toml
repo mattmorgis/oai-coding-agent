@@ -15,6 +15,7 @@ dependencies = [
     "openai-agents>=0.0.16",
     "rich>=14.0.0",
     "gitpython>=3.1.44",
+    "docker>=7.1.0",
 ]
 
 [project.scripts]

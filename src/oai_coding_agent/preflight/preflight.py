@@ -8,6 +8,9 @@ import subprocess
 from pathlib import Path
 from typing import Optional, Tuple
 
+import docker
+from docker.errors import DockerException
+
 from .commit_hook import install_commit_msg_hook
 from .git_repo import get_git_branch, get_github_repo, is_inside_git_repo
 
@@ -59,31 +62,30 @@ def _check_node() -> str:
 
 def _check_docker() -> str:
     """
-    Check that 'docker' binary is on PATH and return its version string.
-    Additionally verifies that the Docker daemon is running.
+    Check that Docker is available and return its version string.
+    Uses the Docker Python SDK to verify daemon connectivity.
     """
+    # First check if docker binary is on PATH for completeness
     docker_path = shutil.which("docker")
     if not docker_path:
         raise RuntimeError("Docker binary not found on PATH")
 
-    # TODO: Switch to Docker SDK for Python for this check
-    # Verify that the Docker daemon is up and running
+    # Use Docker SDK to verify daemon connectivity
     try:
-        subprocess.run(
-            ["docker", "info"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    except FileNotFoundError:
-        # (shouldn't really happen since we already did shutil.which)
-        raise RuntimeError("'docker' binary not found on PATH")
-    except subprocess.CalledProcessError as e:
-        msg = (e.stderr or "").strip() or str(e)
-        raise RuntimeError(f"Failed to connect to Docker daemon: {msg}")
-
-    # Now that the daemon is confirmed, grab & return the client version
-    return _get_tool_version(["docker", "--version"])
+        client = docker.from_env()
+        # Ping the daemon to ensure it's running
+        client.ping()
+        # Get version info
+        version_info = client.version()
+        version_string = f"Docker version {version_info['Version']}"
+        client.close()
+        return version_string
+    except DockerException as e:
+        logger.error(f"Failed to connect to Docker daemon: {str(e)}")
+        raise RuntimeError("Failed to connect to Docker daemon")
+    except Exception as e:
+        logger.error(f"Unexpected error checking Docker: {str(e)}")
+        raise RuntimeError("Unexpected error checking Docker")
 
 
 def run_preflight_checks(repo_path: Path) -> Tuple[Optional[str], Optional[str]]:
