@@ -11,6 +11,8 @@ from oai_coding_agent.runtime_config import (
     ModelChoice,
     RuntimeConfig,
     load_envs,
+    get_config_dir,
+    get_data_dir,
 )
 
 
@@ -199,3 +201,46 @@ def test_load_envs_with_explicit_env_file(
     assert os.environ.get("OPENAI_API_KEY") == "EXPLICIT_KEY"
     assert os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") == "EXPLICIT_GH"
     assert os.environ.get("OPENAI_BASE_URL") == "EXPLICIT_URL"
+
+
+@pytest.mark.parametrize(
+    "home_dir",
+    [Path("/fake/home")],
+)
+def test_get_dirs_default(monkeypatch: pytest.MonkeyPatch, home_dir: Path) -> None:
+    """Test get_data_dir and get_config_dir default fallbacks when XDG vars not set."""
+    # Ensure no XDG env vars
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+    # Set HOME to a known location
+    monkeypatch.setenv("HOME", str(home_dir))
+
+    expected_data = home_dir / ".local" / "share" / "oai_coding_agent"
+    expected_config = home_dir / ".config" / "oai_coding_agent"
+
+    assert get_data_dir() == expected_data
+    assert get_config_dir() == expected_config
+
+
+def test_get_data_dir_with_xdg(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Test get_data_dir uses XDG_DATA_HOME when set."""
+    xdg_data = tmp_path / "xdg_data"
+    monkeypatch.setenv("XDG_DATA_HOME", str(xdg_data))
+    # Set HOME so fallback isn't accidentally used
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+
+    expected_data = xdg_data / "oai_coding_agent"
+    assert get_data_dir() == expected_data
+
+
+def test_get_config_dir_with_xdg(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Test get_config_dir uses XDG_CONFIG_HOME when set."""
+    xdg_config = tmp_path / "xdg_config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_config))
+    # Set HOME so fallback isn't accidentally used
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+
+    expected_config = xdg_config / "oai_coding_agent"
+    assert get_config_dir() == expected_config
