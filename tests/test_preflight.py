@@ -35,6 +35,9 @@ def test_run_preflight_success(
             return subprocess.CompletedProcess(
                 cmd, 0, stdout="Docker version 20.10.7, build abcdef1\n"
             )
+        # Git config hook-path install
+        if cmd[:3] == ["git", "config", "--local"]:
+            return subprocess.CompletedProcess(cmd, 0)
         pytest.fail(f"Unexpected command: {cmd}")
 
     def fake_check_output(

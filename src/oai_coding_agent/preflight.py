@@ -10,8 +10,43 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import typer
+from jinja2 import Environment, PackageLoader, select_autoescape
 
 logger = logging.getLogger(__name__)
+
+# -----------------------------------------------------------------------------
+# Install commit-msg hook into user XDG_CONFIG_HOME so it's not tracked in the repo
+# -----------------------------------------------------------------------------
+
+
+def install_commit_msg_hook(repo_path: Path) -> None:
+    """
+    Install the commit-msg hook into the user's config dir so it's not tracked in the repo.
+    """
+    env = Environment(
+        loader=PackageLoader("oai_coding_agent", "templates"),
+        autoescape=select_autoescape([]),
+    )
+    template = env.get_template("commit_msg_hook.jinja2")
+    hook_script = template.render()
+
+    config_home = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    hooks_dir = config_home / "oai_coding_agent" / "hooks"
+    hook_file = hooks_dir / "commit-msg"
+
+    if not hooks_dir.exists():
+        hooks_dir.mkdir(parents=True, exist_ok=True)
+
+    existing = hook_file.read_text(encoding="utf-8") if hook_file.exists() else None
+    if existing != hook_script:
+        hook_file.write_text(hook_script, encoding="utf-8")
+        hook_file.chmod(0o755)
+
+    subprocess.run(
+        ["git", "config", "--local", "core.hooksPath", str(hooks_dir)],
+        cwd=repo_path,
+        check=False,
+    )
 
 
 def is_inside_git_repo(repo_path: Path) -> bool:
@@ -190,5 +225,8 @@ def run_preflight_checks(repo_path: Path) -> Tuple[Optional[str], Optional[str]]
         logger.info(f"Detected GitHub repository: {github_repo}")
     if branch_name:
         logger.info(f"Detected git branch: {branch_name}")
+
+    # Auto-install the commit-msg hook into the user's config dir
+    install_commit_msg_hook(repo_path)
 
     return github_repo, branch_name

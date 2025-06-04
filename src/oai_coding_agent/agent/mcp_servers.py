@@ -94,6 +94,8 @@ async def start_mcp_servers(
                     "ALLOWED_FLAGS": ",".join(ALLOWED_CLI_FLAGS),
                     "ALLOW_SHELL_OPERATORS": "true",
                     "COMMAND_TIMEOUT": "120",
+                    # set OAI_AGENT so commit-msg hook sees it
+                    "OAI_AGENT": "true",
                 },
             },
             client_session_timeout_seconds=120,
@@ -112,6 +114,8 @@ async def start_mcp_servers(
             name="mcp-server-git",
             params={
                 "command": "mcp-server-git",
+                # set OAI_AGENT so commit-msg hook sees it
+                "env": {"OAI_AGENT": "true"},
             },
             client_session_timeout_seconds=120,
             cache_tools_list=True,
