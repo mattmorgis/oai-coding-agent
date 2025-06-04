@@ -527,6 +527,7 @@ dependencies = [
     { name = "openai-agents" },
     { name = "prompt-toolkit" },
     { name = "python-dotenv" },
+    { name = "requests" },
     { name = "rich" },
     { name = "typer" },
 ]
@@ -552,6 +553,7 @@ requires-dist = [
     { name = "openai-agents", specifier = ">=0.0.16" },
     { name = "prompt-toolkit", specifier = ">=3.0.51" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "requests", specifier = ">=2.31.0" },
     { name = "rich", specifier = ">=14.0.0" },
     { name = "typer", specifier = ">=0.15.4" },
 ]
