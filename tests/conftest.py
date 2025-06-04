@@ -1,5 +1,4 @@
 from typing import Any, AsyncIterator
-from unittest.mock import Mock
 
 from oai_coding_agent.agent import AgentProtocol
 from oai_coding_agent.runtime_config import RuntimeConfig
