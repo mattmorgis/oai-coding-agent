@@ -9,6 +9,7 @@ from typing_extensions import Annotated
 
 from .agent import Agent, AgentProtocol
 from .auth.github_browser_auth import authenticate_github_browser
+from .auth.token_storage import delete_github_token, get_github_token
 from .console.console import Console, HeadlessConsole, ReplConsole
 from .logger import setup_logging
 from .preflight import PreflightCheckError, run_preflight_checks
@@ -57,7 +58,11 @@ def create_app(
 
     app = typer.Typer(rich_markup_mode=None)
 
-    @app.command()
+    # Create github subcommand group
+    github_app = typer.Typer(rich_markup_mode=None)
+    app.add_typer(github_app, name="github", help="GitHub authentication commands")
+
+    @app.command("start", help="Start an interactive session")
     def main(
         openai_api_key: Annotated[
             str, typer.Option(envvar=OPENAI_API_KEY_ENV, help="OpenAI API key")
@@ -170,6 +175,47 @@ def create_app(
         except KeyboardInterrupt:
             print("\nExiting...")
 
+    @github_app.command("auth")
+    def github_auth() -> None:
+        """Authenticate with GitHub using browser-based flow."""
+        typer.echo("🔐 Starting GitHub authentication...")
+
+        # Check if already authenticated
+        existing_token = get_github_token()
+        if existing_token:
+            typer.echo("⚠️  You already have a stored GitHub token.")
+            if not typer.confirm("Do you want to re-authenticate?"):
+                typer.echo("Authentication cancelled.")
+                return
+
+        # Perform authentication
+        token = authenticate_github_browser()
+        if token:
+            typer.echo("\n✅ Authentication successful!")
+            typer.echo("You can now use the agent with full GitHub integration.")
+        else:
+            typer.echo("\n❌ Authentication failed.")
+            typer.echo("Please try again or set GITHUB_TOKEN manually.")
+            raise typer.Exit(code=1)
+
+    @github_app.command("logout")
+    def github_logout() -> None:
+        """Remove stored GitHub authentication token."""
+        if not get_github_token():
+            typer.echo("No stored GitHub token found.")
+            return
+
+        if typer.confirm("Are you sure you want to remove your GitHub token?"):
+            if delete_github_token():
+                typer.echo("✅ Successfully logged out from GitHub.")
+                typer.echo("You'll need to authenticate again to use GitHub features.")
+            else:
+                typer.echo("❌ Failed to remove token.")
+                raise typer.Exit(code=1)
+        else:
+            typer.echo("Logout cancelled.")
+
+    # return the Typer app
     return app
 
 
@@ -178,6 +224,7 @@ load_envs()
 
 # Create default app instance for backward compatibility
 app = create_app()
+
 
 if __name__ == "__main__":
     app()
