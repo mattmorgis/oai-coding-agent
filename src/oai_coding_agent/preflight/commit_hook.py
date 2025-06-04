@@ -34,14 +34,16 @@ def install_commit_msg_hook(repo_path: Path) -> None:
     if hook_file.exists():
         with open(hook_file, "r", encoding="utf-8") as f:
             existing = f.read()
-    
+
     if existing != COMMIT_MSG_HOOK_SCRIPT:
         with open(hook_file, "w", encoding="utf-8") as f:
             f.write(COMMIT_MSG_HOOK_SCRIPT)
         hook_file.chmod(0o755)
+        logger.info(f"Installed commit-msg hook into {hooks_dir}")
 
     try:
-        repo = git.Repo(repo_path, search_parent_directories=True)
+        repo = git.Repo(str(repo_path), search_parent_directories=True)
         repo.config_writer().set_value("core", "hooksPath", str(hooks_dir)).release()
+        logger.info(f"Configured repo to use commit-msg hook from {hooks_dir}")
     except Exception as e:
         logger.warning(f"Failed to set git hooks path: {e}")
