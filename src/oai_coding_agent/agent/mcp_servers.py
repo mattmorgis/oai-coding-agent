@@ -55,7 +55,7 @@ class QuietMCPServerStdio(MCPServerStdio):
 
 async def start_mcp_servers(
     repo_path: Path,
-    github_personal_access_token: Optional[str],
+    github_token: Optional[str],
     exit_stack: AsyncExitStack,
 ) -> List[MCPServer]:
     """
@@ -130,7 +130,7 @@ async def start_mcp_servers(
         logger.exception("Failed to start Git MCP server")
 
     # GitHub MCP server (only if token is available)
-    if github_personal_access_token:
+    if github_token:
         try:
             gh_ctx = QuietMCPServerStdio(
                 name="github-mcp-server",
@@ -144,7 +144,7 @@ async def start_mcp_servers(
                         GITHUB_TOKEN,
                         "ghcr.io/github/github-mcp-server",
                     ],
-                    "env": {GITHUB_TOKEN: github_personal_access_token},
+                    "env": {GITHUB_TOKEN: github_token},
                 },
                 client_session_timeout_seconds=120,
                 cache_tools_list=True,

@@ -63,7 +63,7 @@ class RuntimeConfig:
     Attributes:
         openai_api_key: The OpenAI API key to use.
         openai_base_url: Custom base URL for the OpenAI API endpoint (if provided).
-        github_personal_access_token: The GitHub Personal Access Token to use for the GitHub MCP server.
+        github_token: The GitHub Personal Access Token to use for the GitHub MCP server.
         model: The OpenAI model identifier.
         repo_path: Path to the repository to work on.
         mode: The agent mode to use.
@@ -73,7 +73,7 @@ class RuntimeConfig:
     """
 
     openai_api_key: str
-    github_personal_access_token: Optional[str]
+    github_token: Optional[str]
     model: ModelChoice
     repo_path: Path = field(default_factory=Path.cwd)
     mode: ModeChoice = ModeChoice.default
