@@ -59,7 +59,7 @@ def test_runtime_config_constructor(
 
     kwargs: Dict[str, Any] = {
         "openai_api_key": api_key,
-        "github_personal_access_token": github_token,
+        "github_token": github_token,
         "model": model,
     }
     if repo_path is not None:
@@ -70,7 +70,7 @@ def test_runtime_config_constructor(
     cfg = RuntimeConfig(**kwargs)
 
     assert cfg.openai_api_key == api_key
-    assert cfg.github_personal_access_token == github_token
+    assert cfg.github_token == github_token
     assert cfg.model == model
     assert cfg.repo_path == expected_repo_path
     assert cfg.mode == (mode or ModeChoice.default)
@@ -86,7 +86,7 @@ def test_runtime_config_constructor_with_base_url(
     cfg = RuntimeConfig(
         openai_api_key="KEY",
         openai_base_url=custom_url,
-        github_personal_access_token="GH",
+        github_token="GH",
         model=ModelChoice.o3,
     )
     assert cfg.openai_base_url == custom_url
@@ -112,14 +112,14 @@ def mock_dotenv(monkeypatch: pytest.MonkeyPatch) -> Callable[[Dict[str, str]], N
         # Test loading from dotenv when env vars not set
         (
             {},
-            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"},
-            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"},
+            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_TOKEN": "GH_ENV"},
+            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_TOKEN": "GH_ENV"},
         ),
         # Test not overriding existing env vars
         (
-            {"OPENAI_API_KEY": "SHELL_KEY", "GITHUB_PERSONAL_ACCESS_TOKEN": "SHELL_GH"},
-            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"},
-            {"OPENAI_API_KEY": "SHELL_KEY", "GITHUB_PERSONAL_ACCESS_TOKEN": "SHELL_GH"},
+            {"OPENAI_API_KEY": "SHELL_KEY", "GITHUB_TOKEN": "SHELL_GH"},
+            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_TOKEN": "GH_ENV"},
+            {"OPENAI_API_KEY": "SHELL_KEY", "GITHUB_TOKEN": "SHELL_GH"},
         ),
     ],
 )
@@ -133,7 +133,7 @@ def test_load_envs_behavior(
     """Test load_envs behavior with different environment configurations."""
     # Clear env vars first
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
 
     # Set existing env vars if any
     for key, value in existing_env.items():
@@ -145,10 +145,7 @@ def test_load_envs_behavior(
     load_envs()
 
     assert os.environ.get("OPENAI_API_KEY") == expected["OPENAI_API_KEY"]
-    assert (
-        os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN")
-        == expected["GITHUB_PERSONAL_ACCESS_TOKEN"]
-    )
+    assert os.environ.get("GITHUB_TOKEN") == expected["GITHUB_TOKEN"]
 
 
 @pytest.mark.parametrize(
@@ -188,14 +185,22 @@ def test_load_envs_with_explicit_env_file(
     # Ensure load_envs loads keys from an explicit .env file path
     env_file = tmp_path / ".custom_env"
     env_file.write_text(
-        "OPENAI_API_KEY=EXPLICIT_KEY\nGITHUB_PERSONAL_ACCESS_TOKEN=EXPLICIT_GH\nOPENAI_BASE_URL=EXPLICIT_URL\n"
+        "OPENAI_API_KEY=EXPLICIT_KEY\nGITHUB_TOKEN=EXPLICIT_GH\nOPENAI_BASE_URL=EXPLICIT_URL\n"
     )
+
+    # Clear environment variables first
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+
+    # Mock get_auth_file_path to return a non-existent file to avoid loading auth file
+    monkeypatch.setattr(
+        "oai_coding_agent.runtime_config.get_auth_file_path",
+        lambda: Path("/nonexistent/auth/file"),
+    )
 
     load_envs(env_file=str(env_file))
 
     assert os.environ.get("OPENAI_API_KEY") == "EXPLICIT_KEY"
-    assert os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") == "EXPLICIT_GH"
+    assert os.environ.get("GITHUB_TOKEN") == "EXPLICIT_GH"
     assert os.environ.get("OPENAI_BASE_URL") == "EXPLICIT_URL"

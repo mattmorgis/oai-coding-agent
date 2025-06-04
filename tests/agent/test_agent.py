@@ -125,7 +125,7 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     # Initialize agent and set dummy SDK agent
     config = RuntimeConfig(
         openai_api_key="k",
-        github_personal_access_token="TOK",
+        github_token="TOK",
         model=ModelChoice.codex_mini_latest,
         repo_path=Path("."),
         mode=ModeChoice.async_,
