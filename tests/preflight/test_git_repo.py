@@ -74,6 +74,36 @@ def test_get_github_repo_ssh(monkeypatch: pytest.MonkeyPatch) -> None:
     assert get_github_repo(Path("/some/repo")) == "owner/repo"
 
 
+def test_get_github_repo_non_github_https(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that non-GitHub HTTPS remotes return None."""
+    mock_repo = MagicMock()
+    mock_origin = MagicMock()
+    mock_origin.url = "https://gitlab.com/owner/repo.git"
+    mock_remotes = MagicMock()
+    mock_remotes.__contains__ = lambda self, key: key == "origin"
+    mock_remotes.origin = mock_origin
+    mock_repo.remotes = mock_remotes
+
+    monkeypatch.setattr(git, "Repo", lambda *args, **kwargs: mock_repo)
+
+    assert get_github_repo(Path("/some/repo")) is None
+
+
+def test_get_github_repo_non_github_ssh(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that non-GitHub SSH remotes return None."""
+    mock_repo = MagicMock()
+    mock_origin = MagicMock()
+    mock_origin.url = "git@bitbucket.org:owner/repo.git"
+    mock_remotes = MagicMock()
+    mock_remotes.__contains__ = lambda self, key: key == "origin"
+    mock_remotes.origin = mock_origin
+    mock_repo.remotes = mock_remotes
+
+    monkeypatch.setattr(git, "Repo", lambda *args, **kwargs: mock_repo)
+
+    assert get_github_repo(Path("/some/repo")) is None
+
+
 def test_get_github_repo_no_origin(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test when repo has no origin remote."""
     mock_repo = MagicMock()
@@ -109,12 +139,14 @@ def test_get_git_branch_detached_with_github_ref(
     monkeypatch.setattr(git, "Repo", lambda *args, **kwargs: mock_repo)
     monkeypatch.setenv("GITHUB_REF", "refs/heads/feature/branch")
 
-    # The function splits on the last '/', so we get 'branch' not 'feature/branch'
-    assert get_git_branch(Path("/some/repo")) == "branch"
+    # The function now returns the full branch path after refs/heads/, e.g. 'feature/branch'
+    assert get_git_branch(Path("/some/repo")) == "feature/branch"
 
 
 def test_get_git_branch_error_with_github_ref(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test fallback to GITHUB_REF when GitPython fails."""
+
+    # When GITHUB_REF has full path, we still return everything after 'refs/heads/'
 
     def raise_error(*args: Any, **kwargs: Any) -> None:
         raise Exception("Git error")

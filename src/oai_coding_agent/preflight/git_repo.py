@@ -29,7 +29,7 @@ def is_inside_git_repo(repo_path: Path) -> bool:
 def get_github_repo(repo_path: Path) -> Optional[str]:
     """
     Extract GitHub repository in 'owner/repo' format from git remote.origin.url.
-    Returns None if extraction fails.
+    Returns None if extraction fails or if the remote is not on github.com.
     """
     try:
         repo = git.Repo(repo_path, search_parent_directories=True)
@@ -44,16 +44,17 @@ def get_github_repo(repo_path: Path) -> Optional[str]:
 
         # SSH style: git@github.com:owner/repo
         if origin_url.startswith("git@"):
-            _, path = origin_url.split(":", 1)
-            return path
+            parts = origin_url.split(":", 1)
+            if parts[0] == "git@github.com":
+                return parts[1]
+            return None
 
         # HTTPS style: https://github.com/owner/repo
         parsed = urlparse(origin_url)
-        if parsed.scheme and parsed.netloc:
-            # Remove leading slash from path
+        if parsed.scheme and parsed.netloc in ("github.com", "www.github.com"):
             return parsed.path.lstrip("/")
 
-        return origin_url
+        return None
     except Exception as e:
         logger.debug(f"Failed to extract GitHub repo: {e}")
         return None
@@ -63,21 +64,22 @@ def get_git_branch(repo_path: Path) -> Optional[str]:
     """
     Get the current git branch name.
     Falls back to GITHUB_REF environment variable if direct extraction fails.
-    Returns None if extraction fails.
+    Returns None if extraction fails or if branch cannot be determined.
     """
+    prefix = "refs/heads/"
     try:
         repo = git.Repo(repo_path, search_parent_directories=True)
         if repo.head.is_detached:
             # In detached HEAD state, try to get branch from GITHUB_REF
             ref = os.getenv("GITHUB_REF", "")
-            if ref and "/" in ref:
-                return ref.rsplit("/", 1)[-1]
+            if ref.startswith(prefix):
+                return ref[len(prefix) :]
             return None
         return repo.active_branch.name
     except Exception as e:
         logger.debug(f"Failed to get git branch: {e}")
         # Fallback to GITHUB_REF (useful in CI environments)
         ref = os.getenv("GITHUB_REF", "")
-        if ref and "/" in ref:
-            return ref.rsplit("/", 1)[-1]
+        if ref.startswith(prefix):
+            return ref[len(prefix) :]
         return None
