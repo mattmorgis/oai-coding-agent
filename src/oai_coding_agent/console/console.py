@@ -15,6 +15,7 @@ from .rendering import clear_terminal, console, render_message
 from .slash_commands import handle_slash_command, register_slash_commands
 from .state import UIState
 from .ui_event_mapper import map_event_to_ui_message
+from oai_coding_agent.runtime_config import get_data_dir
 
 
 class Console(Protocol):
@@ -73,9 +74,10 @@ class ReplConsole:
 
         kb = get_key_bindings()
 
-        # Store history alongside logs/config in ~/.oai_coding_agent
-        history_path = Path.home() / ".oai_coding_agent" / "prompt_history"
-        history_path.parent.mkdir(parents=True, exist_ok=True)
+        # Store prompt history under the XDG data directory
+        history_dir = get_data_dir()
+        history_dir.mkdir(parents=True, exist_ok=True)
+        history_path = history_dir / "prompt_history"
 
         prompt_session: PromptSession[str] = PromptSession(
             history=FileHistory(str(history_path)),

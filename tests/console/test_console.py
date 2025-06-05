@@ -64,5 +64,7 @@ async def test_repl_console_exits_on_exit_and_prints_header(
     assert "codex-mini-latest" in output
 
     # Ensure history directory was created under tmp_path
-    history_dir = tmp_path / ".oai_coding_agent"
+    from oai_coding_agent.runtime_config import get_data_dir
+
+    history_dir = get_data_dir()
     assert history_dir.is_dir(), "History directory should be created"
