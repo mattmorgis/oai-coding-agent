@@ -75,7 +75,6 @@ def test_cli_invokes_console_with_explicit_flags(
     result = runner.invoke(
         app,
         [
-            "start",
             "--openai-api-key",
             "TESTKEY",
             "--openai-base-url",
@@ -115,7 +114,7 @@ def test_cli_uses_environment_defaults(
 
     app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
     runner = CliRunner()
-    result = runner.invoke(app, ["start", "--repo-path", str(tmp_path)])
+    result = runner.invoke(app, ["--repo-path", str(tmp_path)])
     assert result.exit_code == 0
     assert mock_agent_factory.agent is not None
 
@@ -141,7 +140,7 @@ def test_cli_uses_cwd_as_default_repo_path(
 
     app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
     runner = CliRunner()
-    result = runner.invoke(app, ["start"])  # No --repo-path specified
+    result = runner.invoke(app, [])  # No --repo-path specified
     assert result.exit_code == 0
     assert mock_agent_factory.agent is not None
 
@@ -166,7 +165,7 @@ def test_cli_prompt_invokes_headless_main(
     app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
     runner = CliRunner()
     result = runner.invoke(
-        app, ["start", "--repo-path", str(tmp_path), "--prompt", "Do awesome things"]
+        app, ["--repo-path", str(tmp_path), "--prompt", "Do awesome things"]
     )
     assert result.exit_code == 0
     assert mock_agent_factory.agent is not None
@@ -194,7 +193,7 @@ def test_cli_prompt_stdin_invokes_headless_main(
     runner = CliRunner()
     prompt_str = "Huge prompt content that exceeds usual limits"
     result = runner.invoke(
-        app, ["start", "--repo-path", str(tmp_path), "--prompt", "-"], input=prompt_str
+        app, ["--repo-path", str(tmp_path), "--prompt", "-"], input=prompt_str
     )
     assert result.exit_code == 0
     assert mock_agent_factory.agent is not None
@@ -228,7 +227,7 @@ def test_cli_exits_on_preflight_error(
 
     app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
     runner = CliRunner()
-    result = runner.invoke(app, ["start", "--repo-path", str(tmp_path)])
+    result = runner.invoke(app, ["--repo-path", str(tmp_path)])
 
     # Should exit with code 1
     assert result.exit_code == 1

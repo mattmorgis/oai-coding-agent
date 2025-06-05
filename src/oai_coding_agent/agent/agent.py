@@ -73,6 +73,7 @@ class Agent:
             self.config.repo_path,
             self.config.github_token,
             self._exit_stack,
+            self.config.mode.value,
         )
 
         # Begin tracing
