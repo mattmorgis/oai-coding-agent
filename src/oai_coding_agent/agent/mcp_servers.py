@@ -63,6 +63,24 @@ async def start_mcp_servers(
     """
     servers: List[MCPServer] = []
 
+    # Atlassian Official MCP server
+    try:
+        atlassian_ctx = QuietMCPServerStdio(
+            name="atlassian-mcp",
+            params={
+                "command": "npx",
+                "args": ["-y", "mcp-remote", "https://mcp.atlassian.com/v1/sse"],
+            },
+            client_session_timeout_seconds=120,
+            cache_tools_list=True,
+        )
+        atlassian = await exit_stack.enter_async_context(atlassian_ctx)
+
+        servers.append(atlassian)
+        logger.info("Atlassian MCP server started successfully")
+    except OSError:
+        logger.exception("Failed to start Atlassian MCP server")
+
     # Filesystem MCP server
     fs_ctx = QuietMCPServerStdio(
         name="file-system-mcp",
