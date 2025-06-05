@@ -62,45 +62,14 @@ def create_app(
     github_app = typer.Typer(rich_markup_mode=None)
     app.add_typer(github_app, name="github", help="GitHub authentication commands")
 
-    @app.command("start", help="Start an interactive session")
-    def main(
-        openai_api_key: Annotated[
-            str, typer.Option(envvar=OPENAI_API_KEY_ENV, help="OpenAI API key")
-        ],
-        github_token: Annotated[
-            Optional[str],
-            typer.Option(
-                envvar=GITHUB_TOKEN,
-                help="GitHub Token",
-            ),
-        ] = None,
-        model: Annotated[
-            ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
-        ] = ModelChoice.codex_mini_latest,
-        mode: Annotated[
-            ModeChoice,
-            typer.Option("--mode", help="Agent mode: default, async, or plan"),
-        ] = ModeChoice.default,
-        repo_path: Path = typer.Option(
-            Path.cwd(),
-            "--repo-path",
-            help=(
-                "Path to the repository. This path (and its subdirectories) "
-                "are the only files the agent has permission to access"
-            ),
-        ),
-        openai_base_url: Annotated[
-            Optional[str],
-            typer.Option(envvar=OPENAI_BASE_URL_ENV, help="OpenAI base URL"),
-        ] = None,
-        prompt: Annotated[
-            Optional[str],
-            typer.Option(
-                "--prompt",
-                "-p",
-                help="Prompt text for non-interactive async mode; use '-' to read from stdin",
-            ),
-        ] = None,
+    def start_session(
+        openai_api_key: str,
+        github_token: Optional[str],
+        model: ModelChoice,
+        mode: ModeChoice,
+        repo_path: Path,
+        openai_base_url: Optional[str],
+        prompt: Optional[str],
     ) -> None:
         """
         OAI CODING AGENT - starts an interactive or batch session
@@ -214,6 +183,68 @@ def create_app(
                 raise typer.Exit(code=1)
         else:
             typer.echo("Logout cancelled.")
+
+    @app.callback(invoke_without_command=True)
+    def main(
+        ctx: typer.Context,
+        openai_api_key: Annotated[
+            Optional[str],
+            typer.Option(envvar=OPENAI_API_KEY_ENV, help="OpenAI API key"),
+        ] = None,
+        github_token: Annotated[
+            Optional[str],
+            typer.Option(
+                envvar=GITHUB_TOKEN,
+                help="GitHub Token",
+            ),
+        ] = None,
+        model: Annotated[
+            ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
+        ] = ModelChoice.codex_mini_latest,
+        mode: Annotated[
+            ModeChoice,
+            typer.Option("--mode", help="Agent mode: default, async, or plan"),
+        ] = ModeChoice.default,
+        repo_path: Path = typer.Option(
+            Path.cwd(),
+            "--repo-path",
+            help=(
+                "Path to the repository. This path (and its subdirectories) "
+                "are the only files the agent has permission to access"
+            ),
+        ),
+        openai_base_url: Annotated[
+            Optional[str],
+            typer.Option(envvar=OPENAI_BASE_URL_ENV, help="OpenAI base URL"),
+        ] = None,
+        prompt: Annotated[
+            Optional[str],
+            typer.Option(
+                "--prompt",
+                "-p",
+                help="Prompt text for non-interactive async mode; use '-' to read from stdin",
+            ),
+        ] = None,
+    ) -> None:
+        """OAI CODING AGENT - AI-powered coding assistant"""
+        # Check if any positional arguments were passed (indicating a subcommand)
+        if ctx.invoked_subcommand is None:
+            if openai_api_key is None:
+                typer.echo(
+                    "Error: OpenAI API key is required. Please set the OPENAI_API_KEY environment variable or use the --openai-api-key option",
+                    err=True,
+                )
+                raise typer.Exit(code=1)
+
+            start_session(
+                openai_api_key=openai_api_key,
+                github_token=github_token,
+                model=model,
+                mode=mode,
+                repo_path=repo_path,
+                openai_base_url=openai_base_url,
+                prompt=prompt,
+            )
 
     # return the Typer app
     return app
