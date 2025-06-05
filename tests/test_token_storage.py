@@ -1,16 +1,19 @@
-import pytest
 from pathlib import Path
 
+import pytest
+
 from oai_coding_agent.auth.token_storage import (
-    get_auth_file_path,
-    save_github_token,
-    get_github_token,
     delete_github_token,
+    get_auth_file_path,
+    get_github_token,
     has_stored_token,
+    save_github_token,
 )
 
 
-def test_get_auth_file_path_default(tmp_path, monkeypatch):
+def test_get_auth_file_path_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # No XDG_DATA_HOME, use HOME for fallback
     home_dir = tmp_path / "home"
     monkeypatch.setenv("HOME", str(home_dir))
@@ -20,7 +23,9 @@ def test_get_auth_file_path_default(tmp_path, monkeypatch):
     assert get_auth_file_path() == expected
 
 
-def test_get_auth_file_path_override(tmp_path, monkeypatch):
+def test_get_auth_file_path_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Use XDG_DATA_HOME override
     xdg_data = tmp_path / "xdg_data"
     monkeypatch.setenv("XDG_DATA_HOME", str(xdg_data))
@@ -29,7 +34,9 @@ def test_get_auth_file_path_override(tmp_path, monkeypatch):
     assert get_auth_file_path() == expected
 
 
-def test_save_get_delete_token_roundtrip(tmp_path, monkeypatch):
+def test_save_get_delete_token_roundtrip(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Use XDG_DATA_HOME override to avoid touching real user directories
     xdg_data = tmp_path / "xdg_data"
     monkeypatch.setenv("XDG_DATA_HOME", str(xdg_data))
