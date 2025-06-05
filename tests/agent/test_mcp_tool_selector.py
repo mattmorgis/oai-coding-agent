@@ -145,3 +145,37 @@ async def test_github_server_plan_mode_readonly_filter(
 
     tools = await get_filtered_function_tools(servers, mode="plan")
     assert {t.name for t in tools} == readonly_allowed
+
+
+@pytest.mark.asyncio
+async def test_atlassian_server_plan_mode_only(
+    patch_get_function_tools: pytest.MonkeyPatch,
+) -> None:
+    # Atlassian MCP server tools should only be available in plan mode
+    async def fake(server: MCPServer, convert_strict: bool) -> List[DummyTool]:
+        return [
+            DummyTool("jira_create_issue"),
+            DummyTool("jira_get_issue"),
+            DummyTool("confluence_create_page"),
+            DummyTool("confluence_get_page"),
+        ]
+
+    patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
+    servers = cast(List[MCPServer], [SimpleNamespace(name="atlassian-mcp")])
+
+    # Test in plan mode - all tools should be available
+    tools = await get_filtered_function_tools(servers, mode="plan")
+    assert {t.name for t in tools} == {
+        "jira_create_issue",
+        "jira_get_issue",
+        "confluence_create_page",
+        "confluence_get_page",
+    }
+
+    # Test in default mode - no tools should be available
+    tools = await get_filtered_function_tools(servers, mode="default")
+    assert {t.name for t in tools} == set()
+
+    # Test in async mode - no tools should be available
+    tools = await get_filtered_function_tools(servers, mode="async")
+    assert {t.name for t in tools} == set()

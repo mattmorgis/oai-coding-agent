@@ -55,31 +55,35 @@ async def start_mcp_servers(
     repo_path: Path,
     github_token: Optional[str],
     exit_stack: AsyncExitStack,
+    mode: Optional[str] = None,
 ) -> List[MCPServer]:
     """
     Start filesystem, CLI, Git, and GitHub MCP servers, registering cleanup on the provided exit_stack.
+
+    If mode is "plan", also starts the Atlassian MCP server.
 
     Returns a list of connected MCPServerStdio instances.
     """
     servers: List[MCPServer] = []
 
-    # Atlassian Official MCP server
-    try:
-        atlassian_ctx = QuietMCPServerStdio(
-            name="atlassian-mcp",
-            params={
-                "command": "npx",
-                "args": ["-y", "mcp-remote", "https://mcp.atlassian.com/v1/sse"],
-            },
-            client_session_timeout_seconds=120,
-            cache_tools_list=True,
-        )
-        atlassian = await exit_stack.enter_async_context(atlassian_ctx)
+    # Atlassian Official MCP server (only in plan mode)
+    if mode == "plan":
+        try:
+            atlassian_ctx = QuietMCPServerStdio(
+                name="atlassian-mcp",
+                params={
+                    "command": "npx",
+                    "args": ["-y", "mcp-remote", "https://mcp.atlassian.com/v1/sse"],
+                },
+                client_session_timeout_seconds=120,
+                cache_tools_list=True,
+            )
+            atlassian = await exit_stack.enter_async_context(atlassian_ctx)
 
-        servers.append(atlassian)
-        logger.info("Atlassian MCP server started successfully")
-    except OSError:
-        logger.exception("Failed to start Atlassian MCP server")
+            servers.append(atlassian)
+            logger.info("Atlassian MCP server started successfully")
+        except OSError:
+            logger.exception("Failed to start Atlassian MCP server")
 
     # Filesystem MCP server
     fs_ctx = QuietMCPServerStdio(
