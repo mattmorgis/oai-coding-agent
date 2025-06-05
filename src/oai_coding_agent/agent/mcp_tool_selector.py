@@ -16,6 +16,8 @@ def _filter_tools_for_mode(
 ) -> List[Tool]:
     """
     Apply mode-specific filtering rules for a given MCP server's tools.
+
+    Note: The atlassian-mcp server is only started in plan mode.
     """
     # File-system MCP: remove edit_file in plan mode
     if server_name == "file-system-mcp":
@@ -27,6 +29,14 @@ def _filter_tools_for_mode(
         if mode == "plan":
             allowed = {"clone_repo", "list_branches"}
             return [t for t in tools if t.name in allowed]
+
+    # Atlassian MCP server: only allow in plan mode
+    if server_name == "atlassian-mcp":
+        if mode != "plan":
+            # Remove all tools if not in plan mode
+            return []
+        # In plan mode, allow all tools
+        return tools
 
     # GitHub MCP server: restrict to a whitelist of allowed tools
     if server_name == "github-mcp-server":
