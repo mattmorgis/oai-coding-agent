@@ -3,20 +3,21 @@ Logging configuration for oai_coding_agent CLI and internals.
 """
 
 import logging
-from pathlib import Path
 
 from concurrent_log_handler import ConcurrentRotatingFileHandler as RotatingFileHandler
+
+from oai_coding_agent.runtime_config import get_data_dir
 
 
 def setup_logging(level: int = logging.INFO) -> None:
     """
     Configure global logging:
-      - Write all log records (including third-party libraries) to ~/.oai_coding_agent/agent.log
+      - Write all log records (including third-party libraries) to DATA_DIR/agent.log
       - Rotate the file at 10 MiB, keep 3 backups
       - Enable DEBUG for OpenAI SDK and HTTP requests
       - Silence overly verbose dependencies
     """
-    log_dir = Path.home() / ".oai_coding_agent"
+    log_dir = get_data_dir()
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "agent.log"
 
