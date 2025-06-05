@@ -3,10 +3,10 @@ Git commit hook setup for OAI Coding Agent.
 """
 
 import logging
-import os
 from pathlib import Path
 
 import git
+
 from oai_coding_agent.runtime_config import get_config_dir
 
 logger = logging.getLogger(__name__)
