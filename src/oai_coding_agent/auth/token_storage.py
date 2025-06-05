@@ -1,15 +1,17 @@
 from pathlib import Path
 from typing import Optional
 
+from ..runtime_config import get_data_dir
+
 
 def get_auth_file_path() -> Path:
-    """Get the path to the OAI auth file in user's home directory."""
-    return Path.home() / ".oai_coding_agent" / "auth"
+    """Get the path to the OAI auth file in the XDG data directory."""
+    return get_data_dir() / "auth"
 
 
 def save_github_token(token: str) -> bool:
     """
-    Save GitHub token to ~/.oai_coding_agent/auth file.
+    Save GitHub token to the auth file in the XDG data directory.
 
     Args:
         token: GitHub personal access token
@@ -20,8 +22,8 @@ def save_github_token(token: str) -> bool:
     try:
         auth_file = get_auth_file_path()
 
-        # Create .oai_coding_agent directory if it doesn't exist
-        auth_file.parent.mkdir(exist_ok=True)
+        # Create auth directory if it doesn't exist
+        auth_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Write token to auth file
         auth_file.write_text(f"GITHUB_TOKEN={token}\n")
@@ -36,7 +38,7 @@ def save_github_token(token: str) -> bool:
 
 def get_github_token() -> Optional[str]:
     """
-    Retrieve GitHub token from ~/.oai_coding_agent/auth file.
+    Retrieve GitHub token from the auth file in the XDG data directory.
 
     Returns:
         GitHub token if found, None otherwise
@@ -63,7 +65,7 @@ def get_github_token() -> Optional[str]:
 
 def delete_github_token() -> bool:
     """
-    Delete the ~/.oai_coding_agent/auth file.
+    Delete the auth file in the XDG data directory.
 
     Returns:
         True if deleted successfully, False otherwise
@@ -79,7 +81,7 @@ def delete_github_token() -> bool:
 
 def has_stored_token() -> bool:
     """
-    Check if a GitHub token is stored in the auth file.
+    Check if a GitHub token is stored in the auth file in the XDG data directory.
 
     Returns:
         True if token exists, False otherwise
