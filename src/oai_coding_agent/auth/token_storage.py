@@ -2,11 +2,10 @@ from pathlib import Path
 from typing import Optional
 
 
-
-
 def get_auth_file_path() -> Path:
     """Get the path to the OAI auth file in the XDG data directory."""
-    from ..runtime_config import get_data_dir
+    from ..runtime_config import get_data_dir  # noqa: PLC0415
+
     return get_data_dir() / "auth"
 
 
