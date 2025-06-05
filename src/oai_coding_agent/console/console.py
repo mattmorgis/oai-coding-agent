@@ -1,5 +1,4 @@
 import asyncio
-from pathlib import Path
 from typing import Protocol
 
 from prompt_toolkit import PromptSession
@@ -9,13 +8,14 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
+from oai_coding_agent.runtime_config import get_data_dir
+
 from ..agent import AgentProtocol
 from .key_bindings import get_key_bindings
 from .rendering import clear_terminal, console, render_message
 from .slash_commands import handle_slash_command, register_slash_commands
 from .state import UIState
 from .ui_event_mapper import map_event_to_ui_message
-from oai_coding_agent.runtime_config import get_data_dir
 
 
 class Console(Protocol):
