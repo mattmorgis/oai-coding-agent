@@ -68,8 +68,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          uv run oai --prompt '${{ github.event.issue.body }}'
-
-      - name: Push branch back to origin
-        run: |
-          git push --set-upstream origin HEAD
+          echo "${{ github.event.issue.body }}" | uv run oai --prompt -
