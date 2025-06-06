@@ -131,4 +131,5 @@ class Agent:
                 if agent_event is not None:
                     yield agent_event
 
+        # Call the async generator function to get an async iterator
         return _map_events()
