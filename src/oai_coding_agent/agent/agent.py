@@ -19,6 +19,7 @@ from agents import (
 )
 from openai.types.shared.reasoning import Reasoning
 
+from ..interrupt_handler import InterruptHandler
 from ..runtime_config import RuntimeConfig
 from .events import (
     MessageOutputEvent,
@@ -38,6 +39,7 @@ class AgentProtocol(Protocol):
     """Protocol defining the interface for agents."""
 
     config: RuntimeConfig
+    interrupt_handler: InterruptHandler
 
     async def __aenter__(self) -> "AgentProtocol": ...
 
@@ -59,6 +61,7 @@ class Agent:
         self._previous_response_id: Optional[str] = None
         self._exit_stack: Optional[AsyncExitStack] = None
         self._sdk_agent: Optional[SDKAgent] = None
+        self.interrupt_handler = InterruptHandler()
 
     async def __aenter__(self) -> "Agent":
         # Initialize exit stack for async contexts and callbacks
