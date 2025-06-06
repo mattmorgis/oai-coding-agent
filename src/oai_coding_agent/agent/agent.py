@@ -125,10 +125,10 @@ class Agent:
         ]:
             """Map SDK events to agent events, filtering out None values."""
             async for sdk_event in result.stream_events():
+                # Store the last-response ID so subsequent calls continue the dialogue
+                self._previous_response_id = result.last_response_id
                 agent_event = map_sdk_event_to_agent_event(sdk_event)
                 if agent_event is not None:
                     yield agent_event
 
-        # Store the last-response ID so subsequent calls continue the dialogue
-        self._previous_response_id = result.last_response_id
         return _map_events()
