@@ -116,7 +116,7 @@ class ProjectContext:
         keywords = self._extract_keywords(task_description)
         relevant_files = self._find_relevant_files(keywords)
 
-        context = {
+        context: Dict[str, Any] = {
             "keywords": keywords,
             "relevant_files": [],
             "suggested_entry_points": [],

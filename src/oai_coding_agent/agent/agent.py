@@ -19,6 +19,8 @@ from agents import (
 )
 from openai.types.shared.reasoning import Reasoning
 
+from ..mcp.mcp_servers import start_mcp_servers
+from ..mcp.mcp_tool_selector import get_filtered_function_tools
 from ..runtime_config import RuntimeConfig
 from .events import (
     MessageOutputEvent,
@@ -27,8 +29,6 @@ from .events import (
     map_sdk_event_to_agent_event,
 )
 from .instruction_builder import build_instructions
-from .mcp_servers import start_mcp_servers
-from .mcp_tool_selector import get_filtered_function_tools
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class Agent:
         self._exit_stack.callback(trace_ctx.__exit__, None, None, None)
 
         # Build instructions and fetch filtered MCP function-tools
-        dynamic_instructions = build_instructions(self.config)
+        dynamic_instructions = build_instructions(self.config, include_context=True)
         function_tools = await get_filtered_function_tools(
             mcp_servers, self.config.mode.value
         )

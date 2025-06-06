@@ -66,6 +66,25 @@ async def start_mcp_servers(
     """
     servers: List[MCPServer] = []
 
+    # Project Context MCP server
+    try:
+        project_ctx_server = QuietMCPServerStdio(
+            name="project-context-mcp",
+            params={
+                "command": "python",
+                "args": [str(Path(__file__).parent / "project_context_mcp_server.py")],
+                "cwd": str(repo_path),
+            },
+            client_session_timeout_seconds=30,
+            cache_tools_list=True,
+        )
+        project_ctx = await exit_stack.enter_async_context(project_ctx_server)
+
+        servers.append(project_ctx)
+        logger.info("Project Context MCP server started successfully")
+    except OSError:
+        logger.exception("Failed to start Project Context MCP server")
+
     # Atlassian Official MCP server (only in plan mode)
     if mode == "plan":
         try:

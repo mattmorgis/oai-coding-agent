@@ -3,6 +3,7 @@ Build dynamic instructions from templates.
 """
 
 from pathlib import Path
+from typing import Any, Dict
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
@@ -41,7 +42,7 @@ def build_instructions(config: RuntimeConfig, include_context: bool = False) -> 
         except TemplateNotFound:
             template = TEMPLATE_ENV.get_template("prompt_default.jinja2")
 
-    template_vars = {
+    template_vars: Dict[str, Any] = {
         "repo_path": str(config.repo_path),
         "mode": config.mode.value,
         "github_repository": config.github_repo or "",
@@ -51,13 +52,9 @@ def build_instructions(config: RuntimeConfig, include_context: bool = False) -> 
     # Add project context if requested
     if include_context:
         ctx = ProjectContext(str(config.repo_path))
-        template_vars.update(
-            {
-                "project_structure": ctx.get_structure_summary(max_depth=2),
-                "semantic_map": ctx.get_semantic_map(),
-                "entry_points": _find_entry_points(ctx),
-            }
-        )
+        template_vars["project_structure"] = ctx.get_structure_summary(max_depth=2)
+        template_vars["semantic_map"] = ctx.get_semantic_map()
+        template_vars["entry_points"] = _find_entry_points(ctx)
 
     return template.render(**template_vars)
 
