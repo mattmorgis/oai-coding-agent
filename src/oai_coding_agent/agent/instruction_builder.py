@@ -6,7 +6,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
-from ..runtime_config import RuntimeConfig
+from oai_coding_agent.runtime_config import RuntimeConfig
 
 TEMPLATE_ENV = Environment(
     loader=FileSystemLoader(Path(__file__).parent.parent / "templates"),
