@@ -8,7 +8,8 @@ from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any, List, Optional
 
-from agents.mcp import MCPServer, MCPServerStdio
+from agents.mcp import MCPServer, MCPServerSse, MCPServerStdio
+from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,16 @@ class QuietMCPServerStdio(MCPServerStdio):
 
     def create_streams(self) -> Any:
         return stdio_client(self.params, errlog=open(os.devnull, "w"))
+
+
+class QuietMCPServerSse(MCPServerSse):
+    """Variant of MCPServerSse that silences child-process stderr."""
+
+    def create_streams(self) -> Any:
+        # Ensure we have a URL parameter
+        if "url" not in self.params:
+            raise ValueError("Missing required 'url' parameter for SSE client")
+        return sse_client(self.params["url"])
 
 
 async def start_mcp_servers(

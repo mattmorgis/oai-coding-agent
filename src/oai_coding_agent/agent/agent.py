@@ -59,11 +59,19 @@ class Agent:
         self._previous_response_id: Optional[str] = None
         self._exit_stack: Optional[AsyncExitStack] = None
         self._sdk_agent: Optional[SDKAgent] = None
+        self._dynamic_context: Optional[Any] = None
 
     async def __aenter__(self) -> "Agent":
         # Initialize exit stack for async contexts and callbacks
         self._exit_stack = AsyncExitStack()
         await self._exit_stack.__aenter__()
+
+        from oai_coding_agent.mcp.dynamic_context import (  # noqa: PLC0415
+            DynamicContextManager,
+        )
+
+        # Initialize dynamic context manager
+        self._dynamic_context = DynamicContextManager(self.config.repo_path)
 
         # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
         mcp_servers = await start_mcp_servers(
@@ -119,16 +127,18 @@ class Agent:
             max_turns=self.max_turns,
         )
 
-        # Automatically resume from the last_response_id set on previous runs
-        async def _map_events() -> AsyncIterator[
-            ToolCallEvent | ReasoningEvent | MessageOutputEvent
-        ]:
+        async def _map_events(
+            self: "Agent",
+        ) -> AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent]:
             """Map SDK events to agent events, filtering out None values."""
             async for sdk_event in result.stream_events():
                 agent_event = map_sdk_event_to_agent_event(sdk_event)
                 if agent_event is not None:
+                    # Track file operations in dynamic context
+                    if self._dynamic_context is not None:
+                        self._dynamic_context.track_tool_call(agent_event)
                     yield agent_event
 
         # Store the last-response ID so subsequent calls continue the dialogue
         self._previous_response_id = result.last_response_id
-        return _map_events()
+        return _map_events(self)

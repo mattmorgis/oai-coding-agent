@@ -7,8 +7,8 @@ from typing import Any, Dict
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
+from ..mcp.project_context import ProjectContext
 from ..runtime_config import RuntimeConfig
-from .project_context import ProjectContext
 
 TEMPLATE_ENV = Environment(
     loader=FileSystemLoader(Path(__file__).parent.parent / "templates"),
@@ -51,7 +51,7 @@ def build_instructions(config: RuntimeConfig, include_context: bool = False) -> 
 
     # Add project context if requested
     if include_context:
-        ctx = ProjectContext(str(config.repo_path))
+        ctx = ProjectContext(config.repo_path)
         template_vars["project_structure"] = ctx.get_structure_summary(max_depth=2)
         template_vars["semantic_map"] = ctx.get_semantic_map()
         template_vars["entry_points"] = _find_entry_points(ctx)

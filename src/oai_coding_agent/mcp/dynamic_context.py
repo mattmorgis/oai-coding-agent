@@ -2,13 +2,21 @@
 Dynamic context manager that updates based on agent interactions.
 """
 
+import json
+import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from .project_context import ProjectContext
+from ..agent.events import (
+    MessageOutputEvent,
+    ReasoningEvent,
+    ToolCallEvent,
+)
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -35,8 +43,11 @@ class TaskContext:
 class DynamicContextManager:
     """Manages dynamic context that evolves during agent interactions."""
 
-    def __init__(self, repo_path: str):
-        self.repo_path = Path(repo_path)
+    def __init__(self, repo_path: Path):
+        self.repo_path = repo_path
+        # Import ProjectContext here to avoid circular dependency
+        from oai_coding_agent.mcp.project_context import ProjectContext  # noqa: PLC0415
+
         self.project_context = ProjectContext(repo_path)
 
         # Track access patterns
@@ -255,3 +266,64 @@ class DynamicContextManager:
                 for p, fa in self.file_access.items()
             },
         }
+
+    def track_tool_call(
+        self, event: ToolCallEvent | ReasoningEvent | MessageOutputEvent
+    ) -> None:
+        """Track tool calls for dynamic context awareness."""
+        logger.info(f"Tracking tool call: {event}")
+        logger.info(f"Current task: {self.current_task}")
+        if not self.current_task or not isinstance(event, ToolCallEvent):
+            return
+
+        try:
+            args = json.loads(event.arguments) if event.arguments else {}
+        except (json.JSONDecodeError, TypeError):
+            args = {}
+
+        # Track file operations based on tool name and arguments
+        if event.name in ["fs_read_file", "read_file"]:
+            if "path" in args:
+                self.record_file_access(args["path"], "read")
+        elif event.name in ["fs_write_file", "write_file"]:
+            if "path" in args:
+                self.record_file_access(args["path"], "create")
+        elif event.name in ["fs_edit_file", "edit_file"]:
+            if "path" in args:
+                self.record_file_access(args["path"], "edit")
+        elif event.name in ["fs_list_directory", "list_directory"]:
+            if "path" in args:
+                self.record_file_access(args["path"], "read")
+        elif event.name == "shell":
+            # Try to extract file operations from shell commands
+            self._track_shell_command(event.arguments)
+
+    def _track_shell_command(self, command: str) -> None:
+        """Track file operations in shell commands."""
+        if not self.current_task:
+            return
+
+        # Simple heuristics for common file operations
+        # This could be enhanced with more sophisticated parsing
+        words = command.split()
+
+        for i, word in enumerate(words):
+            # Look for file operations
+            if word in ["cat", "less", "head", "tail", "grep"]:
+                # These are read operations
+                for j in range(i + 1, len(words)):
+                    if not words[j].startswith("-") and "/" in words[j]:
+                        self.record_file_access(words[j], "read")
+                        break
+            elif word in ["vim", "nano", "emacs", "code"]:
+                # These are edit operations
+                for j in range(i + 1, len(words)):
+                    if not words[j].startswith("-") and "/" in words[j]:
+                        self.record_file_access(words[j], "edit")
+                        break
+            elif word in ["touch", "mkdir"]:
+                # These are create operations
+                for j in range(i + 1, len(words)):
+                    if not words[j].startswith("-") and "/" in words[j]:
+                        self.record_file_access(words[j], "create")
+                        break

@@ -4,20 +4,23 @@ Standalone MCP server for project context information.
 This runs as a separate process and communicates via stdio.
 """
 
-import asyncio
 import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from mcp import server
+import mcp.server.stdio
+from mcp.server.lowlevel import Server
 from mcp.types import TextContent, Tool
 
-from .project_context import ProjectContext
+from oai_coding_agent.mcp.project_context import ProjectContext
 
-app: Any = server.Server("project-context")
+server: Any = Server("project-context")
+
+# Global dictionary of dynamic context managers keyed by repo path
+dynamic_context_managers: Dict[str, Any] = {}
 
 
-@app.list_tools()  # type: ignore[misc]
+@server.list_tools()  # type: ignore[misc]
 async def list_tools() -> List[Tool]:
     """List available project context tools."""
     return [
@@ -33,8 +36,8 @@ async def list_tools() -> List[Tool]:
                     },
                     "max_depth": {
                         "type": "integer",
-                        "description": "Maximum depth to traverse (default: 3)",
-                        "default": 3,
+                        "description": "Maximum depth to traverse (default: 5)",
+                        "default": 5,
                     },
                 },
             },
@@ -83,10 +86,53 @@ async def list_tools() -> List[Tool]:
                 "required": ["task_description"],
             },
         ),
+        Tool(
+            name="start_task",
+            description="Start tracking a new task for dynamic context",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "description": "Description of the task being started",
+                    }
+                },
+                "required": ["description"],
+            },
+        ),
+        Tool(
+            name="record_file_access",
+            description="Record that a file was accessed during the current task",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to the file that was accessed",
+                    },
+                    "operation": {
+                        "type": "string",
+                        "description": "Type of operation (read, edit, create)",
+                        "default": "read",
+                    },
+                },
+                "required": ["file_path"],
+            },
+        ),
+        Tool(
+            name="get_dynamic_context",
+            description="Get current dynamic context including recent activity and suggestions",
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        Tool(
+            name="get_session_summary",
+            description="Get a summary of the current session's activity",
+            inputSchema={"type": "object", "properties": {}},
+        ),
     ]
 
 
-@app.call_tool()  # type: ignore[misc]
+@server.call_tool()  # type: ignore[misc]
 async def call_tool(
     name: str, arguments: Dict[str, Any] | None = None
 ) -> List[TextContent]:
@@ -95,12 +141,23 @@ async def call_tool(
 
     # Get repo path from environment or current directory
     repo_path = Path.cwd()
-    context = ProjectContext(str(repo_path))
+    context = ProjectContext(repo_path)
+
+    # Get or create dynamic context manager for this repo
+    repo_path_str = str(repo_path)
+    if repo_path_str not in dynamic_context_managers:
+        # Import here to avoid top-level circular dependency and allow running as script
+        from oai_coding_agent.mcp.dynamic_context import (  # noqa: PLC0415
+            DynamicContextManager,
+        )
+
+        dynamic_context_managers[repo_path_str] = DynamicContextManager(repo_path)
+    manager = dynamic_context_managers[repo_path_str]
 
     try:
         if name == "get_project_structure":
             result = context.get_structure_summary(
-                path=arguments.get("path"), max_depth=arguments.get("max_depth", 3)
+                path=arguments.get("path"), max_depth=arguments.get("max_depth", 5)
             )
             return [TextContent(type="text", text=result)]
 
@@ -122,6 +179,35 @@ async def call_tool(
         elif name == "get_relevant_context":
             ctx_result = context.get_relevant_context(arguments["task_description"])
             formatted = _format_relevant_context(ctx_result)
+            return [TextContent(type="text", text=formatted)]
+
+        elif name == "start_task":
+            manager.start_task(arguments["description"])
+            return [
+                TextContent(
+                    type="text",
+                    text=f"Started tracking task: {arguments['description']}",
+                )
+            ]
+
+        elif name == "record_file_access":
+            operation = arguments.get("operation", "read")
+            manager.record_file_access(arguments["file_path"], operation)
+            return [
+                TextContent(
+                    type="text",
+                    text=f"Recorded {operation} access to {arguments['file_path']}",
+                )
+            ]
+
+        elif name == "get_dynamic_context":
+            dynamic_ctx = manager.get_current_context()
+            formatted = _format_dynamic_context(dynamic_ctx)
+            return [TextContent(type="text", text=formatted)]
+
+        elif name == "get_session_summary":
+            summary = manager.export_session_summary()
+            formatted = json.dumps(summary, indent=2)
             return [TextContent(type="text", text=formatted)]
 
         else:
@@ -178,13 +264,52 @@ def _format_relevant_context(context: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _format_dynamic_context(context: Dict[str, Any]) -> str:
+    """Format dynamic context for display."""
+    lines = ["Dynamic Context:"]
+
+    if context["current_task"]:
+        task = context["current_task"]
+        lines.append(f"\nCurrent Task: {task['description']}")
+        if task["files_accessed"]:
+            lines.append("Files accessed:")
+            for f in task["files_accessed"]:
+                lines.append(f"  - {f}")
+        if task["files_modified"]:
+            lines.append("Files modified:")
+            for f in task["files_modified"]:
+                lines.append(f"  - {f}")
+
+    if context["recently_accessed"]:
+        lines.append("\nRecently accessed files:")
+        for f in context["recently_accessed"]:
+            lines.append(f"  - {f}")
+
+    if context["frequently_accessed"]:
+        lines.append("\nFrequently accessed files:")
+        for f in context["frequently_accessed"]:
+            lines.append(f"  - {f['path']} (accessed {f['count']} times)")
+
+    if context["related_files"]:
+        lines.append("\nRelated files (based on dependencies):")
+        for f in context["related_files"]:
+            lines.append(f"  - {f}")
+
+    if context["suggested_next_files"]:
+        lines.append("\nSuggested next files:")
+        for f in context["suggested_next_files"]:
+            lines.append(f"  - {f}")
+
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
-    import mcp.server.stdio
+    import asyncio
 
     async def main() -> None:
         async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
-            await app.run(
-                read_stream, write_stream, app.create_initialization_options()
+            await server.run(
+                read_stream, write_stream, server.create_initialization_options()
             )
 
     asyncio.run(main())

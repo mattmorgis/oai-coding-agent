@@ -56,14 +56,14 @@ class DirInfo:
 
 
 class ProjectContext:
-    def __init__(self, root_path: str):
-        self.root_path = Path(root_path).resolve()
+    def __init__(self, root_path: Path):
+        self.root_path = root_path
         self._file_cache: Dict[Path, FileInfo] = {}
         self._dependency_graph: Dict[str, Set[str]] = defaultdict(set)
         self._semantic_tags: Dict[str, List[Path]] = defaultdict(list)
 
     def get_structure_summary(
-        self, path: Optional[str] = None, max_depth: int = 3
+        self, path: Optional[str] = None, max_depth: int = 5
     ) -> str:
         """Generate a rich directory tree with metadata."""
         target_path = Path(path) if path else self.root_path
