@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, AsyncGenerator, cast
+from typing import Any, AsyncGenerator, Optional, cast
 from unittest.mock import Mock
 
 import pytest
@@ -106,6 +106,8 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeResult:
         def __init__(self, evts: list[Any]) -> None:
             self._events = evts
+            # expose last_response_id so Agent.run can store it
+            self.last_response_id: Optional[str] = None
 
         def stream_events(self) -> AsyncGenerator[Any, None]:
             async def gen() -> AsyncGenerator[Any, None]:
@@ -120,7 +122,7 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         Runner,
         "run_streamed",
-        lambda agent, u, previous_response_id, max_turns: fake_result,
+        lambda *args, **kwargs: fake_result,
     )
     # Initialize agent and set dummy SDK agent
     config = RuntimeConfig(
@@ -133,9 +135,7 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     agent = Agent(config, max_turns=1)
     agent._sdk_agent = cast(SDKAgent, object())
 
-    event_stream, returned = await agent.run("input text", previous_response_id="prev")
-    # Should return the underlying result as is
-    assert returned is fake_result  # type: ignore[comparison-overlap]
+    event_stream = await agent.run("input text")
     # Verify we can iterate the mapped events from the stream
     collected = []
     async for event in event_stream:
