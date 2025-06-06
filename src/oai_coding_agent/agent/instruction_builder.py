@@ -7,6 +7,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 from ..runtime_config import RuntimeConfig
+from .project_context import ProjectContext
 
 TEMPLATE_ENV = Environment(
     loader=FileSystemLoader(Path(__file__).parent.parent / "templates"),
@@ -15,16 +16,60 @@ TEMPLATE_ENV = Environment(
 )
 
 
-def build_instructions(config: RuntimeConfig) -> str:
+def build_instructions(config: RuntimeConfig, include_context: bool = False) -> str:
     """Build instructions from template based on configuration."""
-    try:
-        template = TEMPLATE_ENV.get_template(f"prompt_{config.mode.value}.jinja2")
-    except TemplateNotFound:
-        template = TEMPLATE_ENV.get_template("prompt_default.jinja2")
+    template_name = f"prompt_{config.mode.value}.jinja2"
 
-    return template.render(
-        repo_path=str(config.repo_path),
-        mode=config.mode.value,
-        github_repository=config.github_repo or "",
-        branch_name=config.branch_name or "",
-    )
+    # Use context-enhanced template if requested
+    if include_context:
+        context_template = f"prompt_{config.mode.value}_with_context.jinja2"
+        try:
+            template = TEMPLATE_ENV.get_template(context_template)
+        except TemplateNotFound:
+            # Fall back to default with context
+            try:
+                template = TEMPLATE_ENV.get_template(
+                    "prompt_default_with_context.jinja2"
+                )
+            except TemplateNotFound:
+                # Fall back to regular template
+                template = TEMPLATE_ENV.get_template(template_name)
+                include_context = False
+    else:
+        try:
+            template = TEMPLATE_ENV.get_template(template_name)
+        except TemplateNotFound:
+            template = TEMPLATE_ENV.get_template("prompt_default.jinja2")
+
+    template_vars = {
+        "repo_path": str(config.repo_path),
+        "mode": config.mode.value,
+        "github_repository": config.github_repo or "",
+        "branch_name": config.branch_name or "",
+    }
+
+    # Add project context if requested
+    if include_context:
+        ctx = ProjectContext(str(config.repo_path))
+        template_vars.update(
+            {
+                "project_structure": ctx.get_structure_summary(max_depth=2),
+                "semantic_map": ctx.get_semantic_map(),
+                "entry_points": _find_entry_points(ctx),
+            }
+        )
+
+    return template.render(**template_vars)
+
+
+def _find_entry_points(ctx: ProjectContext) -> list[str]:
+    """Find likely entry points in the project."""
+    semantic_map = ctx.get_semantic_map()
+    entry_points = []
+
+    # Look for main/cli files
+    for tag in ["MAIN", "CLI"]:
+        if tag in semantic_map:
+            entry_points.extend(semantic_map[tag][:3])
+
+    return entry_points
