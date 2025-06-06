@@ -8,21 +8,23 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
-from oai_coding_agent.runtime_config import get_data_dir
-
-from ..agent import AgentProtocol
-from ..interrupt_handler import InterruptedError
-from .key_bindings import get_key_bindings
-from .rendering import (
+from oai_coding_agent.agent import AgentProtocol
+from oai_coding_agent.console.interrupt_handler import InterruptedError
+from oai_coding_agent.console.key_bindings import get_key_bindings
+from oai_coding_agent.console.rendering import (
     clear_terminal,
     console,
     hide_interrupt_indicator,
     render_message,
     show_interrupt_indicator,
 )
-from .slash_commands import handle_slash_command, register_slash_commands
-from .state import UIState
-from .ui_event_mapper import map_event_to_ui_message
+from oai_coding_agent.console.slash_commands import (
+    handle_slash_command,
+    register_slash_commands,
+)
+from oai_coding_agent.console.state import UIState
+from oai_coding_agent.console.ui_event_mapper import map_event_to_ui_message
+from oai_coding_agent.runtime_config import get_data_dir
 
 
 class Console(Protocol):

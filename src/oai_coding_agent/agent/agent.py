@@ -19,8 +19,9 @@ from agents import (
 )
 from openai.types.shared.reasoning import Reasoning
 
-from ..interrupt_handler import InterruptHandler
-from ..runtime_config import RuntimeConfig
+from oai_coding_agent.console.interrupt_handler import InterruptHandler
+from oai_coding_agent.runtime_config import RuntimeConfig
+
 from .events import (
     MessageOutputEvent,
     ReasoningEvent,
@@ -132,4 +133,5 @@ class Agent:
                     yield agent_event
 
         # Call the async generator function to get an async iterator
+        self._previous_response_id = result.last_response_id
         return _map_events()
