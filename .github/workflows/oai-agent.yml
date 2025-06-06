@@ -1,5 +1,5 @@
-# .github/workflows/issue-agent.yml
-name: Issue Coding Agent
+# .github/workflows/oai-agent.yml
+name: OAI Coding Agent
 
 on:
   issues:
