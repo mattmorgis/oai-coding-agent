@@ -10,6 +10,8 @@ from oai_coding_agent.runtime_config import (
     ModeChoice,
     ModelChoice,
     RuntimeConfig,
+    get_config_dir,
+    get_data_dir,
     load_envs,
 )
 
@@ -59,7 +61,7 @@ def test_runtime_config_constructor(
 
     kwargs: Dict[str, Any] = {
         "openai_api_key": api_key,
-        "github_personal_access_token": github_token,
+        "github_token": github_token,
         "model": model,
     }
     if repo_path is not None:
@@ -70,7 +72,7 @@ def test_runtime_config_constructor(
     cfg = RuntimeConfig(**kwargs)
 
     assert cfg.openai_api_key == api_key
-    assert cfg.github_personal_access_token == github_token
+    assert cfg.github_token == github_token
     assert cfg.model == model
     assert cfg.repo_path == expected_repo_path
     assert cfg.mode == (mode or ModeChoice.default)
@@ -86,7 +88,7 @@ def test_runtime_config_constructor_with_base_url(
     cfg = RuntimeConfig(
         openai_api_key="KEY",
         openai_base_url=custom_url,
-        github_personal_access_token="GH",
+        github_token="GH",
         model=ModelChoice.o3,
     )
     assert cfg.openai_base_url == custom_url
@@ -112,14 +114,14 @@ def mock_dotenv(monkeypatch: pytest.MonkeyPatch) -> Callable[[Dict[str, str]], N
         # Test loading from dotenv when env vars not set
         (
             {},
-            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"},
-            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"},
+            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_TOKEN": "GH_ENV"},
+            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_TOKEN": "GH_ENV"},
         ),
         # Test not overriding existing env vars
         (
-            {"OPENAI_API_KEY": "SHELL_KEY", "GITHUB_PERSONAL_ACCESS_TOKEN": "SHELL_GH"},
-            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_PERSONAL_ACCESS_TOKEN": "GH_ENV"},
-            {"OPENAI_API_KEY": "SHELL_KEY", "GITHUB_PERSONAL_ACCESS_TOKEN": "SHELL_GH"},
+            {"OPENAI_API_KEY": "SHELL_KEY", "GITHUB_TOKEN": "SHELL_GH"},
+            {"OPENAI_API_KEY": "FROM_ENV", "GITHUB_TOKEN": "GH_ENV"},
+            {"OPENAI_API_KEY": "SHELL_KEY", "GITHUB_TOKEN": "SHELL_GH"},
         ),
     ],
 )
@@ -133,7 +135,7 @@ def test_load_envs_behavior(
     """Test load_envs behavior with different environment configurations."""
     # Clear env vars first
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
 
     # Set existing env vars if any
     for key, value in existing_env.items():
@@ -145,10 +147,7 @@ def test_load_envs_behavior(
     load_envs()
 
     assert os.environ.get("OPENAI_API_KEY") == expected["OPENAI_API_KEY"]
-    assert (
-        os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN")
-        == expected["GITHUB_PERSONAL_ACCESS_TOKEN"]
-    )
+    assert os.environ.get("GITHUB_TOKEN") == expected["GITHUB_TOKEN"]
 
 
 @pytest.mark.parametrize(
@@ -188,14 +187,65 @@ def test_load_envs_with_explicit_env_file(
     # Ensure load_envs loads keys from an explicit .env file path
     env_file = tmp_path / ".custom_env"
     env_file.write_text(
-        "OPENAI_API_KEY=EXPLICIT_KEY\nGITHUB_PERSONAL_ACCESS_TOKEN=EXPLICIT_GH\nOPENAI_BASE_URL=EXPLICIT_URL\n"
+        "OPENAI_API_KEY=EXPLICIT_KEY\nGITHUB_TOKEN=EXPLICIT_GH\nOPENAI_BASE_URL=EXPLICIT_URL\n"
     )
+
+    # Clear environment variables first
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("GITHUB_PERSONAL_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+
+    # Mock get_auth_file_path to return a non-existent file to avoid loading auth file
+    monkeypatch.setattr(
+        "oai_coding_agent.runtime_config.get_auth_file_path",
+        lambda: Path("/nonexistent/auth/file"),
+    )
 
     load_envs(env_file=str(env_file))
 
     assert os.environ.get("OPENAI_API_KEY") == "EXPLICIT_KEY"
-    assert os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") == "EXPLICIT_GH"
+    assert os.environ.get("GITHUB_TOKEN") == "EXPLICIT_GH"
     assert os.environ.get("OPENAI_BASE_URL") == "EXPLICIT_URL"
+
+
+@pytest.mark.parametrize(
+    "home_dir",
+    [Path("/fake/home")],
+)
+def test_get_dirs_default(monkeypatch: pytest.MonkeyPatch, home_dir: Path) -> None:
+    """Test get_data_dir and get_config_dir default fallbacks when XDG vars not set."""
+    # Ensure no XDG env vars
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+    # Set HOME to a known location
+    monkeypatch.setenv("HOME", str(home_dir))
+
+    expected_data = home_dir / ".local" / "share" / "oai_coding_agent"
+    expected_config = home_dir / ".config" / "oai_coding_agent"
+
+    assert get_data_dir() == expected_data
+    assert get_config_dir() == expected_config
+
+
+def test_get_data_dir_with_xdg(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Test get_data_dir uses XDG_DATA_HOME when set."""
+    xdg_data = tmp_path / "xdg_data"
+    monkeypatch.setenv("XDG_DATA_HOME", str(xdg_data))
+    # Set HOME so fallback isn't accidentally used
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+
+    expected_data = xdg_data / "oai_coding_agent"
+    assert get_data_dir() == expected_data
+
+
+def test_get_config_dir_with_xdg(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Test get_config_dir uses XDG_CONFIG_HOME when set."""
+    xdg_config = tmp_path / "xdg_config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_config))
+    # Set HOME so fallback isn't accidentally used
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+
+    expected_config = xdg_config / "oai_coding_agent"
+    assert get_config_dir() == expected_config

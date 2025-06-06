@@ -1,5 +1,4 @@
 import asyncio
-from pathlib import Path
 from typing import Protocol
 
 from prompt_toolkit import PromptSession
@@ -8,6 +7,8 @@ from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
 from rich.panel import Panel
+
+from oai_coding_agent.runtime_config import get_data_dir
 
 from ..agent import AgentProtocol
 from .key_bindings import get_key_bindings
@@ -73,9 +74,10 @@ class ReplConsole:
 
         kb = get_key_bindings()
 
-        # Store history alongside logs/config in ~/.oai_coding_agent
-        history_path = Path.home() / ".oai_coding_agent" / "prompt_history"
-        history_path.parent.mkdir(parents=True, exist_ok=True)
+        # Store prompt history under the XDG data directory
+        history_dir = get_data_dir()
+        history_dir.mkdir(parents=True, exist_ok=True)
+        history_path = history_dir / "prompt_history"
 
         prompt_session: PromptSession[str] = PromptSession(
             history=FileHistory(str(history_path)),

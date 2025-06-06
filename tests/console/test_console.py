@@ -10,7 +10,12 @@ from conftest import MockAgent
 
 import oai_coding_agent.console.console as console_module
 import oai_coding_agent.console.rendering as rendering
-from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConfig
+from oai_coding_agent.runtime_config import (
+    ModeChoice,
+    ModelChoice,
+    RuntimeConfig,
+    get_data_dir,
+)
 
 
 class DummyPromptSession:
@@ -47,7 +52,7 @@ async def test_repl_console_exits_on_exit_and_prints_header(
     recorder = setup_repl
     config = RuntimeConfig(
         openai_api_key="APIKEY",
-        github_personal_access_token="GHTOKEN",
+        github_token="GHTOKEN",
         model=ModelChoice.codex_mini_latest,
         repo_path=tmp_path,
         mode=ModeChoice.default,
@@ -64,5 +69,5 @@ async def test_repl_console_exits_on_exit_and_prints_header(
     assert "codex-mini-latest" in output
 
     # Ensure history directory was created under tmp_path
-    history_dir = tmp_path / ".oai_coding_agent"
+    history_dir = get_data_dir()
     assert history_dir.is_dir(), "History directory should be created"

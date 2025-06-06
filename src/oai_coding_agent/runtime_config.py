@@ -2,7 +2,7 @@
 Runtime configuration for the OAI coding agent.
 
 This module provides:
-- load_envs(): load OPENAI_API_KEY, GITHUB_PERSONAL_ACCESS_TOKEN, and OPENAI_BASE_URL from a .env file
+- load_envs(): load OPENAI_API_KEY, GITHUB_TOKEN, and OPENAI_BASE_URL from a .env file
   if they are not already present in the environment.
 - RuntimeConfig: a dataclass holding runtime settings, including API keys, base URL,
   model choice, repo path, and mode.
@@ -16,27 +16,51 @@ from typing import Optional
 
 from dotenv import dotenv_values
 
+from .auth.token_storage import get_auth_file_path
+
 # Environment variable names for credentials and endpoints
 OPENAI_API_KEY_ENV: str = "OPENAI_API_KEY"
 OPENAI_BASE_URL_ENV: str = "OPENAI_BASE_URL"
-GITHUB_PERSONAL_ACCESS_TOKEN_ENV: str = "GITHUB_PERSONAL_ACCESS_TOKEN"
+GITHUB_TOKEN: str = "GITHUB_TOKEN"
 
 
 def load_envs(env_file: Optional[str] = None) -> None:
     """
-    Load OPENAI_API_KEY, GITHUB_PERSONAL_ACCESS_TOKEN, and OPENAI_BASE_URL from a .env file
+    Load OPENAI_API_KEY, GITHUB_TOKEN, and OPENAI_BASE_URL from .env files
     into the process environment if they are not already set.
+
+    Loads from:
+    1. Auth file in the XDG data directory (for GITHUB_TOKEN)
+    2. .env file (project-specific settings)
+    3. Specified env_file (if provided)
     """
-    env_values = dotenv_values(env_file) if env_file else dotenv_values()
-    for key in (
-        OPENAI_API_KEY_ENV,
-        GITHUB_PERSONAL_ACCESS_TOKEN_ENV,
-        OPENAI_BASE_URL_ENV,
-    ):
-        if not os.environ.get(key):
-            val = env_values.get(key)
-            if val:
-                os.environ[key] = str(val)
+    # Load from multiple sources in order of precedence
+    sources = []
+
+    # 1. Load from auth file in the XDG data directory first (for GITHUB_TOKEN)
+    auth_file = get_auth_file_path()
+    if auth_file.exists():
+        sources.append(str(auth_file))
+
+    # 2. Load from .env file in current directory
+    if not env_file:
+        sources.append(".env")
+    else:
+        # 3. Load from specified env file
+        sources.append(env_file)
+
+    # Load environment variables from all sources
+    for source in sources:
+        try:
+            env_values = dotenv_values(source)
+            for key in (OPENAI_API_KEY_ENV, GITHUB_TOKEN, OPENAI_BASE_URL_ENV):
+                if not os.environ.get(key):
+                    val = env_values.get(key)
+                    if val:
+                        os.environ[key] = str(val)
+        except Exception:
+            # Silently ignore missing or unreadable files
+            continue
 
 
 class ModelChoice(str, Enum):
@@ -63,7 +87,7 @@ class RuntimeConfig:
     Attributes:
         openai_api_key: The OpenAI API key to use.
         openai_base_url: Custom base URL for the OpenAI API endpoint (if provided).
-        github_personal_access_token: The GitHub Personal Access Token to use for the GitHub MCP server.
+        github_token: The GitHub Token to use for the GitHub MCP server.
         model: The OpenAI model identifier.
         repo_path: Path to the repository to work on.
         mode: The agent mode to use.
@@ -73,7 +97,7 @@ class RuntimeConfig:
     """
 
     openai_api_key: str
-    github_personal_access_token: str
+    github_token: Optional[str]
     model: ModelChoice
     repo_path: Path = field(default_factory=Path.cwd)
     mode: ModeChoice = ModeChoice.default
@@ -81,3 +105,19 @@ class RuntimeConfig:
     github_repo: Optional[str] = None
     branch_name: Optional[str] = None
     prompt: Optional[str] = None
+
+
+def get_config_dir() -> Path:
+    """
+    Return the OAI Coding Agent config directory under XDG_CONFIG_HOME or fallback to ~/.config.
+    """
+    config_home = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    return config_home / "oai_coding_agent"
+
+
+def get_data_dir() -> Path:
+    """
+    Return the OAI Coding Agent data directory under XDG_DATA_HOME or fallback to ~/.local/share.
+    """
+    data_home = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
+    return data_home / "oai_coding_agent"

@@ -57,7 +57,7 @@ echo "OPENAI_API_KEY=your-key-here" >> .env
 Optional variables:
 
 - `OPENAI_BASE_URL` - Custom OpenAI API endpoint
-- `GITHUB_PERSONAL_ACCESS_TOKEN` - For GitHub operations (or use `export GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token)`)
+- `GITHUB_TOKEN` - Unlike traditional OAuth flows, this implementation uses GitHub's Device Flow which doesn't require you to register an OAuth application. The agent uses GitHub CLI's public client ID to authenticate users directly with their GitHub accounts.
 
 ### Agent Modes
 
