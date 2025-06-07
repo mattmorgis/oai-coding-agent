@@ -5,11 +5,12 @@ Launch and register cleanup for filesystem, CLI & Git MCP servers via AsyncExitS
 import logging
 import os
 from contextlib import AsyncExitStack
-from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, List
 
 from agents.mcp import MCPServer, MCPServerStdio
 from mcp.client.stdio import stdio_client
+
+from ..runtime_config import RuntimeConfig
 
 logger = logging.getLogger(__name__)
 
@@ -52,22 +53,20 @@ class QuietMCPServerStdio(MCPServerStdio):
 
 
 async def start_mcp_servers(
-    repo_path: Path,
-    github_token: Optional[str],
+    config: RuntimeConfig,
     exit_stack: AsyncExitStack,
-    mode: Optional[str] = None,
 ) -> List[MCPServer]:
     """
     Start filesystem, CLI, Git, and GitHub MCP servers, registering cleanup on the provided exit_stack.
 
-    If mode is "plan", also starts the Atlassian MCP server.
+    If mode is "plan" and atlassian flag is True, also starts the Atlassian MCP server.
 
     Returns a list of connected MCPServerStdio instances.
     """
     servers: List[MCPServer] = []
 
-    # Atlassian Official MCP server (only in plan mode)
-    if mode == "plan":
+    # Atlassian Official MCP server (only in plan mode and when atlassian flag is set)
+    if config.mode.value == "plan" and config.atlassian:
         try:
             atlassian_ctx = QuietMCPServerStdio(
                 name="atlassian-mcp",
@@ -93,7 +92,7 @@ async def start_mcp_servers(
             "args": [
                 "-y",
                 "@modelcontextprotocol/server-filesystem",
-                str(repo_path),
+                str(config.repo_path),
             ],
         },
         client_session_timeout_seconds=30,
@@ -111,7 +110,7 @@ async def start_mcp_servers(
             params={
                 "command": "cli-mcp-server",
                 "env": {
-                    "ALLOWED_DIR": str(repo_path),
+                    "ALLOWED_DIR": str(config.repo_path),
                     "ALLOWED_COMMANDS": ",".join(ALLOWED_CLI_COMMANDS),
                     "ALLOWED_FLAGS": ",".join(ALLOWED_CLI_FLAGS),
                     "ALLOW_SHELL_OPERATORS": "true",
@@ -150,7 +149,7 @@ async def start_mcp_servers(
         logger.exception("Failed to start Git MCP server")
 
     # GitHub MCP server (only if token is available)
-    if github_token:
+    if config.github_token:
         try:
             gh_ctx = QuietMCPServerStdio(
                 name="github-mcp-server",
@@ -164,7 +163,7 @@ async def start_mcp_servers(
                         "GITHUB_PERSONAL_ACCESS_TOKEN",
                         "ghcr.io/github/github-mcp-server",
                     ],
-                    "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": github_token},
+                    "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": config.github_token},
                 },
                 client_session_timeout_seconds=120,
                 cache_tools_list=True,
