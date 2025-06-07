@@ -94,6 +94,7 @@ class RuntimeConfig:
         github_repo: The GitHub repository in "owner/repo" format (if available).
         branch_name: The current git branch name (if available).
         prompt: The prompt text for headless mode (if provided).
+        atlassian: Enable Atlassian MCP server (only works in plan mode).
     """
 
     openai_api_key: str
@@ -105,6 +106,7 @@ class RuntimeConfig:
     github_repo: Optional[str] = None
     branch_name: Optional[str] = None
     prompt: Optional[str] = None
+    atlassian: bool = False
 
 
 def get_config_dir() -> Path:
