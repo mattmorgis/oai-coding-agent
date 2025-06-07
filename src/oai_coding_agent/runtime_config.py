@@ -30,14 +30,14 @@ def load_envs(env_file: Optional[str] = None) -> None:
     into the process environment if they are not already set.
 
     Loads from:
-    1. ~/.oai_coding_agent/auth (for GITHUB_TOKEN)
+    1. Auth file in the XDG data directory (for GITHUB_TOKEN)
     2. .env file (project-specific settings)
     3. Specified env_file (if provided)
     """
     # Load from multiple sources in order of precedence
     sources = []
 
-    # 1. Load from ~/.oai_coding_agent/auth file first (for GITHUB_TOKEN)
+    # 1. Load from auth file in the XDG data directory first (for GITHUB_TOKEN)
     auth_file = get_auth_file_path()
     if auth_file.exists():
         sources.append(str(auth_file))

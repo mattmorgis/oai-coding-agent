@@ -1,5 +1,5 @@
-# .github/workflows/issue-agent.yml
-name: Issue Coding Agent
+# .github/workflows/oai-agent.yml
+name: OAI Coding Agent
 
 on:
   issues:
@@ -62,10 +62,19 @@ jobs:
 
       - name: Run OAI coding agent in headless mode
         env:
-          RICH_FORCE_TERMINAL: "1"
+          RICH_FORCE_TERMINAL: "1" # these provide pretty logs in GHA
           TTY_COMPATIBLE: "1"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          echo "${{ github.event.issue.body }}" | uv run oai --prompt -
+          uv sync
+          source .venv/bin/activate
+          oai --prompt - << 'PROMPT_END'
+          Complete the following GitHub issue:
+          Repository: ${{ github.event.repository.html_url }}
+          Issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
+
+          Body:
+          ${{ github.event.issue.body }}
+          PROMPT_END

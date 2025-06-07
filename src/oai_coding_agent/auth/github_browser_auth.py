@@ -4,7 +4,7 @@ from typing import Optional
 
 import requests
 
-from .token_storage import save_github_token
+from .token_storage import get_auth_file_path, save_github_token
 
 # Using GitHub CLI's client ID for device flow
 # This is a public client ID the GitHub Coding Agent application
@@ -113,10 +113,10 @@ def authenticate_github_browser() -> Optional[str]:
                 print("✓ Successfully authenticated with GitHub!")
                 access_token = result["access_token"]
                 if isinstance(access_token, str):
-                    # Automatically save token to ~/.oai_coding_agent/auth file
+                    # Automatically save token to auth file in XDG data directory
                     if save_github_token(access_token):
                         print(
-                            "✓ Token saved to ~/.oai_coding_agent/auth for future sessions"
+                            f"✓ Token saved to {get_auth_file_path()} for future sessions"
                         )
                     else:
                         print(
