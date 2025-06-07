@@ -77,6 +77,7 @@ def test_runtime_config_constructor(
     assert cfg.repo_path == expected_repo_path
     assert cfg.mode == (mode or ModeChoice.default)
     assert cfg.openai_base_url is None
+    assert cfg.atlassian is False  # default value
 
 
 def test_runtime_config_constructor_with_base_url(
@@ -94,6 +95,23 @@ def test_runtime_config_constructor_with_base_url(
     assert cfg.openai_base_url == custom_url
     assert cfg.repo_path == tmp_path
     assert cfg.mode == ModeChoice.default
+    assert cfg.atlassian is False  # default value
+
+
+def test_runtime_config_constructor_with_atlassian_flag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that RuntimeConfig accepts an explicit atlassian flag."""
+    monkeypatch.chdir(tmp_path)
+    cfg = RuntimeConfig(
+        openai_api_key="KEY",
+        github_token="GH",
+        model=ModelChoice.o3,
+        mode=ModeChoice.plan,
+        atlassian=True,
+    )
+    assert cfg.atlassian is True
+    assert cfg.mode == ModeChoice.plan
 
 
 @pytest.fixture

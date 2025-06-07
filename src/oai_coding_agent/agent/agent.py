@@ -67,10 +67,8 @@ class Agent:
 
         # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
         mcp_servers = await start_mcp_servers(
-            self.config.repo_path,
-            self.config.github_token,
             self._exit_stack,
-            self.config.mode.value,
+            self.config,
         )
 
         # Begin tracing
@@ -81,9 +79,7 @@ class Agent:
 
         # Build instructions and fetch filtered MCP function-tools
         dynamic_instructions = build_instructions(self.config)
-        function_tools = await get_filtered_function_tools(
-            mcp_servers, self.config.mode.value
-        )
+        function_tools = await get_filtered_function_tools(mcp_servers, self.config)
 
         # Instantiate the SDK Agent with the filtered function-tools
         self._sdk_agent = SDKAgent(

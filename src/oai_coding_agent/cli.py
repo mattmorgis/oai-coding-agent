@@ -70,10 +70,8 @@ def create_app(
         repo_path: Path,
         openai_base_url: Optional[str],
         prompt: Optional[str],
+        atlassian: bool = False,
     ) -> None:
-        """
-        OAI CODING AGENT - starts an interactive or batch session
-        """
         setup_logging()
         logger = logging.getLogger(__name__)
 
@@ -128,6 +126,7 @@ def create_app(
             github_repo=github_repo,
             branch_name=branch_name,
             prompt=prompt_text,
+            atlassian=atlassian,
         )
 
         if not prompt:
@@ -225,8 +224,15 @@ def create_app(
                 help="Prompt text for non-interactive async mode; use '-' to read from stdin",
             ),
         ] = None,
+        atlassian: Annotated[
+            bool,
+            typer.Option(
+                "--atlassian",
+                help="Enable Atlassian MCP server (only available in plan mode)",
+            ),
+        ] = False,
     ) -> None:
-        """OAI CODING AGENT - AI-powered coding assistant"""
+        """OAI CODING AGENT - starts an interactive session"""
         # Check if any positional arguments were passed (indicating a subcommand)
         if ctx.invoked_subcommand is None:
             if openai_api_key is None:
@@ -244,6 +250,7 @@ def create_app(
                 repo_path=repo_path,
                 openai_base_url=openai_base_url,
                 prompt=prompt,
+                atlassian=atlassian,
             )
 
     # return the Typer app

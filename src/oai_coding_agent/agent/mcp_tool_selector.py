@@ -2,23 +2,24 @@
 Mode-based selection and filtering of MCP function-tools per server.
 """
 
-from typing import TYPE_CHECKING, List
+from typing import List
 
+from agents.mcp import MCPServer
 from agents.mcp.util import MCPUtil
 from agents.tool import Tool
 
-if TYPE_CHECKING:
-    from agents.mcp import MCPServer
+from ..runtime_config import RuntimeConfig
 
 
 def _filter_tools_for_mode(
-    server_name: str, tools: List[Tool], mode: str
+    server_name: str, tools: List[Tool], config: RuntimeConfig
 ) -> List[Tool]:
     """
     Apply mode-specific filtering rules for a given MCP server's tools.
 
-    Note: The atlassian-mcp server is only started in plan mode.
+    Note: The atlassian-mcp server is only started when in plan mode and atlassian flag is set.
     """
+    mode = config.mode.value
     # File-system MCP: remove edit_file in plan mode
     if server_name == "file-system-mcp":
         if mode == "plan":
@@ -30,12 +31,12 @@ def _filter_tools_for_mode(
             allowed = {"clone_repo", "list_branches"}
             return [t for t in tools if t.name in allowed]
 
-    # Atlassian MCP server: only allow in plan mode
+    # Atlassian MCP server: only allow when in plan mode and atlassian flag is set
     if server_name == "atlassian-mcp":
-        if mode != "plan":
-            # Remove all tools if not in plan mode
+        if mode != "plan" or not config.atlassian:
+            # Remove all tools if not in plan mode or atlassian flag not set
             return []
-        # In plan mode, allow all tools
+        # In plan mode with atlassian flag, allow all tools
         return tools
 
     # GitHub MCP server: restrict to a whitelist of allowed tools
@@ -83,14 +84,16 @@ def _filter_tools_for_mode(
 
 
 async def get_filtered_function_tools(
-    servers: list["MCPServer"], mode: str, convert_schemas_to_strict: bool = False
+    servers: list[MCPServer],
+    config: RuntimeConfig,
+    convert_schemas_to_strict: bool = False,
 ) -> List[Tool]:
     """
     Fetch all function tools from MCP servers, apply mode-specific filters, and return the combined list.
 
     Args:
         servers: List of connected MCPServer instances.
-        mode: The current agent mode (e.g. "default", "plan", "async").
+        config: The runtime configuration containing mode and atlassian flag.
         convert_schemas_to_strict: Whether to coerce input schemas to strict JSON schemas.
     Returns:
         A flattened list of filtered FunctionTool objects ready to attach to an Agent.
@@ -100,6 +103,6 @@ async def get_filtered_function_tools(
         server_tools = await MCPUtil.get_function_tools(
             server, convert_schemas_to_strict
         )
-        server_tools = _filter_tools_for_mode(server.name, server_tools, mode)
+        server_tools = _filter_tools_for_mode(server.name, server_tools, config)
         filtered_tools.extend(server_tools)
     return filtered_tools

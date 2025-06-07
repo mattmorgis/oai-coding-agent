@@ -6,6 +6,7 @@ from agents.mcp import MCPServer
 from agents.mcp.util import MCPUtil
 
 from oai_coding_agent.agent.mcp_tool_selector import get_filtered_function_tools
+from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConfig
 
 
 class DummyTool:
@@ -37,7 +38,13 @@ async def test_default_mode_no_filter(
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
     servers = cast(List[MCPServer], [SimpleNamespace(name="file-system-mcp")])
-    tools = await get_filtered_function_tools(servers, mode="default")
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.default,
+    )
+    tools = await get_filtered_function_tools(servers, config)
     assert {t.name for t in tools} == {"edit_file", "read_file"}
 
 
@@ -51,7 +58,13 @@ async def test_plan_mode_filesystem_filter(
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
     servers = cast(List[MCPServer], [SimpleNamespace(name="file-system-mcp")])
-    tools = await get_filtered_function_tools(servers, mode="plan")
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.plan,
+    )
+    tools = await get_filtered_function_tools(servers, config)
     assert {t.name for t in tools} == {"read_file"}
 
 
@@ -69,7 +82,13 @@ async def test_plan_mode_git_filter(
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
     servers = cast(List[MCPServer], [SimpleNamespace(name="mcp-server-git")])
-    tools = await get_filtered_function_tools(servers, mode="plan")
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.plan,
+    )
+    tools = await get_filtered_function_tools(servers, config)
     assert {t.name for t in tools} == {"clone_repo", "list_branches"}
 
 
@@ -104,8 +123,13 @@ async def test_github_server_whitelist_default_mode(
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
     servers = cast(List[MCPServer], [SimpleNamespace(name="github-mcp-server")])
-
-    tools = await get_filtered_function_tools(servers, mode="default")
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.default,
+    )
+    tools = await get_filtered_function_tools(servers, config)
     assert {t.name for t in tools} == full_allowed
 
 
@@ -142,16 +166,21 @@ async def test_github_server_plan_mode_readonly_filter(
 
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake_plan)
     servers = cast(List[MCPServer], [SimpleNamespace(name="github-mcp-server")])
-
-    tools = await get_filtered_function_tools(servers, mode="plan")
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.plan,
+    )
+    tools = await get_filtered_function_tools(servers, config)
     assert {t.name for t in tools} == readonly_allowed
 
 
 @pytest.mark.asyncio
-async def test_atlassian_server_plan_mode_only(
+async def test_atlassian_server_plan_mode_and_flag(
     patch_get_function_tools: pytest.MonkeyPatch,
 ) -> None:
-    # Atlassian MCP server tools should only be available in plan mode
+    # Atlassian MCP server tools should only be available in plan mode with atlassian flag
     async def fake(server: MCPServer, convert_strict: bool) -> List[DummyTool]:
         return [
             DummyTool("jira_create_issue"),
@@ -163,8 +192,15 @@ async def test_atlassian_server_plan_mode_only(
     patch_get_function_tools.setattr(MCPUtil, "get_function_tools", fake)
     servers = cast(List[MCPServer], [SimpleNamespace(name="atlassian-mcp")])
 
-    # Test in plan mode - all tools should be available
-    tools = await get_filtered_function_tools(servers, mode="plan")
+    # Test in plan mode with atlassian flag - all tools should be available
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.plan,
+        atlassian=True,
+    )
+    tools = await get_filtered_function_tools(servers, config)
     assert {t.name for t in tools} == {
         "jira_create_issue",
         "jira_get_issue",
@@ -172,10 +208,33 @@ async def test_atlassian_server_plan_mode_only(
         "confluence_get_page",
     }
 
+    # Test in plan mode without atlassian flag - no tools should be available
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.plan,
+        atlassian=False,
+    )
+    tools = await get_filtered_function_tools(servers, config)
+    assert {t.name for t in tools} == set()
+
     # Test in default mode - no tools should be available
-    tools = await get_filtered_function_tools(servers, mode="default")
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.default,
+    )
+    tools = await get_filtered_function_tools(servers, config)
     assert {t.name for t in tools} == set()
 
     # Test in async mode - no tools should be available
-    tools = await get_filtered_function_tools(servers, mode="async")
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.async_,
+    )
+    tools = await get_filtered_function_tools(servers, config)
     assert {t.name for t in tools} == set()

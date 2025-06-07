@@ -8,6 +8,7 @@ import pytest
 from agents.mcp import MCPServerStdioParams
 
 import oai_coding_agent.agent.mcp_servers as mcp_servers
+from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConfig
 
 
 class DummyExitStack:
@@ -92,8 +93,15 @@ async def test_start_mcp_servers_all_success(monkeypatch: pytest.MonkeyPatch) ->
     exit_stack = DummyExitStack()
     repo = Path("/some/repo")
 
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.default,
+        repo_path=repo,
+    )
     servers = await mcp_servers.start_mcp_servers(
-        repo, "dummy-token", cast(AsyncExitStack[bool | None], exit_stack), None
+        cast(AsyncExitStack[bool | None], exit_stack), config
     )
     # Should start filesystem, CLI, git, and GitHub servers
     names = [s.name for s in servers]
@@ -140,8 +148,15 @@ async def test_start_mcp_servers_skip_cli_on_error(
     exit_stack = DummyExitStack()
     repo = Path("/repo")
 
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.default,
+        repo_path=repo,
+    )
     servers = await mcp_servers.start_mcp_servers(
-        repo, "dummy-token", cast(AsyncExitStack[bool | None], exit_stack), None
+        cast(AsyncExitStack[bool | None], exit_stack), config
     )
     names = [s.name for s in servers]
     # Should skip CLI and include filesystem, git, and GitHub servers
@@ -182,8 +197,15 @@ async def test_start_mcp_servers_skip_git_on_error(
     exit_stack = DummyExitStack()
     repo = Path("/repo")
 
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.default,
+        repo_path=repo,
+    )
     servers = await mcp_servers.start_mcp_servers(
-        repo, "dummy-token", cast(AsyncExitStack[bool | None], exit_stack), None
+        cast(AsyncExitStack[bool | None], exit_stack), config
     )
     names = [s.name for s in servers]
     # Should skip Git and include filesystem, CLI, and GitHub servers
@@ -224,8 +246,15 @@ async def test_start_mcp_servers_skip_cli_and_git_on_error(
     exit_stack = DummyExitStack()
     repo = Path("/repo")
 
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.default,
+        repo_path=repo,
+    )
     servers = await mcp_servers.start_mcp_servers(
-        repo, "dummy-token", cast(AsyncExitStack[bool | None], exit_stack), None
+        cast(AsyncExitStack[bool | None], exit_stack), config
     )
     names = [s.name for s in servers]
     # Should skip CLI and Git and include filesystem and GitHub servers only
@@ -234,11 +263,11 @@ async def test_start_mcp_servers_skip_cli_and_git_on_error(
 
 
 @pytest.mark.asyncio
-async def test_start_mcp_servers_plan_mode_includes_atlassian(
+async def test_start_mcp_servers_plan_mode_with_atlassian_flag(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    In plan mode, the Atlassian MCP server should be started.
+    In plan mode with atlassian flag set, the Atlassian MCP server should be started.
     """
 
     # Dummy context manager to replace QuietMCPServerStdio
@@ -264,8 +293,16 @@ async def test_start_mcp_servers_plan_mode_includes_atlassian(
     exit_stack = DummyExitStack()
     repo = Path("/some/repo")
 
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.plan,
+        repo_path=repo,
+        atlassian=True,
+    )
     servers = await mcp_servers.start_mcp_servers(
-        repo, "dummy-token", cast(AsyncExitStack[bool | None], exit_stack), "plan"
+        cast(AsyncExitStack[bool | None], exit_stack), config
     )
     # Should start Atlassian, filesystem, CLI, git, and GitHub servers
     names = [s.name for s in servers]
@@ -281,11 +318,65 @@ async def test_start_mcp_servers_plan_mode_includes_atlassian(
 
 
 @pytest.mark.asyncio
+async def test_start_mcp_servers_plan_mode_without_atlassian_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    In plan mode without atlassian flag, the Atlassian MCP server should NOT be started.
+    """
+
+    # Dummy context manager to replace QuietMCPServerStdio
+    class DummyCtx:
+        def __init__(
+            self,
+            name: str,
+            params: Any,
+            client_session_timeout_seconds: int | None = None,
+            cache_tools_list: bool | None = None,
+        ) -> None:
+            self.name = name
+            self.params = params
+
+        async def __aenter__(self) -> SimpleNamespace:
+            return SimpleNamespace(name=self.name, params=self.params)
+
+        async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+            pass
+
+    monkeypatch.setattr(mcp_servers, "QuietMCPServerStdio", DummyCtx)
+
+    exit_stack = DummyExitStack()
+    repo = Path("/some/repo")
+
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.plan,
+        repo_path=repo,
+        atlassian=False,  # Flag not set
+    )
+    servers = await mcp_servers.start_mcp_servers(
+        cast(AsyncExitStack[bool | None], exit_stack), config
+    )
+    # Should NOT start Atlassian server, only filesystem, CLI, git, and GitHub servers
+    names = [s.name for s in servers]
+    assert names == [
+        "file-system-mcp",
+        "cli-mcp-server",
+        "mcp-server-git",
+        "github-mcp-server",
+    ]
+    # exit_stack should have a callback for each server
+    assert len(exit_stack.callbacks) == 4
+
+
+@pytest.mark.asyncio
 async def test_start_mcp_servers_plan_mode_skip_atlassian_on_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    In plan mode, if Atlassian MCP server fails, it should be skipped.
+    In plan mode with atlassian flag, if Atlassian MCP server fails, it should be skipped.
     """
     fail_names = {"atlassian-mcp"}
 
@@ -313,8 +404,16 @@ async def test_start_mcp_servers_plan_mode_skip_atlassian_on_error(
     exit_stack = DummyExitStack()
     repo = Path("/repo")
 
+    config = RuntimeConfig(
+        openai_api_key="test-key",
+        github_token="dummy-token",
+        model=ModelChoice.codex_mini_latest,
+        mode=ModeChoice.plan,
+        repo_path=repo,
+        atlassian=True,
+    )
     servers = await mcp_servers.start_mcp_servers(
-        repo, "dummy-token", cast(AsyncExitStack[bool | None], exit_stack), "plan"
+        cast(AsyncExitStack[bool | None], exit_stack), config
     )
     names = [s.name for s in servers]
     # Should skip Atlassian and include filesystem, CLI, git, and GitHub servers
