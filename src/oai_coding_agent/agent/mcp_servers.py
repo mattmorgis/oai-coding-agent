@@ -53,8 +53,8 @@ class QuietMCPServerStdio(MCPServerStdio):
 
 
 async def start_mcp_servers(
-    exit_stack: AsyncExitStack,
     config: RuntimeConfig,
+    exit_stack: AsyncExitStack,
 ) -> List[MCPServer]:
     """
     Start filesystem, CLI, Git, and GitHub MCP servers, registering cleanup on the provided exit_stack.

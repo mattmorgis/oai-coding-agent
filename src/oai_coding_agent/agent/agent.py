@@ -67,8 +67,8 @@ class Agent:
 
         # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
         mcp_servers = await start_mcp_servers(
-            self._exit_stack,
             self.config,
+            self._exit_stack,
         )
 
         # Begin tracing
