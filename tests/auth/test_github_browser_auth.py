@@ -1,5 +1,3 @@
-import pytest
-
 import oai_coding_agent.auth.github_browser_auth as gba
 
 
@@ -154,7 +152,9 @@ def test_error_path(monkeypatch, capsys):
         if url == DEVICE_CODE_URL:
             return DummyResponse(200, device_data)
         if url == TOKEN_URL:
-            return DummyResponse(200, {"error": "access_denied", "error_description": "Denied"})
+            return DummyResponse(
+                200, {"error": "access_denied", "error_description": "Denied"}
+            )
         raise AssertionError(f"Unexpected URL called: {url}")
 
     saved = {"called": False}
