@@ -109,6 +109,7 @@ class RuntimeConfig:
     atlassian: bool = False
 
 
+# To learn more about XDG see: https://claude.ai/share/e76b242d-2bda-40c8-a58b-0c797d3d5b0c
 def get_config_dir() -> Path:
     """
     Return the OAI Coding Agent config directory under XDG_CONFIG_HOME or fallback to ~/.config.
