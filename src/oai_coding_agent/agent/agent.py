@@ -87,7 +87,8 @@ class Agent:
             instructions=dynamic_instructions,
             model=self.config.model.value,
             model_settings=ModelSettings(
-                reasoning=Reasoning(summary="auto", effort="high")
+                reasoning=Reasoning(summary="auto", effort="high"),
+                parallel_tool_calls=True,
             ),
             tools=function_tools,
         )
