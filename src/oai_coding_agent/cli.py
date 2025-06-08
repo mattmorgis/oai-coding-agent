@@ -24,8 +24,8 @@ from .runtime_config import (
 )
 
 # Global factory functions - set by create_app()
-_agent_factory: Callable[[RuntimeConfig], AgentProtocol] = None
-_console_factory: Callable[[AgentProtocol], Console] = None
+_agent_factory: Optional[Callable[[RuntimeConfig], AgentProtocol]] = None
+_console_factory: Optional[Callable[[AgentProtocol], Console]] = None
 
 
 def default_agent_factory(config: RuntimeConfig) -> AgentProtocol:
@@ -92,9 +92,9 @@ def github_logout() -> None:
 def main(
     ctx: typer.Context,
     openai_api_key: Annotated[
-        Optional[str],
+        str,
         typer.Option(envvar=OPENAI_API_KEY_ENV, help="OpenAI API key"),
-    ] = None,
+    ],
     github_token: Annotated[
         Optional[str],
         typer.Option(
@@ -203,8 +203,10 @@ def main(
             logger.info(f"Running prompt in headless (async): {cfg.prompt}")
 
         try:
-            agent = _agent_factory(cfg)
-            console = _console_factory(agent)
+            factory = _agent_factory or default_agent_factory
+            console_fact = _console_factory or default_console_factory
+            agent = factory(cfg)
+            console = console_fact(agent)
             asyncio.run(console.run())
         except KeyboardInterrupt:
             print("\nExiting...")
