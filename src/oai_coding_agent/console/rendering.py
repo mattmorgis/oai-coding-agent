@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 from rich.console import Console, ConsoleOptions, RenderResult
 from rich.markdown import Heading, Markdown
@@ -26,34 +25,12 @@ class PlainMarkdown(Markdown):
 # Apply override globally for Markdown
 Markdown.elements["heading_open"] = PlainHeading
 
-
 console = Console()
-
-# Global variable to track interrupt indicator
-_interrupt_live: Optional[bool] = None
 
 
 def clear_terminal() -> None:
     """Clear the terminal screen."""
     os.system("cls" if os.name == "nt" else "clear")
-
-
-def show_interrupt_indicator() -> None:
-    """Show the 'ESC to interrupt' indicator."""
-    global _interrupt_live
-    if _interrupt_live is None:
-        # Simple print approach instead of Live widget
-        console.print("[dim](esc to interrupt)[/dim]")
-        _interrupt_live = True  # Just use as a flag
-
-
-def hide_interrupt_indicator() -> None:
-    """Hide the 'ESC to interrupt' indicator."""
-    global _interrupt_live
-    if _interrupt_live is not None:
-        # Move cursor up one line and clear it
-        console.print("\033[1A\033[K", end="")
-        _interrupt_live = None
 
 
 def render_message(msg: UIMessage) -> None:

@@ -53,7 +53,7 @@ async def test_repl_console_exits_on_exit_and_prints_header(
     config = RuntimeConfig(
         openai_api_key="APIKEY",
         github_token="GHTOKEN",
-        model=ModelChoice.codex_mini_latest,
+        model=ModelChoice.o4_mini,
         repo_path=tmp_path,
         mode=ModeChoice.default,
     )
@@ -66,7 +66,7 @@ async def test_repl_console_exits_on_exit_and_prints_header(
     output = recorder.export_text()
     # Header includes agent name and model
     assert "OAI CODING AGENT" in output
-    assert "codex-mini-latest" in output
+    assert "o4-mini" in output
 
     # Ensure history directory was created under tmp_path
     history_dir = get_data_dir()

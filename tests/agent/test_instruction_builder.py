@@ -15,7 +15,7 @@ def test_build_instructions_with_async_mode() -> None:
     config = RuntimeConfig(
         openai_api_key="apikey",
         github_token="TOK",
-        model=ModelChoice.codex_mini_latest,
+        model=ModelChoice.o4_mini,
         repo_path=Path("repo"),
         mode=ModeChoice.async_,
     )
@@ -32,7 +32,7 @@ def test_build_instructions_with_plan_mode() -> None:
     config = RuntimeConfig(
         openai_api_key="apikey",
         github_token="TOK",
-        model=ModelChoice.codex_mini_latest,
+        model=ModelChoice.o4_mini,
         repo_path=Path("repo"),
         mode=ModeChoice.plan,
     )
@@ -49,7 +49,7 @@ def test_build_instructions_with_default_mode() -> None:
     config = RuntimeConfig(
         openai_api_key="apikey",
         github_token="TOK",
-        model=ModelChoice.codex_mini_latest,
+        model=ModelChoice.o4_mini,
         repo_path=Path("repo2"),
         mode=ModeChoice.default,
     )
@@ -69,7 +69,7 @@ def test_build_instructions_fallback_to_default(
     config = RuntimeConfig(
         openai_api_key="apikey",
         github_token="TOK",
-        model=ModelChoice.codex_mini_latest,
+        model=ModelChoice.o4_mini,
         repo_path=Path("repo"),
         mode=ModeChoice.default,
     )
@@ -96,7 +96,7 @@ def test_build_instructions_with_github_info() -> None:
     config = RuntimeConfig(
         openai_api_key="apikey",
         github_token="TOK",
-        model=ModelChoice.codex_mini_latest,
+        model=ModelChoice.o4_mini,
         repo_path=Path("/test/repo"),
         mode=ModeChoice.async_,
         github_repo="owner/repo",

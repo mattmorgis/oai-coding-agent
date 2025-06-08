@@ -128,14 +128,14 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     config = RuntimeConfig(
         openai_api_key="k",
         github_token="TOK",
-        model=ModelChoice.codex_mini_latest,
+        model=ModelChoice.o4_mini,
         repo_path=Path("."),
         mode=ModeChoice.async_,
     )
     agent = Agent(config, max_turns=1)
     agent._sdk_agent = cast(SDKAgent, object())
 
-    event_stream = await agent.run("input text")
+    event_stream, result = await agent.run("input text")
     # Verify we can iterate the mapped events from the stream
     collected = []
     async for event in event_stream:

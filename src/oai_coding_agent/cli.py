@@ -9,6 +9,7 @@ from typing_extensions import Annotated
 
 from oai_coding_agent.agent import Agent, AgentProtocol
 from oai_coding_agent.auth.github_browser_auth import authenticate_github_browser
+from oai_coding_agent.auth.token_storage import delete_github_token, get_github_token
 from oai_coding_agent.console.console import Console, HeadlessConsole, ReplConsole
 from oai_coding_agent.console.fullscreen_console import FullscreenConsole
 from oai_coding_agent.logger import setup_logging
@@ -23,17 +24,15 @@ from oai_coding_agent.runtime_config import (
     load_envs,
 )
 
-# Global factory functions - set by create_app()
-_agent_factory: Optional[Callable[[RuntimeConfig], AgentProtocol]] = None
-_console_factory: Optional[Callable[[AgentProtocol], Console]] = None
-
 
 def default_agent_factory(config: RuntimeConfig) -> AgentProtocol:
     """Default factory for creating Agent instances."""
     return Agent(config)
 
 
-def default_console_factory(agent: AgentProtocol, fullscreen: bool = False) -> Console:
+def default_console_factory(
+    agent: AgentProtocol, fullscreen: Optional[bool] = None
+) -> Console:
     """Default factory for creating Console instances."""
     if agent.config.prompt:
         return HeadlessConsole(agent)
@@ -43,7 +42,7 @@ def default_console_factory(agent: AgentProtocol, fullscreen: bool = False) -> C
 
 def create_app(
     agent_factory: Optional[Callable[[RuntimeConfig], AgentProtocol]] = None,
-    console_factory: Optional[Callable[[AgentProtocol, bool], Console]] = None,
+    console_factory: Optional[Callable] = None,
 ) -> typer.Typer:
     """
     Create and configure the Typer application.
@@ -64,9 +63,7 @@ def create_app(
 
     # Create github subcommand group
     github_app = typer.Typer(rich_markup_mode=None)
-    github_app.command("auth")(github_auth)
-    github_app.command("logout")(github_logout)
-    return github_app
+    app.add_typer(github_app, name="github", help="GitHub authentication commands")
 
     def start_session(
         openai_api_key: str,
@@ -74,15 +71,17 @@ def create_app(
         model: ModelChoice,
         mode: ModeChoice,
         repo_path: Path,
+        atlassian: bool,
+        fullscreen: bool,
         openai_base_url: Optional[str],
         prompt: Optional[str],
-        fullscreen: bool = False,
     ) -> None:
         """
         OAI CODING AGENT - starts an interactive or batch session
         """
         setup_logging()
         logger = logging.getLogger(__name__)
+
         # Run preflight checks and get git info
         try:
             github_repo, branch_name = run_preflight_checks(repo_path)
@@ -146,30 +145,55 @@ def create_app(
 
         try:
             agent = agent_factory(cfg)
-            console = console_factory(agent, fullscreen)
+            # Handle both old and new console factory signatures
+            try:
+                console = console_factory(agent, fullscreen)
+            except TypeError:
+                # Fall back to old signature for backward compatibility
+                console = console_factory(agent)
             asyncio.run(console.run())
         except KeyboardInterrupt:
             print("\nExiting...")
 
+    @github_app.command("auth")
+    def github_auth() -> None:
+        """Authenticate with GitHub using browser-based flow."""
+        typer.echo("🔐 Starting GitHub authentication...")
 
-def create_app(
-    agent_factory: Optional[Callable[[RuntimeConfig], AgentProtocol]] = None,
-    console_factory: Optional[Callable[[AgentProtocol], Console]] = None,
-) -> typer.Typer:
-    """
-    Create and configure the Typer application.
+        # Check if already authenticated
+        existing_token = get_github_token()
+        if existing_token:
+            typer.echo("⚠️  You already have a stored GitHub token.")
+            if not typer.confirm("Do you want to re-authenticate?"):
+                typer.echo("Authentication cancelled.")
+                return
 
-    Args:
-        agent_factory: Factory function to create Agent instances
-        console_factory: Factory function to create Console instances
+        # Perform authentication
+        token = authenticate_github_browser()
+        if token:
+            typer.echo("\n✅ Authentication successful!")
+            typer.echo("You can now use the agent with full GitHub integration.")
+        else:
+            typer.echo("\n❌ Authentication failed.")
+            typer.echo("Please try again or set GITHUB_TOKEN manually.")
+            raise typer.Exit(code=1)
 
-    Returns:
-        Typer application
-    """
-    setup_logging()
+    @github_app.command("logout")
+    def github_logout() -> None:
+        """Remove stored GitHub authentication token."""
+        if not get_github_token():
+            typer.echo("No stored GitHub token found.")
+            return
 
-    # Load API keys and related settings from .env if not already set in the environment
-    load_envs()
+        if typer.confirm("Are you sure you want to remove your GitHub token?"):
+            if delete_github_token():
+                typer.echo("✅ Successfully logged out from GitHub.")
+                typer.echo("You'll need to authenticate again to use GitHub features.")
+            else:
+                typer.echo("❌ Failed to remove token.")
+                raise typer.Exit(code=1)
+        else:
+            typer.echo("Logout cancelled.")
 
     @app.callback(invoke_without_command=True)
     def main(
@@ -212,6 +236,13 @@ def create_app(
                 help="Prompt text for non-interactive async mode; use '-' to read from stdin",
             ),
         ] = None,
+        atlassian: Annotated[
+            bool,
+            typer.Option(
+                "--atlassian",
+                help="Enable Atlassian MCP server (only available in plan mode)",
+            ),
+        ] = False,
         fullscreen: Annotated[
             bool,
             typer.Option(
@@ -219,7 +250,7 @@ def create_app(
                 "-f",
                 help="Use fullscreen prompt_toolkit interface (experimental)",
             ),
-        ] = False,
+        ] = True,
     ) -> None:
         """OAI CODING AGENT - AI-powered coding assistant"""
         # Check if any positional arguments were passed (indicating a subcommand)
@@ -237,13 +268,18 @@ def create_app(
                 model=model,
                 mode=mode,
                 repo_path=repo_path,
+                atlassian=atlassian,
+                fullscreen=fullscreen,
                 openai_base_url=openai_base_url,
                 prompt=prompt,
-                fullscreen=fullscreen,
             )
 
+    # return the Typer app
     return app
 
+
+# Load API keys and related settings from .env if not already set in the environment
+load_envs()
 
 # Create default app instance for backward compatibility
 app = create_app()
