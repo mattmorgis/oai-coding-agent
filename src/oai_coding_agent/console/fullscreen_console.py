@@ -129,8 +129,9 @@ class FullscreenConsole:
             """Handle Enter - submit input."""
             text = self.input_buffer.text.strip()
             if text:
-                # Add to scrollback
-                self._append_to_scrollback(f"› {text}")
+                # Add to scrollback with better formatting
+                user_input = f"[bold green]›[/bold green] {text}"
+                self._append_to_scrollback(user_input)
                 # Clear input
                 self.input_buffer.reset()
                 # Process command
@@ -168,7 +169,11 @@ class FullscreenConsole:
         """Append text to the scrollback buffer."""
         if self.scrollback_text and not self.scrollback_text.endswith("\n"):
             self.scrollback_text += "\n"
-        self.scrollback_text += text + "\n"
+        self.scrollback_text += text
+        # Ensure proper line ending
+        if not self.scrollback_text.endswith("\n"):
+            self.scrollback_text += "\n"
+        
         # Update the buffer by creating a new document
         self.scrollback_buffer.set_document(
             Document(self.scrollback_text), bypass_readonly=True
@@ -216,6 +221,7 @@ class FullscreenConsole:
             title_align="left",
             border_style=engine.color,
             expand=False,
+            padding=(0, 1),
         )
 
         # Render to ANSI
@@ -260,15 +266,21 @@ class FullscreenConsole:
         # Show token counts for active engines
         for engine_name, engine in self.fs_state.engines.items():
             if engine.is_streaming:
-                parts.append((f"fg:{engine.color}", f"{engine_name}:{engine.tokens} "))
+                parts.append((f"fg:{engine.color}", f"{engine_name}: {engine.tokens} tokens "))
 
-        # Demo counter that increments
-        parts.append(("", f"demo:{self.fs_state.token_counter} "))
+        # Show total tokens if available
+        if self.fs_state.engines:
+            total_tokens = sum(e.tokens for e in self.fs_state.engines.values())
+            if total_tokens > 0:
+                parts.append(("fg:white", f"total: {total_tokens} tokens "))
 
         # Show interrupt hint if streaming
         if any(e.is_streaming for e in self.fs_state.engines.values()):
             parts.append(("fg:yellow", "⠋ thinking... "))
-            parts.append(("", "Ctrl-C to cancel"))
+            parts.append(("fg:dim", "Ctrl-C to interrupt"))
+        else:
+            # Show helpful hints when idle
+            parts.append(("fg:dim", "Type your message or /help for commands"))
 
         # Show interrupt indicator temporarily
         if self.fs_state.interrupt_visible:
@@ -278,7 +290,7 @@ class FullscreenConsole:
             ):
                 self.fs_state.interrupt_visible = False
             else:
-                parts = [("fg:red bold", "⏹ Interrupted")]
+                parts = [("fg:red bold", "⏹ Interrupted "), ("fg:red", "- conversation restored")]
 
         return FormattedText(parts)
 
@@ -314,7 +326,7 @@ class FullscreenConsole:
                 footer,
                 VSplit(
                     [
-                        Window(FormattedTextControl("› "), width=2),
+                        Window(FormattedTextControl([("fg:green bold", "› ")]), width=2),
                         input_window,
                     ]
                 ),
@@ -391,8 +403,22 @@ class FullscreenConsole:
             )
             self.fs_state.engines[engine_id] = engine
 
-            # Initial empty panel
-            self._update_engine_output(engine_id, "")
+            # Add spacing before response
+            self._append_to_scrollback("\n")
+            
+            # Show thinking indicator
+            thinking_panel = Panel(
+                "[dim]⋯ thinking ⋯[/dim]",
+                title="Assistant",
+                title_align="left",
+                border_style="cyan",
+                expand=False,
+                padding=(0, 1),
+            )
+            self._render_rich_to_scrollback(thinking_panel)
+            
+            # Track the line for replacement
+            engine.start_line = len(self.scrollback_text.split("\n")) - 5
 
             # Get the event stream
             event_stream, result = await self.agent.run(text)
@@ -406,7 +432,7 @@ class FullscreenConsole:
                         # Handle different event types
                         if isinstance(event, MessageOutputEvent):
                             # Accumulate message content
-                            message_content = event.content
+                            message_content = event.text
                             engine.content = message_content
                             engine.tokens = len(
                                 message_content.split()
@@ -449,12 +475,26 @@ class FullscreenConsole:
                 if hasattr(self.agent, "_previous_response_id"):
                     self.agent._previous_response_id = last_completed_id
                 engine.is_streaming = False
-                self._update_engine_output(
-                    engine_id, engine.content + "\n[red]⏹ Interrupted[/red]"
+                interrupt_panel = Panel(
+                    engine.content + "\n\n[red bold]⏹ Interrupted[/red bold]",
+                    title="Assistant",
+                    title_align="left",
+                    border_style="red",
+                    expand=False,
+                    padding=(0, 1),
                 )
+                self._render_rich_to_scrollback(interrupt_panel)
 
         except Exception as e:
-            self._append_to_scrollback(f"[red]Error: {e}[/red]")
+            error_panel = Panel(
+                f"[red bold]Error: {e}[/red bold]",
+                title="Error",
+                title_align="left",
+                border_style="red",
+                expand=False,
+                padding=(0, 1),
+            )
+            self._render_rich_to_scrollback(error_panel)
         finally:
             # Clean up
             if engine_id in self.fs_state.engines:
@@ -514,6 +554,7 @@ class FullscreenConsole:
             f"[dim]Model:[/dim] [dim cyan]{self.agent.config.model.value}[/dim cyan]\n"
             f"[dim]Mode:[/dim] [dim cyan]{self.agent.config.mode.value}[/dim cyan]",
             expand=False,
+            padding=(1, 1),
         )
         self._render_rich_to_scrollback(welcome_panel)
 
