@@ -14,23 +14,22 @@ from agents import (
 from agents import (
     ModelSettings,
     Runner,
+    RunResultStreaming,
     gen_trace_id,
     trace,
 )
 from openai.types.shared.reasoning import Reasoning
 
-from oai_coding_agent.console.interrupt_handler import InterruptHandler
-from oai_coding_agent.runtime_config import RuntimeConfig
-
-from .events import (
+from oai_coding_agent.agent.events import (
     MessageOutputEvent,
     ReasoningEvent,
     ToolCallEvent,
     map_sdk_event_to_agent_event,
 )
-from .instruction_builder import build_instructions
-from .mcp_servers import start_mcp_servers
-from .mcp_tool_selector import get_filtered_function_tools
+from oai_coding_agent.agent.instruction_builder import build_instructions
+from oai_coding_agent.agent.mcp_servers import start_mcp_servers
+from oai_coding_agent.agent.mcp_tool_selector import get_filtered_function_tools
+from oai_coding_agent.runtime_config import RuntimeConfig
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,6 @@ class AgentProtocol(Protocol):
     """Protocol defining the interface for agents."""
 
     config: RuntimeConfig
-    interrupt_handler: InterruptHandler
 
     async def __aenter__(self) -> "AgentProtocol": ...
 
@@ -49,7 +47,10 @@ class AgentProtocol(Protocol):
     async def run(
         self,
         user_input: str,
-    ) -> AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent]: ...
+    ) -> tuple[
+        AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent],
+        RunResultStreaming,
+    ]: ...
 
 
 class Agent:
@@ -62,7 +63,6 @@ class Agent:
         self._previous_response_id: Optional[str] = None
         self._exit_stack: Optional[AsyncExitStack] = None
         self._sdk_agent: Optional[SDKAgent] = None
-        self.interrupt_handler = InterruptHandler()
 
     async def __aenter__(self) -> "Agent":
         # Initialize exit stack for async contexts and callbacks
@@ -106,7 +106,10 @@ class Agent:
     async def run(
         self,
         user_input: str,
-    ) -> AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent]:
+    ) -> tuple[
+        AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent],
+        RunResultStreaming,
+    ]:
         """
         Send one user message to the agent and return an async iterator of agent events.
         """
@@ -120,7 +123,6 @@ class Agent:
             max_turns=self.max_turns,
         )
 
-        # Automatically resume from the last_response_id set on previous runs
         async def _map_events() -> AsyncIterator[
             ToolCallEvent | ReasoningEvent | MessageOutputEvent
         ]:
@@ -132,6 +134,14 @@ class Agent:
                 if agent_event is not None:
                     yield agent_event
 
-        # Call the async generator function to get an async iterator
-        self._previous_response_id = result.last_response_id
-        return _map_events()
+        return _map_events(), result
+
+    async def cancel(self, run: RunResultStreaming) -> None:
+        """Abort an in-flight run and restore the last completed response ID.
+
+        The SDK's ``RunResultStreaming.cancel`` closes the HTTP stream but does
+        *not* roll back this ``Agent``'s conversation pointer.  We therefore
+        capture the snapshot *before* each run starts (see ``run`` below) and
+        restore it here if the caller decides to abort the run.
+        """
+        run.cancel()

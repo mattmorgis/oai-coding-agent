@@ -1,5 +1,7 @@
 import asyncio
-from typing import Any, Protocol
+import signal
+from contextlib import suppress
+from typing import Protocol
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -9,15 +11,8 @@ from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
 from oai_coding_agent.agent import AgentProtocol
-from oai_coding_agent.console.interrupt_handler import InterruptedError
 from oai_coding_agent.console.key_bindings import get_key_bindings
-from oai_coding_agent.console.rendering import (
-    clear_terminal,
-    console,
-    hide_interrupt_indicator,
-    render_message,
-    show_interrupt_indicator,
-)
+from oai_coding_agent.console.rendering import clear_terminal, console, render_message
 from oai_coding_agent.console.slash_commands import (
     handle_slash_command,
     register_slash_commands,
@@ -51,20 +46,11 @@ class HeadlessConsole:
 
         console.print(f"[bold cyan]Prompt:[/bold cyan] {self.agent.config.prompt}")
         async with self.agent:
-            with self.agent.interrupt_handler:
-                try:
-                    show_interrupt_indicator()
-                    event_stream = await self.agent.run(self.agent.config.prompt)
-                    async for event in event_stream:
-                        ui_msg = map_event_to_ui_message(event)
-                        if ui_msg:
-                            render_message(ui_msg)
-                except InterruptedError:
-                    console.print("\n[yellow]Response interrupted[/yellow]")
-                except KeyboardInterrupt:
-                    console.print("\n[red]Exiting...[/red]")
-                finally:
-                    hide_interrupt_indicator()
+            event_stream, _ = await self.agent.run(self.agent.config.prompt)
+            async for event in event_stream:
+                ui_msg = map_event_to_ui_message(event)
+                if ui_msg:
+                    render_message(ui_msg)
 
 
 class ReplConsole:
@@ -72,12 +58,6 @@ class ReplConsole:
 
     def __init__(self, agent: AgentProtocol) -> None:
         self.agent = agent
-
-    async def _process_agent_response(self, event_stream: Any) -> None:
-        """Process and render agent response events."""
-        async for event in event_stream:
-            ui_msg = map_event_to_ui_message(event)
-            render_message(ui_msg)
 
     async def run(self) -> None:
         """Interactive REPL loop for the console interface."""
@@ -137,53 +117,50 @@ class ReplConsole:
 
                     console.print(f"[dim]› {user_input}[/dim]\n")
 
-                    # Install interrupt handler and run the agent
-                    with self.agent.interrupt_handler:
-                        try:
-                            # Show interrupt indicator during response
-                            show_interrupt_indicator()
-                            # Get the event stream first to ensure we have an async iterator
-                            event_stream = await self.agent.run(user_input)
-                            # Create task for cancellable execution
-                            async with self.agent.interrupt_handler.cancellable_task(
-                                self._process_agent_response(event_stream)
-                            ) as task:
-                                await task
-                        except InterruptedError:
-                            # Handle interruption gracefully - show message above input
-                            console.print("\n[red]interrupted[/red]")
+                    # Snapshot the last completed response ID so we can restore on cancel
+                    last_completed_id = getattr(
+                        self.agent, "_previous_response_id", None
+                    )
 
-                            # Get new input from user immediately
-                            new_input = await asyncio.to_thread(
-                                lambda: prompt_session.prompt("› ")
-                            )
+                    event_stream, result = await self.agent.run(user_input)
 
-                            if new_input.strip():
-                                user_input = new_input
-                                console.print(f"[dim]› {user_input}[/dim]\n")
+                    # Consume the event stream in its own task so we can cancel it on Ctrl+C
+                    async def _consume_stream() -> None:
+                        async for event in event_stream:
+                            ui_msg = map_event_to_ui_message(event)
+                            if ui_msg:
+                                render_message(ui_msg)
 
-                                # Reset interrupt state and run with new input
-                                # Always preserve conversation context
-                                self.agent.interrupt_handler.reset()
-                                show_interrupt_indicator()
-                                try:
-                                    event_stream = await self.agent.run(user_input)
-                                    async for event in event_stream:
-                                        ui_msg = map_event_to_ui_message(event)
-                                        render_message(ui_msg)
-                                finally:
-                                    hide_interrupt_indicator()
-                            else:
-                                console.print(
-                                    "[dim]No input provided. Returning to prompt.[/dim]\n"
-                                )
-                        except KeyboardInterrupt:
-                            # Ctrl+C means exit
-                            console.print("\n[red]Exiting...[/red]")
-                            continue_loop = False
-                        finally:
-                            # Always hide the interrupt indicator when done with response
-                            hide_interrupt_indicator()
+                    stream_task = asyncio.create_task(_consume_stream())
+
+                    interrupted = False  # Use a flag to track if interruption happened
+                    with suppress(NotImplementedError):
+
+                        def _on_sigint() -> None:
+                            nonlocal interrupted
+                            interrupted = True
+                            stream_task.cancel()
+                            result.cancel()
+                            console.print("[red]\n⏹ Interrupted[/red]\n")
+
+                        loop = asyncio.get_running_loop()
+                        loop.add_signal_handler(signal.SIGINT, _on_sigint)
+
+                    try:
+                        await stream_task
+                    except asyncio.CancelledError:
+                        # Stream was already handled in _sigint_handler
+                        pass
+                    finally:
+                        # Remove our temporary SIGINT handler so default behaviour is restored
+                        with suppress(NotImplementedError):
+                            loop.remove_signal_handler(signal.SIGINT)
+
+                        # If interrupted, restore the last completed response id so the next
+                        # turn stitches onto the correct conversation thread.
+                        if interrupted:
+                            if hasattr(self.agent, "_previous_response_id"):
+                                self.agent._previous_response_id = last_completed_id
 
                 except (KeyboardInterrupt, EOFError):
                     continue_loop = False
