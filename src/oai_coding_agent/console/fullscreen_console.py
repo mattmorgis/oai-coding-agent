@@ -173,7 +173,7 @@ class FullscreenConsole:
         # Ensure proper line ending
         if not self.scrollback_text.endswith("\n"):
             self.scrollback_text += "\n"
-        
+
         # Update the buffer by creating a new document
         self.scrollback_buffer.set_document(
             Document(self.scrollback_text), bypass_readonly=True
@@ -266,7 +266,9 @@ class FullscreenConsole:
         # Show token counts for active engines
         for engine_name, engine in self.fs_state.engines.items():
             if engine.is_streaming:
-                parts.append((f"fg:{engine.color}", f"{engine_name}: {engine.tokens} tokens "))
+                parts.append(
+                    (f"fg:{engine.color}", f"{engine_name}: {engine.tokens} tokens ")
+                )
 
         # Show total tokens if available
         if self.fs_state.engines:
@@ -277,10 +279,10 @@ class FullscreenConsole:
         # Show interrupt hint if streaming
         if any(e.is_streaming for e in self.fs_state.engines.values()):
             parts.append(("fg:yellow", "⠋ thinking... "))
-            parts.append(("fg:dim", "Ctrl-C to interrupt"))
+            parts.append(("fg:gray", "Ctrl-C to interrupt"))
         else:
             # Show helpful hints when idle
-            parts.append(("fg:dim", "Type your message or /help for commands"))
+            parts.append(("fg:gray", "Type your message or /help for commands"))
 
         # Show interrupt indicator temporarily
         if self.fs_state.interrupt_visible:
@@ -290,7 +292,10 @@ class FullscreenConsole:
             ):
                 self.fs_state.interrupt_visible = False
             else:
-                parts = [("fg:red bold", "⏹ Interrupted "), ("fg:red", "- conversation restored")]
+                parts = [
+                    ("bold fg:red", "⏹ Interrupted "),
+                    ("fg:red", "- conversation restored"),
+                ]
 
         return FormattedText(parts)
 
@@ -326,7 +331,9 @@ class FullscreenConsole:
                 footer,
                 VSplit(
                     [
-                        Window(FormattedTextControl([("fg:green bold", "› ")]), width=2),
+                        Window(
+                            FormattedTextControl([("bold fg:green", "› ")]), width=2
+                        ),
                         input_window,
                     ]
                 ),
@@ -405,7 +412,7 @@ class FullscreenConsole:
 
             # Add spacing before response
             self._append_to_scrollback("\n")
-            
+
             # Show thinking indicator
             thinking_panel = Panel(
                 "[dim]⋯ thinking ⋯[/dim]",
@@ -416,7 +423,7 @@ class FullscreenConsole:
                 padding=(0, 1),
             )
             self._render_rich_to_scrollback(thinking_panel)
-            
+
             # Track the line for replacement
             engine.start_line = len(self.scrollback_text.split("\n")) - 5
 
