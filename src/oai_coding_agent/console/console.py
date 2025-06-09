@@ -3,7 +3,7 @@ from typing import Optional, Protocol
 
 from prompt_toolkit import Application
 from prompt_toolkit.buffer import Buffer
-from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
 from prompt_toolkit.layout.containers import HSplit, Window
 from prompt_toolkit.layout.controls import BufferControl
 from prompt_toolkit.layout.layout import Layout
@@ -63,7 +63,7 @@ class ReplConsole:
         self.is_processing = False
 
         # Buffer for live streaming output
-        self.live_output_buffer = Buffer(read_only=True)
+        self.live_output_buffer = Buffer(read_only=False)
 
         # Create the live output area (for streaming responses)
         self.live_output_area = Window(
@@ -79,6 +79,7 @@ class ReplConsole:
             wrap_lines=False,
             focusable=True,
             prompt="› ",
+            accept_handler=self._on_accept,
         )
 
         # Create key bindings
@@ -94,17 +95,32 @@ class ReplConsole:
         )
 
         # Create application (not full screen to use terminal scrolling)
+        # Use just our key bindings for now - TextArea will handle its own input
+        merged_bindings = self.kb
+
         self.app: Application = Application(
-            layout=Layout(root_container),
-            key_bindings=self.kb,
+            layout=Layout(root_container, focused_element=self.input_area),
+            key_bindings=merged_bindings,
             style=Style.from_dict(
                 {
                     "prompt": "ansicyan bold",
                 }
             ),
-            mouse_support=True,
+            mouse_support=False,  # Disable mouse support to avoid terminal issues
             full_screen=False,
+            enable_page_navigation_bindings=False,
+            input=None,  # Use default input
+            output=None,  # Use default output
         )
+
+    def _on_accept(self, buffer) -> None:
+        """Handle when Enter is pressed in the TextArea."""
+        text = buffer.text.strip()
+        if text and not self.is_processing:
+            # Clear the buffer after getting the text
+            buffer.reset()
+            # Process the input
+            asyncio.create_task(self._process_input(text))
 
     def _create_key_bindings(self) -> KeyBindings:
         """Create key bindings for the console."""
@@ -127,15 +143,6 @@ class ReplConsole:
         def handle_exit(event):
             """Handle Ctrl-D to exit."""
             event.app.exit()
-
-        @kb.add("enter")
-        def handle_enter(event):
-            """Handle Enter to submit input."""
-            if not self.is_processing:
-                text = event.app.current_buffer.text.strip()
-                if text:
-                    event.app.current_buffer.reset()
-                    asyncio.create_task(self._process_input(text))
 
         return kb
 
@@ -187,7 +194,7 @@ class ReplConsole:
                             force_terminal=False, no_color=True, width=80
                         )
                         with plain_console.capture() as capture:
-                            render_message(ui_msg, console=plain_console)
+                            plain_console.print(render_message(ui_msg))
                         plain_text = capture.get()
 
                         if plain_text:
@@ -203,7 +210,7 @@ class ReplConsole:
 
                 # Stream completed successfully - print final output to console
                 for msg in full_response:
-                    render_message(msg)
+                    console.print(render_message(msg))
 
                 # Clear live area after successful completion
                 self.live_output_buffer.text = ""
@@ -212,7 +219,7 @@ class ReplConsole:
                 if self.interrupted:
                     # Print partial output to console
                     for msg in full_response:
-                        render_message(msg)
+                        console.print(render_message(msg))
 
                     # Cancel the result future
                     result.cancel()
