@@ -7,13 +7,13 @@ from typing import Callable, Optional
 import typer
 from typing_extensions import Annotated
 
-from .agent import Agent, AgentProtocol
-from .auth.github_browser_auth import authenticate_github_browser
-from .auth.token_storage import delete_github_token, get_github_token
-from .console.console import Console, HeadlessConsole, ReplConsole
-from .logger import setup_logging
-from .preflight import PreflightCheckError, run_preflight_checks
-from .runtime_config import (
+from oai_coding_agent.agent import Agent, AgentProtocol
+from oai_coding_agent.auth.github_browser_auth import authenticate_github_browser
+from oai_coding_agent.auth.token_storage import delete_github_token, get_github_token
+from oai_coding_agent.console.console import Console, HeadlessConsole, ReplConsole
+from oai_coding_agent.logger import setup_logging
+from oai_coding_agent.preflight import PreflightCheckError, run_preflight_checks
+from oai_coding_agent.runtime_config import (
     GITHUB_TOKEN,
     OPENAI_API_KEY_ENV,
     OPENAI_BASE_URL_ENV,
