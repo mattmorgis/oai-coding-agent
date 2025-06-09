@@ -5,6 +5,7 @@ Agent for streaming OAI agent interactions with a local codebase.
 __all__ = ["Agent", "AgentProtocol"]
 
 import logging
+import os
 from contextlib import AsyncExitStack
 from typing import Any, AsyncIterator, Optional, Protocol, runtime_checkable
 
@@ -13,11 +14,13 @@ from agents import (
 )
 from agents import (
     ModelSettings,
+    RunConfig,
     Runner,
     RunResultStreaming,
     gen_trace_id,
     trace,
 )
+from agents.models.multi_provider import MultiProvider
 from openai.types.shared.reasoning import Reasoning
 
 from oai_coding_agent.agent.events import (
@@ -121,6 +124,13 @@ class Agent:
             user_input,
             previous_response_id=self._previous_response_id,
             max_turns=self.max_turns,
+            run_config=RunConfig(
+                model_provider=MultiProvider(
+                    openai_api_key=os.environ.get("OPENAI_API_KEY"),
+                    openai_base_url=os.environ.get("OPENAI_BASE_URL"),
+                    openai_use_responses=False,
+                )
+            ),
         )
 
         async def _map_events() -> AsyncIterator[

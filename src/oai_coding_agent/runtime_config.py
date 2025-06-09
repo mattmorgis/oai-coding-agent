@@ -68,7 +68,7 @@ class ModelChoice(str, Enum):
 
     codex_mini_latest = "codex-mini-latest"
     o3 = "o3"
-    o4_mini = "o4-mini"
+    o4_mini = "gemma-3-4b-it"
 
 
 class ModeChoice(str, Enum):
