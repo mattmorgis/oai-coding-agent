@@ -11,8 +11,12 @@ from typing import Optional, Tuple
 import docker
 from docker.errors import DockerException
 
-from .commit_hook import install_commit_msg_hook
-from .git_repo import get_git_branch, get_github_repo, is_inside_git_repo
+from oai_coding_agent.preflight.commit_hook import install_commit_msg_hook
+from oai_coding_agent.preflight.git_repo import (
+    get_git_branch,
+    get_github_repo,
+    is_inside_git_repo,
+)
 
 logger = logging.getLogger(__name__)
 

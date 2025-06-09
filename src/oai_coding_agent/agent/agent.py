@@ -39,6 +39,7 @@ class AgentProtocol(Protocol):
     """Protocol defining the interface for agents."""
 
     config: RuntimeConfig
+    _previous_response_id: Optional[str]
 
     async def __aenter__(self) -> "AgentProtocol": ...
 

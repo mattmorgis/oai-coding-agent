@@ -4,7 +4,7 @@ from typing import Optional
 
 import requests
 
-from .token_storage import get_auth_file_path, save_github_token
+from oai_coding_agent.auth.token_storage import get_auth_file_path, save_github_token
 
 # Using GitHub CLI's client ID for device flow
 # This is a public client ID the GitHub Coding Agent application
