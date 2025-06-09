@@ -11,7 +11,6 @@ from oai_coding_agent.agent import Agent, AgentProtocol
 from oai_coding_agent.auth.github_browser_auth import authenticate_github_browser
 from oai_coding_agent.auth.token_storage import delete_github_token, get_github_token
 from oai_coding_agent.console.console import Console, HeadlessConsole, ReplConsole
-from oai_coding_agent.console.fullscreen_console import FullscreenConsole
 from oai_coding_agent.logger import setup_logging
 from oai_coding_agent.preflight import PreflightCheckError, run_preflight_checks
 from oai_coding_agent.runtime_config import (
@@ -30,19 +29,17 @@ def default_agent_factory(config: RuntimeConfig) -> AgentProtocol:
     return Agent(config)
 
 
-def default_console_factory(
-    agent: AgentProtocol, fullscreen: Optional[bool] = None
-) -> Console:
+def default_console_factory(agent: AgentProtocol) -> Console:
     """Default factory for creating Console instances."""
     if agent.config.prompt:
         return HeadlessConsole(agent)
     else:
-        return FullscreenConsole(agent) if fullscreen else ReplConsole(agent)
+        return ReplConsole(agent)
 
 
 def create_app(
     agent_factory: Optional[Callable[[RuntimeConfig], AgentProtocol]] = None,
-    console_factory: Optional[Callable] = None,
+    console_factory: Optional[Callable[[AgentProtocol], Console]] = None,
 ) -> typer.Typer:
     """
     Create and configure the Typer application.
@@ -72,7 +69,6 @@ def create_app(
         mode: ModeChoice,
         repo_path: Path,
         atlassian: bool,
-        fullscreen: bool,
         openai_base_url: Optional[str],
         prompt: Optional[str],
     ) -> None:
@@ -145,12 +141,7 @@ def create_app(
 
         try:
             agent = agent_factory(cfg)
-            # Handle both old and new console factory signatures
-            try:
-                console = console_factory(agent, fullscreen)
-            except TypeError:
-                # Fall back to old signature for backward compatibility
-                console = console_factory(agent)
+            console = console_factory(agent)
             asyncio.run(console.run())
         except KeyboardInterrupt:
             print("\nExiting...")
@@ -243,14 +234,6 @@ def create_app(
                 help="Enable Atlassian MCP server (only available in plan mode)",
             ),
         ] = False,
-        fullscreen: Annotated[
-            bool,
-            typer.Option(
-                "--fullscreen",
-                "-f",
-                help="Use fullscreen prompt_toolkit interface (experimental)",
-            ),
-        ] = True,
     ) -> None:
         """OAI CODING AGENT - AI-powered coding assistant"""
         # Check if any positional arguments were passed (indicating a subcommand)
@@ -269,7 +252,6 @@ def create_app(
                 mode=mode,
                 repo_path=repo_path,
                 atlassian=atlassian,
-                fullscreen=fullscreen,
                 openai_base_url=openai_base_url,
                 prompt=prompt,
             )
