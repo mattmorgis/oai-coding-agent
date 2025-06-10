@@ -17,6 +17,8 @@ from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, ScrollableContainer
+from textual.reactive import reactive
+from textual.widget import Widget
 from textual.widgets import Header, Input, Label
 from textual.worker import Worker, WorkerState
 
@@ -50,9 +52,26 @@ class ChatMessage(Label):
         super().__init__(formatted_message)
 
 
+class LiveMessage(Widget):
+    """Updates a message in real-time."""
+
+    message = reactive("")
+
+    def render(self) -> str:
+        return self.message
+
+    def show(self, msg: str) -> None:
+        self.message = msg
+        self.remove_class("hidden")
+
+    def hide(self) -> None:
+        self.message = ""
+        self.add_class("hidden")
+
+
 class ChatInterface(App):
     """
-    Main TUI application class implementing the chat interface.
+    Main Terminal UI application class implementing the chat interface.
 
     Features:
     - Real-time message display
@@ -60,8 +79,6 @@ class ChatInterface(App):
     - Keyboard shortcuts
     - Event logging
     - Scrollable message history
-
-    The interface is styled using CSS defined in static/styles.css
     """
 
     # Path to CSS file for styling the interface
@@ -70,7 +87,7 @@ class ChatInterface(App):
     # Define keyboard shortcuts
     BINDINGS = [
         Binding("ctrl+c", "quit", "Quit", show=False),
-        Binding("escape", "quit", "Quit", show=True),
+        # Binding("escape", "quit", "Quit", show=True),
     ]
 
     def __init__(self, agent: AgentProtocol) -> None:
@@ -115,10 +132,11 @@ class ChatInterface(App):
 
         This method is crucial for proper initialization timing in Textual applications, ensuring all components are properly set up after the UI is ready.
         """
-        message_container = self.query_one("#message-container")
+        message_container: ScrollableContainer = self.query_one("#message-container")
+        live_message: LiveMessage = self.query_one("#live-message", LiveMessage)
 
         # Add TUI callback to handle agent dialog events and update the interface
-        tui_callback = TuiCallback(self, message_container, ChatMessage)
+        tui_callback = TuiCallback(self, message_container, ChatMessage, live_message)
         self.agent_dialog.add_callback(tui_callback)
 
         # Set up file logging for events
@@ -140,8 +158,9 @@ class ChatInterface(App):
         yield Header()
         with Container(id="chat-container"):
             with ScrollableContainer(id="message-container"):
-                # Display initial welcome message
                 yield ChatMessage("Agent", "Hello! How can I help you today?")
+            with Container(id="live-container"):
+                yield LiveMessage(id="live-message", classes="hidden")
             with Container(id="input-container"):
                 yield Input(
                     placeholder="Type your message here and press Enter...",

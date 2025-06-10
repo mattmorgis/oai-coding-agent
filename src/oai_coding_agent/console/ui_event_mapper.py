@@ -15,7 +15,7 @@ from oai_coding_agent.console.state import UIMessage
 logger = logging.getLogger(__name__)
 
 
-def map_event_to_ui_message(event: AgentEvent) -> UIMessage | None:
+def map_event_to_ui_message(event: AgentEvent) -> UIMessage:
     """Map an agent event to a UI message."""
     logger.debug("Internal event received: %r", event)
 

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -207,7 +208,10 @@ def main(
             console_fact = _console_factory or default_console_factory
             agent = factory(cfg)
             console = console_fact(agent)
-            console.run()
+            if isinstance(console, HeadlessConsole):
+                asyncio.run(console.run())
+            elif isinstance(console, ChatInterface):
+                console.run()
         except KeyboardInterrupt:
             print("\nExiting...")
 

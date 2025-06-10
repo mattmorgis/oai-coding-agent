@@ -1,8 +1,12 @@
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import Callable
 
 from textual.app import App
+from textual.containers import ScrollableContainer
+from textual.widget import Widget
+from textual.widgets import Label
 
 
 class ChatEvent(Enum):
@@ -28,15 +32,12 @@ class FileLogCallback(ChatCallback):
         self.logger = logging.getLogger("ChatEvents")
         self.logger.setLevel(logging.INFO)
 
-        # Create file handler
         file_handler = logging.FileHandler(log_file)
         file_handler.setLevel(logging.INFO)
 
-        # Create formatter
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
         file_handler.setFormatter(formatter)
 
-        # Add handler to logger
         self.logger.addHandler(file_handler)
 
     def on_event(self, event: ChatEvent, message: str) -> None:
@@ -46,36 +47,42 @@ class FileLogCallback(ChatCallback):
 class TuiCallback(ChatCallback):
     """Callback that updates the Terminal UI interface."""
 
-    def __init__(self, app: App, message_container, create_message_func) -> None:
+    def __init__(
+        self,
+        app: App,
+        message_container: ScrollableContainer,
+        create_message_func: Callable[[str, str], Label],
+        live_message_widget: Widget,
+    ) -> None:
         self.app = app
         self.message_container = message_container
         self.create_message = create_message_func
+        self.live_message = live_message_widget
 
     def on_event(self, event: ChatEvent, message: str) -> None:
         def update_ui() -> None:
-            if event == ChatEvent.START_PROCESSING:
-                self.message_container.mount(
-                    self.create_message(
-                        "Event", f"🤔 Processing your message: {message}"
-                    )
-                )
-            elif event == ChatEvent.THINKING:
-                self.message_container.mount(
-                    self.create_message("Event", f"💭 {message}")
-                )
-            elif event == ChatEvent.ERROR:
-                self.message_container.mount(
-                    self.create_message("Event", f"❌ Error: {message}")
-                )
-            elif event == ChatEvent.PROCESSING_COMPLETE:
-                self.message_container.mount(
-                    self.create_message("Event", f"✅ Response ready: {message}")
-                )
+            # Update live message widget if available
+            if self.live_message:
+                if event == ChatEvent.START_PROCESSING:
+                    self.live_message.show("🤔 Processing your message...")
+                elif event == ChatEvent.THINKING:
+                    self.live_message.show(f"💭 {message}")
+                elif event == ChatEvent.ERROR:
+                    self.live_message.show(f"❌ Error: {message}")
+                elif event == ChatEvent.PROCESSING_COMPLETE:
+                    # self.message_container.mount(self.create_message("Event", f"✅ Response ready: {message}"))
+                    self.live_message.hide()
 
-            # Ensure the message container scrolls to show new messages
-            self.message_container.scroll_end(animate=False)
+            # Log events to message container for debugging
+            if event == ChatEvent.ERROR:
+                self.message_container.mount(
+                    self.create_message("Error", f"❌ {message}")
+                )
+                self.message_container.scroll_end(animate=False)
+
             # Force a refresh of the screen
-            self.message_container.refresh()
+            if self.live_message:
+                self.live_message.refresh()
 
         # Call the UI update from the main thread
         """
