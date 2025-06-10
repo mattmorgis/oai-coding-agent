@@ -77,7 +77,7 @@ jobs:
       - name: Create a fresh branch for the agent
         run: |
           git config user.name "oai-coding-agent[bot]"
-          git config user.email "1363663+oai-coding-agent[bot]@users.noreply.github.com"
+          git config user.email "214839426+oai-coding-agent[bot]@users.noreply.github.com"
           ISSUE_NUMBER="${{ github.event.issue.number }}"
           BRANCH="oai/issue-${ISSUE_NUMBER}"
           git checkout -b "$BRANCH"
