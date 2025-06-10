@@ -14,13 +14,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from prompt_toolkit import PromptSession
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.key_binding import KeyPressEvent
+from prompt_toolkit.styles import Style
+from rich.panel import Panel
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, ScrollableContainer
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Header, Input, Label
+from textual.widgets import Header, Input, Label, Static
 from textual.worker import Worker, WorkerState
 
 from oai_coding_agent.agent import AgentProtocol
@@ -70,6 +76,49 @@ class LiveMessage(Widget):
         self.add_class("hidden")
 
 
+class PromptInput(Input):
+    """A widget for displaying a prompt."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        # Store prompt history under the XDG data directory
+        history_dir = get_data_dir()
+        history_dir.mkdir(parents=True, exist_ok=True)
+        self.history_path = history_dir / "prompt_history"
+
+    def on_mount(self) -> None:
+        self.session = PromptSession(
+            placeholder="Type your message here and press Enter...",
+            history=FileHistory(str(self.history_path)),
+            auto_suggest=AutoSuggestFromHistory(),
+            enable_history_search=True,
+            complete_while_typing=True,
+            complete_in_thread=True,
+            style=Style.from_dict(
+                {"prompt": "ansicyan bold", "auto-suggestion": "#888888"}
+            ),
+            erase_when_done=True,
+        )
+
+    async def on_key(self, event: KeyPressEvent) -> None:
+        if event.key == "enter":
+            self.session.append_to_history(self.value)
+            on_input_submitted
+
+        if event.key == "tab":
+            if self.session.default_buffer.suggestion:
+                self.session.default_buffer.insert_text(
+                    self.session.default_buffer.suggestion.text
+                )
+            else:
+                self.session.default_buffer.complete_next()
+        elif event.key == "up":
+            self.session.default_buffer.history_backward()
+        elif event.key == "down":
+            self.session.default_buffer.history_forward()
+
+
 class ChatInterface(App[Any]):
     """
     Main Terminal UI application class implementing the chat interface.
@@ -96,6 +145,7 @@ class ChatInterface(App[Any]):
         super().__init__()
         self.agent = agent
         self.agent_dialog = AgentDialog(agent)
+        self.title = "OAI Coding Agent"
 
     async def on_mount(self) -> None:
         """
@@ -167,10 +217,23 @@ class ChatInterface(App[Any]):
         yield Header()
         with Container(id="chat-container"):
             with ScrollableContainer(id="message-container"):
+                yield Static(
+                    Panel(
+                        f"[bold cyan]╭─ OAI CODING AGENT ─╮[/bold cyan]\n\n"
+                        f"[dim]Current Directory:[/dim] [dim cyan]{self.agent.config.repo_path}[/dim cyan]\n"
+                        f"[dim]Model:[/dim] [dim cyan]{self.agent.config.model.value}[/dim cyan]\n"
+                        f"[dim]Mode:[/dim] [dim cyan]{self.agent.config.mode.value}[/dim cyan]",
+                        expand=False,
+                    )
+                )
                 yield ChatMessage("Agent", "Hello! How can I help you today?")
             with Container(id="live-container"):
                 yield LiveMessage(id="live-message", classes="hidden")
             with Container(id="input-container"):
+                # yield PromptInput(
+                #     placeholder="Type something...",
+                #     id="user-input",
+                # )
                 yield Input(
                     placeholder="Type your message here and press Enter...",
                     id="user-input",
