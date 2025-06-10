@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from oai_coding_agent.agent import AgentProtocol
 from oai_coding_agent.console.callbacks import ChatCallback, ChatEvent
@@ -11,30 +11,6 @@ class AgentDialog:
     def __init__(self, agent: Optional[AgentProtocol] = None) -> None:
         self.agent = agent
         self.callbacks: List[ChatCallback] = []
-        self.responses: Dict[str, List[str]] = {
-            "greeting": [
-                "Hello! How can I assist you today?",
-                "Hi there! What's on your mind?",
-                "Greetings! How may I help you?",
-            ],
-            "default": [
-                "Interesting point! Let me think about that...",
-                "I understand what you're saying. Here's what I think...",
-                "That's a good question. From my perspective...",
-                "Let me process that for a moment...",
-            ],
-            "farewell": [
-                "Goodbye! Have a great day!",
-                "See you later! Take care!",
-                "Bye for now! Feel free to come back anytime!",
-            ],
-        }
-        self.thinking_messages = [
-            "Analyzing...",
-            "Processing...",
-            "Considering the best response...",
-            "Computing...",
-        ]
 
     def add_callback(self, callback: ChatCallback) -> None:
         """Add a callback to the agent dialog."""
@@ -71,6 +47,8 @@ class AgentDialog:
                             )
 
                 return result.final_output or "Agent completed processing."
+            else:
+                return "The agent is not configured."
 
         except Exception as e:
             error_message = f"An error occurred: {str(e)}"

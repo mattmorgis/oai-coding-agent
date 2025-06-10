@@ -15,7 +15,7 @@ from oai_coding_agent.console.rendering import UIMessage
 logger = logging.getLogger(__name__)
 
 
-def map_event_to_ui_message(event: AgentEvent) -> UIMessage:
+def map_event_to_ui_message(event: AgentEvent) -> UIMessage | None:
     """Map an agent event to a UI message."""
     logger.debug("Internal event received: %r", event)
 
@@ -26,3 +26,5 @@ def map_event_to_ui_message(event: AgentEvent) -> UIMessage:
             return UIMessage(role="thought", content=f"💭 {text}")
         case MessageOutputEvent(text=text):
             return UIMessage(role="assistant", content=text)
+        case _:
+            return None

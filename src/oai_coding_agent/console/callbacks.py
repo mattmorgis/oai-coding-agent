@@ -1,7 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Callable
+from typing import Any, Callable
 
 from textual.app import App
 from textual.containers import ScrollableContainer
@@ -49,7 +49,7 @@ class TuiCallback(ChatCallback):
 
     def __init__(
         self,
-        app: App,
+        app: App[Any],
         message_container: ScrollableContainer,
         create_message_func: Callable[[str, str], Label],
         live_message_widget: Widget,
@@ -64,14 +64,18 @@ class TuiCallback(ChatCallback):
             # Update live message widget if available
             if self.live_message:
                 if event == ChatEvent.START_PROCESSING:
-                    self.live_message.show("🤔 Processing your message...")
+                    if hasattr(self.live_message, "show"):
+                        self.live_message.show("🤔 Processing your message...")
                 elif event == ChatEvent.THINKING:
-                    self.live_message.show(f"💭 {message}")
+                    if hasattr(self.live_message, "show"):
+                        self.live_message.show(f"💭 {message}")
                 elif event == ChatEvent.ERROR:
-                    self.live_message.show(f"❌ Error: {message}")
+                    if hasattr(self.live_message, "show"):
+                        self.live_message.show(f"❌ Error: {message}")
                 elif event == ChatEvent.PROCESSING_COMPLETE:
                     # self.message_container.mount(self.create_message("Event", f"✅ Response ready: {message}"))
-                    self.live_message.hide()
+                    if hasattr(self.live_message, "hide"):
+                        self.live_message.hide()
 
             # Log events to message container for debugging
             if event == ChatEvent.ERROR:

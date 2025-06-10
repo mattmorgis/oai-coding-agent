@@ -26,7 +26,7 @@ from oai_coding_agent.runtime_config import (
 
 # Global factory functions - set by create_app()
 _agent_factory: Optional[Callable[[RuntimeConfig], AgentProtocol]] = None
-_console_factory: Optional[Callable[[AgentProtocol], Console]] = None
+_console_factory: Optional[Callable[[AgentProtocol], Console | ChatInterface]] = None
 
 
 def default_agent_factory(config: RuntimeConfig) -> AgentProtocol:
@@ -34,7 +34,7 @@ def default_agent_factory(config: RuntimeConfig) -> AgentProtocol:
     return Agent(config)
 
 
-def default_console_factory(agent: AgentProtocol) -> Console:
+def default_console_factory(agent: AgentProtocol) -> Console | ChatInterface:
     """Default factory for creating Console instances."""
     if agent.config.prompt:
         return HeadlessConsole(agent)
@@ -218,7 +218,9 @@ def main(
 
 def create_app(
     agent_factory: Optional[Callable[[RuntimeConfig], AgentProtocol]] = None,
-    console_factory: Optional[Callable[[AgentProtocol], Console]] = None,
+    console_factory: Optional[
+        Callable[[AgentProtocol], Console | ChatInterface]
+    ] = None,
 ) -> typer.Typer:
     """
     Create and configure the Typer application.

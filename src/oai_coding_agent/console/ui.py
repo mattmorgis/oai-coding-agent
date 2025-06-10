@@ -12,6 +12,7 @@ Key components:
 
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from rich.text import Text
 from textual.app import App, ComposeResult
@@ -69,7 +70,7 @@ class LiveMessage(Widget):
         self.add_class("hidden")
 
 
-class ChatInterface(App):
+class ChatInterface(App[Any]):
     """
     Main Terminal UI application class implementing the chat interface.
 
@@ -136,8 +137,8 @@ class ChatInterface(App):
         # Initialize agent async context (starts MCP servers, tracing, SDK agent)
         await self.agent.__aenter__()
 
-        message_container: ScrollableContainer = self.query_one("#message-container")
-        live_message: LiveMessage = self.query_one("#live-message", LiveMessage)
+        message_container = self.query_one("#message-container", ScrollableContainer)
+        live_message = self.query_one("#live-message", LiveMessage)
 
         # Add TUI callback to handle agent dialog events and update the interface
         tui_callback = TuiCallback(self, message_container, ChatMessage, live_message)
@@ -146,7 +147,7 @@ class ChatInterface(App):
         # Set up file logging for events
         log_dir = get_data_dir()
         log_dir.mkdir(parents=True, exist_ok=True)
-        file_callback = FileLogCallback(log_dir / "console.log")
+        file_callback = FileLogCallback(str(log_dir / "console.log"))
         self.agent_dialog.add_callback(file_callback)
 
     async def on_unmount(self) -> None:
@@ -197,11 +198,11 @@ class ChatInterface(App):
         if event.worker.name == "agent_processing":  # Only handle our agent worker
             if event.worker.state == WorkerState.SUCCESS:
                 # We're already in the main thread, so update UI directly
-                result = event.worker.result
-                message_container.mount(ChatMessage("Agent", result))
+                result = event.worker.result or ""
+                message_container.mount(ChatMessage("Agent", str(result)))
                 message_container.scroll_end(animate=False)
 
-    def process_message_in_background(self, user_input: str) -> Worker:
+    def process_message_in_background(self, user_input: str) -> Worker[Any]:
         """Process user messages in a background thread to keep UI responsive.
 
         Args:
