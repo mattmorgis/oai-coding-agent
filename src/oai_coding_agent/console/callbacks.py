@@ -86,17 +86,13 @@ class TuiCallback(ChatCallback):
 
         # Call the UI update from the main thread
         """
-        This pattern is essential because:
-        - Agent processing happens in background threads
-        - UI updates must be thread-safe
-        - Prevents race conditions and UI corruption
-        - Maintains responsiveness of the application
+        Update UI directly since we're now running in the main async event loop
 
-        The call_from_thread method essentially queues the UI update to be executed safely on the main thread, where all UI operations should occur.
-
-        Key Reasons:
-        - Thread Confinement: Most GUI frameworks (including Textual) are not thread-safe
-        - Single Thread Model: UI operations must happen on the main thread
-        - Race Conditions: Direct updates from background threads can corrupt UI state
+        Since agent processing now happens in async workers (not separate threads),
+        we can update the UI directly without call_from_thread.
+        This is safe because:
+            - Async workers run in the main event loop
+            - No cross-thread communication needed
+            - Direct UI updates are thread-safe within the main loop
         """
-        self.app.call_from_thread(update_ui)
+        update_ui()

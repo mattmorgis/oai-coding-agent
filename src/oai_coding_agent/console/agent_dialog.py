@@ -1,14 +1,15 @@
-import random
-import time
-from typing import Dict, List
+from typing import Dict, List, Optional
 
+from oai_coding_agent.agent import AgentProtocol
 from oai_coding_agent.console.callbacks import ChatCallback, ChatEvent
+from oai_coding_agent.console.ui_event_mapper import map_event_to_ui_message
 
 
 class AgentDialog:
-    """A simple synchronous dialog that generates responses with event callbacks."""
+    """Dialog that handles agent interactions with event callbacks."""
 
-    def __init__(self) -> None:
+    def __init__(self, agent: Optional[AgentProtocol] = None) -> None:
+        self.agent = agent
         self.callbacks: List[ChatCallback] = []
         self.responses: Dict[str, List[str]] = {
             "greeting": [
@@ -44,43 +45,32 @@ class AgentDialog:
         for callback in self.callbacks:
             callback.on_event(event, message)
 
-    def process_message(self, message: str) -> str:
+    async def process_message(self, message: str) -> str:
         """Process the user message and return a response with event notifications."""
         try:
             self.notify_callbacks(
                 ChatEvent.START_PROCESSING, "Starting to process message"
             )
 
-            message = message.lower().strip()
+            if self.agent:
+                # Use real agent
+                event_stream, result = await self.agent.run(message)
 
-            # Simulate longer processing with multiple thinking steps
-            time.sleep(random.uniform(0.5, 5.0))
-            self.notify_callbacks(
-                ChatEvent.THINKING, random.choice(self.thinking_messages)
-            )
+                # Consume the event stream and convert to callback events
+                async for event in event_stream:
+                    ui_msg = map_event_to_ui_message(event)
+                    if ui_msg:
+                        # Convert UI message to callback event
+                        if ui_msg["role"] == "tool":
+                            self.notify_callbacks(ChatEvent.THINKING, ui_msg["content"])
+                        elif ui_msg["role"] == "thought":
+                            self.notify_callbacks(ChatEvent.THINKING, ui_msg["content"])
+                        elif ui_msg["role"] == "assistant":
+                            self.notify_callbacks(
+                                ChatEvent.PROCESSING_COMPLETE, ui_msg["content"]
+                            )
 
-            time.sleep(random.uniform(0.5, 3.0))
-            self.notify_callbacks(ChatEvent.THINKING, "Analyzing sentiment...")
-
-            # Determine response type
-            if any(word in message for word in ["hello", "hi", "hey", "greetings"]):
-                response = random.choice(self.responses["greeting"])
-            elif any(
-                word in message for word in ["bye", "goodbye", "see you", "farewell"]
-            ):
-                response = random.choice(self.responses["farewell"])
-            else:
-                response = random.choice(self.responses["default"])
-
-            time.sleep(random.uniform(0.5, 1.0))
-            self.notify_callbacks(
-                ChatEvent.THINKING, f"Debug: Generated response: {response}"
-            )
-            self.notify_callbacks(
-                ChatEvent.PROCESSING_COMPLETE, f"Debug: About to return: {response}"
-            )
-
-            return response
+                return result.final_output or "Agent completed processing."
 
         except Exception as e:
             error_message = f"An error occurred: {str(e)}"

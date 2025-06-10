@@ -93,16 +93,17 @@ class ChatInterface(App):
     def __init__(self, agent: AgentProtocol) -> None:
         """Initialize the chat interface with a AgentDialog instance."""
         super().__init__()
-        self.agent_dialog = AgentDialog()
         self.agent = agent
+        self.agent_dialog = AgentDialog(agent)
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         """
         Set up callbacks after the app is mounted.
 
         Initializes:
-        1. TUI callback for updating the interface
-        2. File logging callback for event tracking
+        1. Agent async context (MCP servers, tracing, SDK agent)
+        2. TUI callback for updating the interface
+        3. File logging callback for event tracking
 
 
         Timing:
@@ -132,6 +133,9 @@ class ChatInterface(App):
 
         This method is crucial for proper initialization timing in Textual applications, ensuring all components are properly set up after the UI is ready.
         """
+        # Initialize agent async context (starts MCP servers, tracing, SDK agent)
+        await self.agent.__aenter__()
+
         message_container: ScrollableContainer = self.query_one("#message-container")
         live_message: LiveMessage = self.query_one("#live-message", LiveMessage)
 
@@ -144,6 +148,10 @@ class ChatInterface(App):
         log_dir.mkdir(parents=True, exist_ok=True)
         file_callback = FileLogCallback(log_dir / "console.log")
         self.agent_dialog.add_callback(file_callback)
+
+    async def on_unmount(self) -> None:
+        """Clean up agent async context when app is unmounted."""
+        await self.agent.__aexit__(None, None, None)
 
     def compose(self) -> ComposeResult:
         """
@@ -206,11 +214,10 @@ class ChatInterface(App):
         message_container.mount(ChatMessage("You", user_input))
         message_container.scroll_end(animate=False)
 
-        # Create worker for background processing
+        # Create worker for background processing (async)
         worker = self.run_worker(
-            lambda: self.agent_dialog.process_message(user_input),
+            self.agent_dialog.process_message(user_input),
             name="agent_processing",  # Important for identifying our worker
-            thread=True,
         )
         return worker
 
