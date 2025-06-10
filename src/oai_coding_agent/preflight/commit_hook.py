@@ -15,7 +15,7 @@ COMMIT_MSG_HOOK_SCRIPT = """#!/usr/bin/env sh
 # commit-msg hook: append Co-Authored-By stanza when OAI_AGENT is set
 
 if [ -n "$OAI_AGENT" ]; then
-  printf "\\n🤖 Generated with oai-coding-agent\\nCo-Authored-By: OAI <noreply@oai-coding-agent.com>\\n" >> "$1"
+  printf "\\n🤖 Generated with OAI Coding Agent\\nCo-Authored-By: oai-coding-agent[bot] <1363663+oai-coding-agent[bot]@users.noreply.github.com>\\n" >> "$1"
 fi
 """
 
