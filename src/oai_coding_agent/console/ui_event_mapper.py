@@ -10,7 +10,7 @@ from oai_coding_agent.agent.events import (
     ReasoningEvent,
     ToolCallEvent,
 )
-from oai_coding_agent.console.state import UIMessage
+from oai_coding_agent.console.rendering import UIMessage
 
 logger = logging.getLogger(__name__)
 
