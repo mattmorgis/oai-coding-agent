@@ -3,7 +3,7 @@ UI state container (replaces global messages and slash_commands).
 """
 
 import asyncio
-from typing import Any, Callable, Dict, Optional, TypedDict, TypeVar
+from typing import Any, Optional, TypedDict, TypeVar
 
 T = TypeVar("T")
 
@@ -18,7 +18,6 @@ class UIState:
 
     def __init__(self) -> None:
         """Initialize UI state."""
-        self.slash_commands: Dict[str, Callable[..., bool]] = {}
         self.current_stream_task: Optional[asyncio.Task[Any]] = None
         self.current_result: Optional[Any] = None
         self.last_completed_response_id: Optional[str] = None

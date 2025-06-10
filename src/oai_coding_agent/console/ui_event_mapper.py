@@ -9,7 +9,6 @@ from oai_coding_agent.agent.events import (
     MessageOutputEvent,
     ReasoningEvent,
     ToolCallEvent,
-    UsageUpdateEvent,
 )
 from oai_coding_agent.console.state import UIMessage
 
@@ -27,6 +26,3 @@ def map_event_to_ui_message(event: AgentEvent) -> UIMessage | None:
             return UIMessage(role="thought", content=f"💭 {text}")
         case MessageOutputEvent(text=text):
             return UIMessage(role="assistant", content=text)
-        case UsageUpdateEvent():
-            # Usage events are handled separately, not as UI messages
-            return None

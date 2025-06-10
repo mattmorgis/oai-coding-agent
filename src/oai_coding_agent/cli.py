@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -10,7 +9,8 @@ from typing_extensions import Annotated
 from oai_coding_agent.agent import Agent, AgentProtocol
 from oai_coding_agent.auth.github_browser_auth import authenticate_github_browser
 from oai_coding_agent.auth.token_storage import delete_github_token, get_github_token
-from oai_coding_agent.console.console import Console, HeadlessConsole, ReplConsole
+from oai_coding_agent.console.console import Console, HeadlessConsole
+from oai_coding_agent.console.ui import ChatInterface
 from oai_coding_agent.logger import setup_logging
 from oai_coding_agent.preflight import PreflightCheckError, run_preflight_checks
 from oai_coding_agent.runtime_config import (
@@ -38,7 +38,7 @@ def default_console_factory(agent: AgentProtocol) -> Console:
     if agent.config.prompt:
         return HeadlessConsole(agent)
     else:
-        return ReplConsole(agent)
+        return ChatInterface(agent)
 
 
 def create_github_app() -> typer.Typer:
@@ -207,7 +207,7 @@ def main(
             console_fact = _console_factory or default_console_factory
             agent = factory(cfg)
             console = console_fact(agent)
-            asyncio.run(console.run())
+            console.run()
         except KeyboardInterrupt:
             print("\nExiting...")
 
