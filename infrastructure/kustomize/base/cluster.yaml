@@ -10,10 +10,10 @@ spec:
   imageName: ghcr.io/cloudnative-pg/postgresql:16
   storage:
     size: 20Gi
-    storageClass: standard # Patched per environment
+    storageClass: default # Patched per environment
   walStorage:
     size: 10Gi
-    storageClass: standard # Patched per environment
+    storageClass: default # Patched per environment
   bootstrap:
     initdb:
       database: app_db

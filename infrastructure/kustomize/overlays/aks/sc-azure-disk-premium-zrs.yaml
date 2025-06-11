@@ -1,9 +1,10 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: premium-lrs
+  name: premium-zrs
 provisioner: disk.csi.azure.com
 parameters:
-  skuName: Premium_LRS
+  skuName: Premium_ZRS
+allowVolumeExpansion: true
 reclaimPolicy: Delete
 volumeBindingMode: WaitForFirstConsumer

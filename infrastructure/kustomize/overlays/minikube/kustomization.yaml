@@ -3,7 +3,8 @@ kind: Kustomization
 
 resources:
   - ../../base
-  - sc-hostpath.yaml
+  - pg-nodeport.yaml
+  - pgadmin-dev-secret.yaml
 
 patchesStrategicMerge:
   - cluster-patch.yaml

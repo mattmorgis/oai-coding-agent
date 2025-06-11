@@ -9,6 +9,8 @@ resources:
   - servicemonitor.yaml
   - app-deployment.yaml
   - app-service.yaml
+  - app-hpa.yaml
+  - pgadmin-deployment.yaml
 
 images:
   - name: python-app

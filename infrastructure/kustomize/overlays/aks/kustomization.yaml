@@ -3,16 +3,17 @@ kind: Kustomization
 
 resources:
   - ../../base
-  - sc-azure-disk.yaml
+  - sc-azure-disk-premium-zrs.yaml
+  - keyvault-secretstore.yaml
 
 patchesStrategicMerge:
-  - cluster-patch.yaml
+  - cluster-keyvault-patch.yaml
 
 generatorOptions:
   disableNameSuffixHash: true
 
 secretGenerator:
-  - name: db-user-pass
+  - name: pgadmin-credentials
     literals:
-      - username=app
-      - password=PLACEHOLDER_PG_PASSWORD
+      - email=PLACEHOLDER_PGADMIN_EMAIL
+      - password=PLACEHOLDER_PGADMIN_PASSWORD

@@ -1,0 +1,25 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg-vector
+spec:
+  bootstrap:
+    initdb:
+      database: app_db
+      owner: app
+      secret:
+        name: db-user-pass-kv
+  storage:
+    storageClass: premium-zrs
+  walStorage:
+    storageClass: premium-zrs
+  backup:
+    barmanObjectStore:
+      destinationPath: "https://<STORAGE_ACCOUNT>.blob.core.windows.net/<CONTAINER>/"
+      azureCredentials:
+        inheritFromAzureAD: true
+    retentionPolicy: "7d"
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway

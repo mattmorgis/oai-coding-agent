@@ -13,9 +13,36 @@ spec:
       labels:
         app: python-app
     spec:
+      initContainers:
+        - name: db-migration
+          image: python-app
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Waiting for database to be ready..."
+              until pg_isready -U app -d app_db -h pg-vector-rw; do
+                echo "Database not ready, waiting..."
+                sleep 2
+              done
+              echo "Database ready, running migrations..."
+              # Add your migration commands here
+              # python manage.py migrate
+              echo "Migrations complete"
+          env:
+            - name: PGHOST
+              value: pg-vector-rw
+            - name: PGDATABASE
+              value: app_db
+            - name: PGUSER
+              value: app
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-user-pass
+                  key: password
       containers:
         - name: python-app
-          image: python-app:dev # Patched via Kustomize images
+          image: python-app
           ports:
             - containerPort: 8000
           env:
@@ -30,6 +57,14 @@ spec:
                 secretKeyRef:
                   name: db-user-pass
                   key: password
+            - name: PGPOOL_MAX_CONN
+              value: "20"
+            - name: PGPOOL_MIN_CONN
+              value: "5"
+            - name: PGCONNECT_TIMEOUT
+              value: "10"
+            - name: PGCOMMAND_TIMEOUT
+              value: "30"
           readinessProbe:
             exec:
               command:

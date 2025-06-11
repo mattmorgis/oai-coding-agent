@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pg-vector-external
+  namespace: cnpg-system
+spec:
+  selector:
+    cnpg.io/cluster: pg-vector
+    role: primary
+  ports:
+    - port: 5432
+      targetPort: 5432
+      nodePort: 30432
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin-external
+  namespace: cnpg-system
+spec:
+  selector:
+    app: pgadmin
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
+  type: NodePort
