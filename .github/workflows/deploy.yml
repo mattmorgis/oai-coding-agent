@@ -44,10 +44,27 @@ jobs:
             -f infrastructure/charts/cloudnativepg-values.yaml \
             --wait --timeout 5m
 
+      - name: Build & push python app image
+        env:
+          IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $IMAGE_REGISTRY/python-app:$IMAGE_TAG -f python-app/Dockerfile python-app/
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push $IMAGE_REGISTRY/python-app:$IMAGE_TAG
+          echo "IMAGE_URI=$IMAGE_REGISTRY/python-app:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Update image in kustomize overlay
+        run: |
+          pushd $KUSTOMIZE_OVERLAY
+          kustomize edit set image python-app=$IMAGE_URI
+          popd
+
       - name: Apply Postgres & app manifests
         env:
           PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
         run: |
-          # Inject DB password into secretGenerator at build time
+          pushd $KUSTOMIZE_OVERLAY
           kustomize edit set secret db-user-pass --from-literal=password=$PG_PASSWORD --namespace=cnpg-system --name=db-user-pass || true
+          popd
           kustomize build $KUSTOMIZE_OVERLAY | kubectl apply -f -

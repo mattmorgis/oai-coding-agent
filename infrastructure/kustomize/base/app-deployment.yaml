@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-app
+  namespace: cnpg-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-app
+  template:
+    metadata:
+      labels:
+        app: python-app
+    spec:
+      containers:
+        - name: python-app
+          image: python-app:dev # Patched via Kustomize images
+          ports:
+            - containerPort: 8000
+          env:
+            - name: PGHOST
+              value: pg-vector-rw
+            - name: PGDATABASE
+              value: app_db
+            - name: PGUSER
+              value: app
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-user-pass
+                  key: password
+          readinessProbe:
+            exec:
+              command:
+                ["/bin/sh", "-c", "pg_isready -U app -d app_db -h pg-vector-rw"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"

@@ -7,3 +7,10 @@ resources:
   - namespace.yaml
   - cluster.yaml
   - servicemonitor.yaml
+  - app-deployment.yaml
+  - app-service.yaml
+
+images:
+  - name: python-app
+    newName: <PY_APP_REGISTRY>/python-app
+    newTag: latest
