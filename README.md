@@ -1,5 +1,8 @@
 # OAI Coding Agent
 
+[![CI](https://github.com/mattmorgis/oai-coding-agent/actions/workflows/ci.yaml/badge.svg)](https://github.com/mattmorgis/oai-coding-agent/actions/workflows/ci.yaml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A terminal-based coding agent designed for lightweight, asynchronous development tasks. Unlike traditional coding agents that require constant steering, this agent can work independently or collaboratively, enabling developers to run entire agent fleets for parallel development workflows.
 
 > **Status**: Work in progress
