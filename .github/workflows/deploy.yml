@@ -1,0 +1,53 @@
+name: Deploy to AKS
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AKS_RG: <AKS_RESOURCE_GROUP>
+  AKS_CLUSTER: <AKS_CLUSTER_NAME>
+  KUSTOMIZE_OVERLAY: infrastructure/kustomize/overlays/aks
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set AKS context
+        uses: azure/aks-set-context@v3
+        with:
+          resource-group: ${{ env.AKS_RG }}
+          cluster-name: ${{ env.AKS_CLUSTER }}
+
+      - name: Install kubectl & kustomize
+        run: |
+          az aks install-cli  # installs kubectl
+          curl -sLo kustomize https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v5.4.1/kustomize_v5.4.1_linux_amd64 && \
+          chmod +x kustomize && sudo mv kustomize /usr/local/bin/
+
+      - name: Deploy CloudNativePG operator (one-time)
+        run: |
+          helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts
+          helm repo update
+          helm upgrade --install cloudnativepg-operator cloudnative-pg/cloudnative-pg \
+            --namespace cnpg-system --create-namespace \
+            --version 1.22.1 \
+            -f infrastructure/charts/cloudnativepg-values.yaml \
+            --wait --timeout 5m
+
+      - name: Apply Postgres & app manifests
+        env:
+          PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
+        run: |
+          # Inject DB password into secretGenerator at build time
+          kustomize edit set secret db-user-pass --from-literal=password=$PG_PASSWORD --namespace=cnpg-system --name=db-user-pass || true
+          kustomize build $KUSTOMIZE_OVERLAY | kubectl apply -f -

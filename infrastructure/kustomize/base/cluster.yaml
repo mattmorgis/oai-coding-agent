@@ -1,0 +1,32 @@
+# yamllint disable-file
+
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg-vector
+  namespace: cnpg-system
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+  storage:
+    size: 20Gi
+    storageClass: standard # Patched per environment
+  walStorage:
+    size: 10Gi
+    storageClass: standard # Patched per environment
+  bootstrap:
+    initdb:
+      database: app_db
+      owner: app
+      secret:
+        name: db-user-pass
+      postInitSQL:
+        - "CREATE EXTENSION IF NOT EXISTS vector;"
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "1"
+    limits:
+      memory: "1Gi"
+      cpu: "1"
+  monitoring: true

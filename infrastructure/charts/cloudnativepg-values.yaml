@@ -1,0 +1,18 @@
+# CloudNativePG operator values override
+# Reference: https://github.com/cloudnative-pg/charts
+# Only minimal tweaks; rest remain chart defaults.
+# Replace placeholders if needed.
+image:
+  tag: "1.22.1"
+
+fullnameOverride: "cloudnativepg-operator"
+
+# Metrics exporter enabled by default
+metrics:
+  enabled: true
+
+rbac:
+  create: true
+
+# Namespace the operator will manage by default (can manage cluster-wide)
+watchNamespaces: ["cnpg-system"]
