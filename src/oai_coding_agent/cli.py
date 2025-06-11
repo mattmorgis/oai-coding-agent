@@ -2,10 +2,9 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Annotated, Callable, Optional
 
 import typer
-from typing_extensions import Annotated
 
 from oai_coding_agent.agent import Agent, AgentProtocol
 from oai_coding_agent.auth.github_browser_auth import authenticate_github_browser
