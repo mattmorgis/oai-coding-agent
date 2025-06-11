@@ -1,7 +1,7 @@
 [project]
 name = "oai-coding-agent"
 version = "0.1.0"
-description = "Add your description here"
+description = "A terminal-based coding agent for lightweight, asynchronous development tasks"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
