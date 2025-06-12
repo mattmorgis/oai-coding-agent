@@ -6,14 +6,39 @@ resources:
   - pg-nodeport.yaml
   - pgadmin-dev-secret.yaml
 
-patchesStrategicMerge:
-  - cluster-patch.yaml
+# Note: ServiceMonitor will be ignored since Prometheus operator is not installed
+
+patches:
+  - path: remove-servicemonitor.yaml
+    target:
+      group: monitoring.coreos.com
+      kind: ServiceMonitor
+      name: cnpg-monitor
+      version: v1
+  - path: cluster-patch.yaml
+    target:
+      group: postgresql.cnpg.io
+      kind: Cluster
+      name: pg-vector
+      version: v1
+  - path: app-deployment-patch.yaml
+    target:
+      group: apps
+      kind: Deployment
+      name: python-app
+      version: v1
+
+images:
+  - name: python-app
+    newName: python-app
+    newTag: local
 
 generatorOptions:
   disableNameSuffixHash: true
 
 secretGenerator:
-  - name: db-user-pass
-    literals:
+  - literals:
       - username=app
-      - password=PLACEHOLDER_PG_PASSWORD
+      - password=devpassword123
+    name: db-user-pass
+    namespace: cnpg-system

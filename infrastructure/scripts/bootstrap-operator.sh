@@ -3,7 +3,7 @@
 set -euo pipefail
 
 NAMESPACE="cnpg-system"
-CHART_VERSION="1.22.1"
+CHART_VERSION="0.24.0"
 
 helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts
 helm repo update

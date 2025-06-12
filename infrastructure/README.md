@@ -2,6 +2,8 @@
 
 This document explains how to run the **CloudNativePG + pgvector** stack and the sample Python application in two environments:
 
+> **Note**: This stack uses CloudNativePG's standard PostgreSQL image (`ghcr.io/cloudnative-pg/postgresql:16-standard-bookworm`) which includes the pgvector extension pre-installed. The extension is automatically enabled during database initialization via `postInitTemplateSQL`.
+
 1. **Local development with Minikube** – fast feedback loop, no cloud bill.
 2. **Azure Kubernetes Service (AKS)** – production-like cluster, deployed via Azure CLI and GitHub Actions.
 
@@ -35,30 +37,7 @@ Kubernetes (k8s) is a container orchestration platform that automates deployment
 
 First, ensure you have all required tools installed:
 
-\*\*Quick-start (Ubuntu/Debian)
-
-If you're on Linux, run the commands below to install all prerequisites in one go:
-
-```bash
-sudo apt-get update && sudo apt-get install -y docker.io
-sudo usermod -aG docker $USER && newgrp docker
-
-curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
-
-curl -LO "https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && rm kubectl
-
-curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
-sudo mv kustomize /usr/local/bin/
-
-# Verify
-docker --version && minikube version && kubectl version --client && helm version && kustomize version
-```
-
-For macOS and Windows users, see the official installation guides for
+See the official installation guides for
 [Docker](https://docs.docker.com/get-docker/),
 [Minikube](https://minikube.sigs.k8s.io/),
 [Kubectl](https://kubernetes.io/docs/tasks/tools/),
@@ -72,10 +51,10 @@ Now we'll start minikube with enough resources for PostgreSQL and our applicatio
 ```bash
 # Start minikube with adequate resources
 # --cpus 4: Use 4 CPU cores (PostgreSQL needs good CPU)
-# --memory 8g: Use 8GB RAM (PostgreSQL and containers need memory)
-# --disk-size 30g: 30GB disk space for container images and data
+# --memory 6g: Use 6GB RAM (PostgreSQL and containers need memory)
+# --disk-size 10g: 30GB disk space for container images and data
 # --driver=docker: Use Docker as the container runtime
-minikube start --cpus 4 --memory 8g --disk-size 30g --driver=docker
+minikube start --cpus 4 --memory 6g --disk-size 10g --driver=docker
 
 # This might take a few minutes on first run as it downloads the Kubernetes image
 ```
@@ -125,7 +104,7 @@ minikube delete && minikube start --cpus 4 --memory 8g --disk-size 30g --driver=
 minikube start --help | grep driver
 
 # For Apple Silicon Macs, you might need:
-minikube start --cpus 4 --memory 8g --disk-size 30g --driver=qemu
+minikube start --cpus 4 --memory 6g --disk-size 30g --driver=qemu
 
 # Check minikube logs if issues persist
 minikube logs
@@ -169,11 +148,11 @@ Now we'll build our Python application and deploy both PostgreSQL and the app to
 ```bash
 # First, build the Python application into a Docker image
 # This creates a container image that minikube can use
-docker build -t python-app:dev -f python-app/Dockerfile python-app/
+docker build -t python-app:local -f python-app/Dockerfile python-app/
 
 # Load the image into minikube's Docker registry
 # (This step is important - minikube needs access to your locally built image)
-minikube image load python-app:dev
+minikube image load python-app:local
 
 # Now deploy everything using Kustomize
 # This will create: PostgreSQL cluster, Python app, pgAdmin, and all supporting resources
@@ -225,16 +204,18 @@ Now let's access the applications we just deployed:
 
 ```bash
 # Access your Python application (in a new terminal window)
-kubectl port-forward -n cnpg-system deploy/python-app 8000:8000
+kubectl port-forward -n cnpg-system deploy/python-app 8000:8000 &
+# Kill it later with: kill %1
 
 # Now open http://localhost:8000 in your browser
 # You should see your Python application running!
 
 # Access pgAdmin (database management UI) - in another terminal
-kubectl port-forward -n cnpg-system deploy/pgadmin 8080:80
+kubectl port-forward -n cnpg-system deploy/pgadmin 8080:80 &
+# Kill it later with: kill %2
 
 # Open http://localhost:8080 in your browser
-# Login with: dev@localhost / devpass
+# Login with: dev@example.com / devpass
 ```
 
 **Option 2: Using NodePort Services (Direct access)**
@@ -255,7 +236,7 @@ minikube service python-app -n cnpg-system --url           # Python app (if you 
 
 ### 1.7 Connect to Your Database
 
-Once you have pgAdmin open (http://localhost:8080 with dev@localhost / devpass), you can connect to your PostgreSQL database:
+Once you have pgAdmin open (http://localhost:8080 with dev@example.com / devpass), you can connect to your PostgreSQL database:
 
 **Setting up the database connection in pgAdmin:**
 
@@ -301,10 +282,10 @@ When you modify your Python application:
 
 ```bash
 # Rebuild the Docker image
-docker build -t python-app:dev -f python-app/Dockerfile python-app/
+docker build -t python-app:local -f python-app/Dockerfile python-app/
 
 # Load the new image into minikube
-minikube image load python-app:dev
+minikube image load python-app:local
 
 # Restart the deployment to use the new image
 kubectl rollout restart deployment/python-app -n cnpg-system

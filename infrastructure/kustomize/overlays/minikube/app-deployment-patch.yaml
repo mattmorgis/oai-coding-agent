@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-app
+spec:
+  template:
+    spec:
+      containers:
+        - name: python-app
+          imagePullPolicy: Never
+      initContainers:
+        - name: db-migration
+          imagePullPolicy: Never

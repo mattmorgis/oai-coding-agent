@@ -7,7 +7,7 @@ metadata:
   namespace: cnpg-system
 spec:
   instances: 3
-  imageName: ghcr.io/cloudnative-pg/postgresql:16
+  imageName: ghcr.io/cloudnative-pg/postgresql:16-standard-bookworm
   storage:
     size: 20Gi
     storageClass: default # Patched per environment
@@ -20,7 +20,7 @@ spec:
       owner: app
       secret:
         name: db-user-pass
-      postInitSQL:
+      postInitTemplateSQL:
         - "CREATE EXTENSION IF NOT EXISTS vector;"
   resources:
     requests:
@@ -29,4 +29,5 @@ spec:
     limits:
       memory: "1Gi"
       cpu: "1"
-  monitoring: true
+  monitoring:
+    enablePodMonitor: true

@@ -11,8 +11,3 @@ resources:
   - app-service.yaml
   - app-hpa.yaml
   - pgadmin-deployment.yaml
-
-images:
-  - name: python-app
-    newName: <PY_APP_REGISTRY>/python-app
-    newTag: latest

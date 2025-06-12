@@ -2,8 +2,8 @@
 # Reference: https://github.com/cloudnative-pg/charts
 # Only minimal tweaks; rest remain chart defaults.
 # Replace placeholders if needed.
-image:
-  tag: "1.22.1"
+# image:
+#   tag: "1.26.0"
 
 fullnameOverride: "cloudnativepg-operator"
 

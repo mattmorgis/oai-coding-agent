@@ -6,14 +6,20 @@ resources:
   - sc-azure-disk-premium-zrs.yaml
   - keyvault-secretstore.yaml
 
-patchesStrategicMerge:
-  - cluster-keyvault-patch.yaml
+patches:
+  - path: cluster-keyvault-patch.yaml
+
+images:
+  # For AKS, use the container registry image (set by CI/CD or manually)
+  - name: python-app
+    newName: <PY_APP_REGISTRY>/python-app
+    newTag: latest
 
 generatorOptions:
   disableNameSuffixHash: true
 
 secretGenerator:
-  - name: pgadmin-credentials
-    literals:
+  - literals:
       - email=PLACEHOLDER_PGADMIN_EMAIL
       - password=PLACEHOLDER_PGADMIN_PASSWORD
+    name: pgadmin-credentials
