@@ -1,14 +1,6 @@
-from typing import Any, AsyncIterator, Optional
-from unittest.mock import Mock
-
-from agents import RunResultStreaming
+from typing import Any, AsyncIterator
 
 from oai_coding_agent.agent import AgentProtocol
-from oai_coding_agent.agent.events import (
-    MessageOutputEvent,
-    ReasoningEvent,
-    ToolCallEvent,
-)
 from oai_coding_agent.runtime_config import RuntimeConfig
 
 
@@ -19,7 +11,6 @@ class MockAgent:
         self.config = config
         self.run_called = False
         self.run_args: list[str] = []
-        self._previous_response_id: Optional[str] = None
 
     async def __aenter__(self) -> "MockAgent":
         return self
@@ -30,26 +21,15 @@ class MockAgent:
     async def run(
         self,
         user_input: str,
-    ) -> tuple[
-        AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent],
-        RunResultStreaming,
-    ]:
+    ) -> AsyncIterator[Any]:
         self.run_called = True
         self.run_args.append(user_input)
 
-        async def empty_stream() -> AsyncIterator[
-            ToolCallEvent | ReasoningEvent | MessageOutputEvent
-        ]:
+        async def empty_stream() -> AsyncIterator[Any]:
             if False:
-                # This is never executed, just for type checking
-                yield ToolCallEvent(name="dummy", arguments="{}")
+                yield
 
-        # Create a mock of RunResultStreaming
-        mock_result = Mock(spec=RunResultStreaming)
-        # Set the last_response_id attribute
-        mock_result.last_response_id = "mock_response_id"
-
-        return empty_stream(), mock_result
+        return empty_stream()
 
 
 class MockConsole:

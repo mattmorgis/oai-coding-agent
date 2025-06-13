@@ -16,7 +16,7 @@ from typing import Optional
 
 from dotenv import dotenv_values
 
-from oai_coding_agent.auth.token_storage import get_auth_file_path
+from .auth.token_storage import get_auth_file_path
 
 # Environment variable names for credentials and endpoints
 OPENAI_API_KEY_ENV: str = "OPENAI_API_KEY"

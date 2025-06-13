@@ -4,13 +4,8 @@ Map agent events to UI messages.
 
 import logging
 
-from oai_coding_agent.agent.events import (
-    AgentEvent,
-    MessageOutputEvent,
-    ReasoningEvent,
-    ToolCallEvent,
-)
-from oai_coding_agent.console.state import UIMessage
+from ..agent.events import AgentEvent, MessageOutputEvent, ReasoningEvent, ToolCallEvent
+from .state import UIMessage
 
 logger = logging.getLogger(__name__)
 

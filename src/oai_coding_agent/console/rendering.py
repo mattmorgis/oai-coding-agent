@@ -3,7 +3,7 @@ import os
 from rich.console import Console, ConsoleOptions, RenderResult
 from rich.markdown import Heading, Markdown
 
-from oai_coding_agent.console.state import UIMessage
+from .state import UIMessage
 
 
 # Classes to override the default Markdown renderer

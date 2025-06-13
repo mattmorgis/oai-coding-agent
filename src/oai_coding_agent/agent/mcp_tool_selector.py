@@ -8,7 +8,7 @@ from agents.mcp import MCPServer
 from agents.mcp.util import MCPUtil
 from agents.tool import Tool
 
-from oai_coding_agent.runtime_config import RuntimeConfig
+from ..runtime_config import RuntimeConfig
 
 
 def _filter_tools_for_mode(

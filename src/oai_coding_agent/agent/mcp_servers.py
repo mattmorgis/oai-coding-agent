@@ -10,7 +10,7 @@ from typing import Any, List
 from agents.mcp import MCPServer, MCPServerStdio
 from mcp.client.stdio import stdio_client
 
-from oai_coding_agent.runtime_config import RuntimeConfig
+from ..runtime_config import RuntimeConfig
 
 logger = logging.getLogger(__name__)
 

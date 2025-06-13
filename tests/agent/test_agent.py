@@ -135,7 +135,7 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
     agent = Agent(config, max_turns=1)
     agent._sdk_agent = cast(SDKAgent, object())
 
-    event_stream, result = await agent.run("input text")
+    event_stream = await agent.run("input text")
     # Verify we can iterate the mapped events from the stream
     collected = []
     async for event in event_stream:

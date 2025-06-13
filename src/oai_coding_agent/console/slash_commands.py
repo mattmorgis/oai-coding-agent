@@ -1,5 +1,5 @@
-from oai_coding_agent.console.rendering import clear_terminal, render_message
-from oai_coding_agent.console.state import UIMessage, UIState
+from .rendering import clear_terminal, render_message
+from .state import UIMessage, UIState
 
 
 def register_slash_commands(state: UIState) -> None:
