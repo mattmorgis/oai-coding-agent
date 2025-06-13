@@ -19,16 +19,17 @@ from agents import (
 )
 from openai.types.shared.reasoning import Reasoning
 
-from ..runtime_config import RuntimeConfig
+from oai_coding_agent.agent.instruction_builder import build_instructions
+from oai_coding_agent.agent.mcp_servers import start_mcp_servers
+from oai_coding_agent.agent.mcp_tool_selector import get_filtered_function_tools
+from oai_coding_agent.runtime_config import RuntimeConfig
+
 from .events import (
     MessageOutputEvent,
     ReasoningEvent,
     ToolCallEvent,
     map_sdk_event_to_agent_event,
 )
-from .instruction_builder import build_instructions
-from .mcp_servers import start_mcp_servers
-from .mcp_tool_selector import get_filtered_function_tools
 
 logger = logging.getLogger(__name__)
 
