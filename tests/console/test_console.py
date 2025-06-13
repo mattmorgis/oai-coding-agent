@@ -1,12 +1,9 @@
-import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
-from rich.console import Console
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from conftest import MockAgent
+from rich.console import Console
 
 import oai_coding_agent.console.console as console_module
 import oai_coding_agent.console.rendering as rendering
