@@ -27,10 +27,4 @@ def get_key_bindings() -> KeyBindings:
         """Insert newline on Alt+Enter."""
         event.current_buffer.insert_text("\n")
 
-    # Enter submits input
-    @kb.add(Keys.Enter, eager=True)
-    def _(event: KeyPressEvent) -> None:
-        """Submit input on Enter"""
-        event.current_buffer.validate_and_handle()
-
     return kb
