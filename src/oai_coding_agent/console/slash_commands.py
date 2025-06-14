@@ -31,7 +31,7 @@ def register_slash_commands(state: UIState) -> None:
         """Show version information."""
         msg: UIMessage = {
             "role": "system",
-            "content": "CLI Chat Version: 0.1.0\nBuilt with Rich and prompt-toolkit",
+            "content": "OAI CLI Version: 0.1.0",
         }
         render_message(msg)
         return True
