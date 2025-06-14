@@ -7,8 +7,7 @@ from typing import Annotated, Callable, Optional
 import typer
 
 from oai_coding_agent.agent import Agent, AgentProtocol
-from oai_coding_agent.auth.github_browser_auth import authenticate_github_browser
-from oai_coding_agent.auth.token_storage import delete_github_token, get_github_token
+from oai_coding_agent.console import GitHubConsole
 from oai_coding_agent.console.console import Console, HeadlessConsole, ReplConsole
 from oai_coding_agent.logger import setup_logging
 from oai_coding_agent.preflight import PreflightCheckError, run_preflight_checks
@@ -40,52 +39,26 @@ def default_console_factory(agent: AgentProtocol) -> Console:
         return ReplConsole(agent)
 
 
-def create_github_app() -> typer.Typer:
+def create_github_cli_app() -> typer.Typer:
     # Create github subcommand group
     github_app = typer.Typer(rich_markup_mode=None)
-    github_app.command("auth")(github_auth)
+    github_app.command("login")(github_login)
     github_app.command("logout")(github_logout)
     return github_app
 
 
-def github_auth() -> None:
-    """Authenticate with GitHub using browser-based flow."""
-    typer.echo("🔐 Starting GitHub authentication...")
-
-    # Check if already authenticated
-    existing_token = get_github_token()
-    if existing_token:
-        typer.echo("⚠️  You already have a stored GitHub token.")
-        if not typer.confirm("Do you want to re-authenticate?"):
-            typer.echo("Authentication cancelled.")
-            return
-
-    # Perform authentication
-    token = authenticate_github_browser()
-    if token:
-        typer.echo("\n✅ Authentication successful!")
-        typer.echo("You can now use the agent with full GitHub integration.")
-    else:
-        typer.echo("\n❌ Authentication failed.")
-        typer.echo("Please try again or set GITHUB_TOKEN manually.")
-        raise typer.Exit(code=1)
+def github_login() -> None:
+    """Log in to GitHub using browser-based flow."""
+    github_console = GitHubConsole()
+    github_console.check_or_authenticate()
+    # if not token:
+    #     raise typer.Exit(code=1)
 
 
 def github_logout() -> None:
     """Remove stored GitHub authentication token."""
-    if not get_github_token():
-        typer.echo("No stored GitHub token found.")
-        return
-
-    if typer.confirm("Are you sure you want to remove your GitHub token?"):
-        if delete_github_token():
-            typer.echo("✅ Successfully logged out from GitHub.")
-            typer.echo("You'll need to authenticate again to use GitHub features.")
-        else:
-            typer.echo("❌ Failed to remove token.")
-            raise typer.Exit(code=1)
-    else:
-        typer.echo("Logout cancelled.")
+    github_console = GitHubConsole()
+    github_console.logout()
 
 
 def main(
@@ -159,27 +132,11 @@ def main(
         # Handle GitHub authentication
         if not github_token and mode == ModeChoice.default and not prompt:
             # Only prompt for browser auth in interactive Default mode
-            typer.echo("\n⚠️  No GitHub Personal Access Token found.")
-            typer.echo("Would you like to authenticate with GitHub using your browser?")
-            if typer.confirm("Authenticate now?"):
-                token = authenticate_github_browser()
-                if token:
-                    github_token = token
-                else:
-                    typer.echo("\n❌ Browser authentication failed.")
-                    typer.echo("Please set GITHUB_TOKEN manually.")
-                    raise typer.Exit(code=1)
-            else:
-                typer.echo("\nAlternatively, you can:")
-                typer.echo(
-                    "  • Set environment variable: export GITHUB_TOKEN=your_token"
-                )
-                typer.echo(
-                    "  • Use command line option: --github-personal-access-token your_token"
-                )
-                typer.echo("  • The agent will continue without GitHub integration")
+            github_console = GitHubConsole()
 
-        # Note: github_token can be None - the agent will handle this gracefully
+            token = github_console.prompt_auth()
+            if token:
+                github_token = token
 
         cfg = RuntimeConfig(
             openai_api_key=openai_api_key,
@@ -205,8 +162,8 @@ def main(
             factory = _agent_factory or default_agent_factory
             console_fact = _console_factory or default_console_factory
             agent = factory(cfg)
-            console = console_fact(agent)
-            asyncio.run(console.run())
+            agent_console = console_fact(agent)
+            asyncio.run(agent_console.run())
         except KeyboardInterrupt:
             print("\nExiting...")
 
@@ -241,8 +198,8 @@ def create_app(
     _console_factory = console_factory
 
     app = typer.Typer(rich_markup_mode=None)
-    github_app = create_github_app()
-    app.add_typer(github_app, name="github")
+    github_cli_app = create_github_cli_app()
+    app.add_typer(github_cli_app, name="github")
 
     app.callback(invoke_without_command=True)(main)
 
