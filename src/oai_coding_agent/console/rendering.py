@@ -47,7 +47,8 @@ def render_message(msg: UIMessage) -> None:
     elif role == "system":
         console.print(f"[dim yellow]System:[/dim yellow] [yellow]{content}[/yellow]")
     elif role == "thought":
-        console.print(f"[italic dim]{content}[/italic dim]")
+        md = Markdown(content, code_theme="nord", hyperlinks=True)
+        console.print(md)
     elif role == "tool":
         console.print(f"[dim green]Tool: {content}[/dim green]")
 
