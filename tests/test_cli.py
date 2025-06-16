@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 import oai_coding_agent.cli as cli_module
 from oai_coding_agent.agent import AgentProtocol
 from oai_coding_agent.cli import create_app
-from oai_coding_agent.console.console import Console
+from oai_coding_agent.console.console import ConsoleInterface
 from oai_coding_agent.preflight import PreflightCheckError
 from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConfig
 
@@ -40,7 +40,7 @@ def mock_console_factory() -> Any:
     """Create a factory that returns a MockConsole."""
     created_console: Optional[MockConsole] = None
 
-    def factory(agent: AgentProtocol) -> Console:
+    def factory(agent: AgentProtocol) -> ConsoleInterface:
         nonlocal created_console
         created_console = MockConsole(agent)
         return created_console
@@ -51,7 +51,7 @@ def mock_console_factory() -> Any:
             return created_console
 
         @property
-        def factory(self) -> Callable[[AgentProtocol], Console]:
+        def factory(self) -> Callable[[AgentProtocol], ConsoleInterface]:
             return factory
 
     return FactoryResult()

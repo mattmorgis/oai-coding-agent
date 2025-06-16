@@ -5,8 +5,9 @@ import pytest
 from conftest import MockAgent
 from rich.console import Console
 
-import oai_coding_agent.console.console as console_module
 import oai_coding_agent.console.rendering as rendering
+from oai_coding_agent.console.console import ReplConsole
+import oai_coding_agent.console.repl_console as repl_console_module
 from oai_coding_agent.runtime_config import (
     ModeChoice,
     ModelChoice,
@@ -29,15 +30,15 @@ def setup_repl(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Console:
     # Redirect console output to recorder and disable clear
     recorder = Console(record=True, width=80)
     monkeypatch.setattr(rendering, "console", recorder)
-    monkeypatch.setattr(console_module, "console", recorder)
+    monkeypatch.setattr(repl_console_module, "console", recorder)
     monkeypatch.setattr(rendering, "clear_terminal", lambda: None)
-    monkeypatch.setattr(console_module, "clear_terminal", lambda: None)
+    monkeypatch.setattr(repl_console_module, "clear_terminal", lambda: None)
 
     # Force history path into tmp_path
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     # Monkeypatch prompt session only
-    monkeypatch.setattr(console_module, "PromptSession", DummyPromptSession)
+    monkeypatch.setattr(repl_console_module, "PromptSession", DummyPromptSession)
 
     return recorder
 
@@ -57,7 +58,7 @@ async def test_repl_console_exits_on_exit_and_prints_header(
 
     # Create agent and console directly
     agent = MockAgent(config)
-    console = console_module.ReplConsole(agent)
+    console = ReplConsole(agent)
     await console.run()
 
     output = recorder.export_text()

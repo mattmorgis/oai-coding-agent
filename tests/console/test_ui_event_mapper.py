@@ -19,7 +19,7 @@ def test_map_reasoning_event() -> None:
     """Test mapping of reasoning events."""
     event = ReasoningEvent(text="thinking about the problem")
     mapped = map_event_to_ui_message(event)
-    assert mapped == {"role": "thought", "content": "💭 thinking about the problem"}
+    assert mapped == {"role": "thought", "content": "thinking about the problem"}
 
 
 def test_map_message_output_event() -> None:

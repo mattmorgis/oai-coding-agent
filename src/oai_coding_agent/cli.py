@@ -8,7 +8,7 @@ import typer
 
 from oai_coding_agent.agent import Agent, AgentProtocol
 from oai_coding_agent.console import GitHubConsole
-from oai_coding_agent.console.console import Console, HeadlessConsole, ReplConsole
+from oai_coding_agent.console.console import ConsoleInterface, HeadlessConsole, ReplConsole
 from oai_coding_agent.logger import setup_logging
 from oai_coding_agent.preflight import PreflightCheckError, run_preflight_checks
 from oai_coding_agent.runtime_config import (
@@ -23,7 +23,7 @@ from oai_coding_agent.runtime_config import (
 
 # Global factory functions - set by create_app()
 _agent_factory: Optional[Callable[[RuntimeConfig], AgentProtocol]] = None
-_console_factory: Optional[Callable[[AgentProtocol], Console]] = None
+_console_factory: Optional[Callable[[AgentProtocol], ConsoleInterface]] = None
 
 
 def default_agent_factory(config: RuntimeConfig) -> AgentProtocol:
@@ -31,8 +31,8 @@ def default_agent_factory(config: RuntimeConfig) -> AgentProtocol:
     return Agent(config)
 
 
-def default_console_factory(agent: AgentProtocol) -> Console:
-    """Default factory for creating Console instances."""
+def default_console_factory(agent: AgentProtocol) -> ConsoleInterface:
+    """Default factory for creating ConsoleInterface instances."""
     if agent.config.prompt:
         return HeadlessConsole(agent)
     else:
@@ -170,14 +170,14 @@ def main(
 
 def create_app(
     agent_factory: Optional[Callable[[RuntimeConfig], AgentProtocol]] = None,
-    console_factory: Optional[Callable[[AgentProtocol], Console]] = None,
+    console_factory: Optional[Callable[[AgentProtocol], ConsoleInterface]] = None,
 ) -> typer.Typer:
     """
     Create and configure the Typer application.
 
     Args:
         agent_factory: Factory function to create Agent instances
-        console_factory: Factory function to create Console instances
+        console_factory: Factory function to create ConsoleInterface instances
 
     Returns:
         Typer application
