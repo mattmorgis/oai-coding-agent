@@ -68,6 +68,7 @@ class ModelChoice(str, Enum):
 
     codex_mini_latest = "codex-mini-latest"
     o3 = "o3"
+    o3_pro = "o3-pro"
     o4_mini = "o4-mini"
 
 
