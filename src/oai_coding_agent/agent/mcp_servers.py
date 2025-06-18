@@ -152,6 +152,7 @@ async def start_mcp_servers(
     if config.github_token:
         try:
             gh_ctx = QuietMCPServerStdio(
+                # TODO: Change to use remote MCP instead
                 name="github-mcp-server",
                 params={
                     "command": "docker",
@@ -161,7 +162,7 @@ async def start_mcp_servers(
                         "--rm",
                         "-e",
                         "GITHUB_PERSONAL_ACCESS_TOKEN",
-                        "ghcr.io/github/github-mcp-server",
+                        "ghcr.io/github/github-mcp-server:v0.5.0",
                     ],
                     "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": config.github_token},
                 },
