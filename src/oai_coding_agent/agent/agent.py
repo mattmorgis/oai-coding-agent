@@ -9,7 +9,7 @@ from contextlib import AsyncExitStack
 from typing import Any, AsyncIterator, Optional, Protocol, runtime_checkable
 
 from agents import (
-    Agent as SDKAgent,
+    Agent as OpenAIAgent,
 )
 from agents import (
     ModelSettings,
@@ -50,8 +50,15 @@ class AgentProtocol(Protocol):
     ) -> AsyncIterator[ToolCallEvent | ReasoningEvent | MessageOutputEvent]: ...
 
 
-class Agent:
+class Agent(AgentProtocol):
     """Agent that manages MCP servers, tracing, and SDK agent interactions."""
+
+    config: RuntimeConfig
+    max_turns: int
+    _openai_agent: Optional[OpenAIAgent]
+    _previous_response_id: Optional[str]
+
+    _exit_stack: Optional[AsyncExitStack]
 
     def __init__(self, config: RuntimeConfig, max_turns: int = 100):
         self.config = config
@@ -59,7 +66,7 @@ class Agent:
         # track the last response ID internally
         self._previous_response_id: Optional[str] = None
         self._exit_stack: Optional[AsyncExitStack] = None
-        self._sdk_agent: Optional[SDKAgent] = None
+        self._openai_agent: Optional[OpenAIAgent] = None
 
     async def __aenter__(self) -> "Agent":
         # Initialize exit stack for async contexts and callbacks
@@ -82,8 +89,8 @@ class Agent:
         dynamic_instructions = build_instructions(self.config)
         function_tools = await get_filtered_function_tools(mcp_servers, self.config)
 
-        # Instantiate the SDK Agent with the filtered function-tools
-        self._sdk_agent = SDKAgent(
+        # Instantiate the OpenAI agent with the filtered function-tools
+        self._openai_agent = OpenAIAgent(
             name="Coding Agent",
             instructions=dynamic_instructions,
             model=self.config.model.value,
@@ -107,11 +114,11 @@ class Agent:
         """
         Send one user message to the agent and return an async iterator of agent events.
         """
-        if self._sdk_agent is None:
+        if self._openai_agent is None:
             raise RuntimeError("Agent not initialized. Use async with context manager.")
 
         result = Runner.run_streamed(
-            self._sdk_agent,
+            self._openai_agent,
             user_input,
             previous_response_id=self._previous_response_id,
             max_turns=self.max_turns,

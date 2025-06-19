@@ -4,7 +4,7 @@ from typing import Any, AsyncGenerator, Optional, cast
 from unittest.mock import Mock
 
 import pytest
-from agents import Agent as SDKAgent
+from agents import Agent as OpenAIAgent
 from agents import RunItemStreamEvent, Runner
 from agents.items import (  # type: ignore[attr-defined]
     MessageOutputItem,
@@ -133,7 +133,7 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
         mode=ModeChoice.async_,
     )
     agent = Agent(config, max_turns=1)
-    agent._sdk_agent = cast(SDKAgent, object())
+    agent._openai_agent = cast(OpenAIAgent, object())
 
     event_stream = await agent.run("input text")
     # Verify we can iterate the mapped events from the stream
