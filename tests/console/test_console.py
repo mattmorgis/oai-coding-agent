@@ -6,8 +6,8 @@ from conftest import MockAgent
 from rich.console import Console
 
 import oai_coding_agent.console.rendering as rendering
-from oai_coding_agent.console.console import ReplConsole
 import oai_coding_agent.console.repl_console as repl_console_module
+from oai_coding_agent.console.console import ReplConsole
 from oai_coding_agent.runtime_config import (
     ModeChoice,
     ModelChoice,

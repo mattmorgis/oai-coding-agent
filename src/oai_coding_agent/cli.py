@@ -8,7 +8,11 @@ import typer
 
 from oai_coding_agent.agent import Agent, AgentProtocol
 from oai_coding_agent.console import GitHubConsole
-from oai_coding_agent.console.console import ConsoleInterface, HeadlessConsole, ReplConsole
+from oai_coding_agent.console.console import (
+    ConsoleInterface,
+    HeadlessConsole,
+    ReplConsole,
+)
 from oai_coding_agent.logger import setup_logging
 from oai_coding_agent.preflight import PreflightCheckError, run_preflight_checks
 from oai_coding_agent.runtime_config import (

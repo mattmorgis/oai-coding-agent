@@ -19,7 +19,7 @@ from oai_coding_agent.runtime_config import (
 @pytest.mark.parametrize(
     "enum_class,expected_values",
     [
-        (ModelChoice, {"codex-mini-latest", "o3", "o4-mini"}),
+        (ModelChoice, {"codex-mini-latest", "o3", "o4-mini", "o3-pro"}),
         (ModeChoice, {"default", "async", "plan"}),
     ],
 )

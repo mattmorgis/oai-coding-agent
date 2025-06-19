@@ -37,5 +37,3 @@ class HeadlessConsole(ConsoleInterface):
                 ui_msg = map_event_to_ui_message(event)
                 if ui_msg:
                     render_message(ui_msg)
-
-
