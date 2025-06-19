@@ -27,3 +27,54 @@ controller.cancel_current() then app exit)
 4 Inversion-of-control
 • App layers talk only via protocols: – Console depends on AgentControllerProtocol – AgentController depends on AgentProtocol (already exists) – AgentProtocol uses RuntimeConfig but nothing above it.
 • Factory functions already present in cli.py stay, but now create the controller instead of raw Agent.
+
+```mermaid
+sequenceDiagram
+    participant CLI
+    participant Agent
+    participant MCPServers
+    participant Console
+    participant User
+
+    CLI->>Agent: Create Agent(config)
+    Agent->>MCPServers: Start all servers (blocking)
+    MCPServers-->>Agent: Servers ready
+    Agent-->>CLI: Agent ready
+    CLI->>Console: Create Console(agent)
+    Console->>User: Show prompt
+    User->>Console: Enter message
+    Console->>Agent: Run (blocking)
+    Agent-->>Console: Stream events
+    Console-->>User: Render output
+    Console->>User: Show prompt (after completion)
+```
+
+```mermaid
+graph TB
+    subgraph "User Interface Layer"
+        Console[Console]
+        InputHandler[Input Handler]
+        OutputRenderer[Output Renderer]
+    end
+
+    subgraph "Coordination Layer"
+        AgentManager[Agent Manager]
+        MessageQueue[Message Queue]
+        StateManager[State Manager]
+    end
+
+    subgraph "Agent Layer"
+        Agent[Agent]
+        MCPServers[MCP Servers]
+    end
+
+    Console --> InputHandler
+    Console --> OutputRenderer
+    InputHandler --> MessageQueue
+    MessageQueue --> AgentManager
+    AgentManager --> Agent
+    Agent --> MCPServers
+    AgentManager --> StateManager
+    StateManager --> OutputRenderer
+    Agent -.->|Events| OutputRenderer
+```
