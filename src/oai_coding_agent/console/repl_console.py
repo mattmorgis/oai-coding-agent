@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.application import run_in_terminal
@@ -13,6 +14,8 @@ from oai_coding_agent.agent import AgentProtocol
 from oai_coding_agent.console.rendering import clear_terminal, console, render_message
 from oai_coding_agent.console.ui_event_mapper import UIMessage, map_event_to_ui_message
 from oai_coding_agent.runtime_config import get_data_dir
+
+logger = logging.getLogger(__name__)
 
 
 class ReplConsole:
@@ -106,10 +109,15 @@ class ReplConsole:
         )
 
         # Don’t start the agent until the first prompt is actually on screen.
+        logger.debug(
+            "ReplConsole: creating start_init_event and registering pre_run callback"
+        )
         start_event = asyncio.Event()
         self.agent._start_init_event = start_event
         prompt_session.app.pre_run_callables.append(lambda: start_event.set())
 
+        # Debug: show when entering agent context
+        logger.debug("ReplConsole: entering async with self.agent")
         async with self.agent:
             continue_loop = True
             while continue_loop:
