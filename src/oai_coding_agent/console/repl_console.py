@@ -108,21 +108,20 @@ class ReplConsole:
             erase_when_done=True,
         )
 
-        # Don’t start the agent until the first prompt is actually on screen.
-        logger.debug(
-            "ReplConsole: creating start_init_event and registering pre_run callback"
-        )
         start_event = asyncio.Event()
         self.agent._start_init_event = start_event
-        prompt_session.app.pre_run_callables.append(lambda: start_event.set())
 
-        # Debug: show when entering agent context
-        logger.debug("ReplConsole: entering async with self.agent")
+        def _pre_run_callback() -> None:
+            logger.info("Prompt session pre-run callback: setting start_init_event")
+            start_event.set()
+
         async with self.agent:
             continue_loop = True
             while continue_loop:
                 try:
-                    user_input = await prompt_session.prompt_async("› ")
+                    user_input = await prompt_session.prompt_async(
+                        "› ", pre_run=_pre_run_callback
+                    )
                     if not user_input.strip():
                         continue
 

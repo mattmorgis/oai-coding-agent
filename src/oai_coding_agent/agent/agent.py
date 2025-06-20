@@ -114,14 +114,8 @@ class Agent(AgentProtocol):
         self._exit_stack = None
 
     async def __aenter__(self) -> "Agent":
-        if self._start_init_event is not None:
-            logger.debug("Agent: awaiting start_init_event before init")
-            await self._start_init_event.wait()
-            logger.debug("Agent: start_init_event received")
-        logger.debug("Agent: spawning background init and prompt consumer tasks")
         self._agent_init_task = asyncio.create_task(self._initialize_in_background())
         self._prompt_consumer_task = asyncio.create_task(self._prompt_queue_consumer())
-        logger.debug("Agent: tasks spawned, returning from __aenter__")
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -131,6 +125,10 @@ class Agent(AgentProtocol):
     async def _initialize_in_background(self) -> None:
         logger.info("Initializing agent in background")
         try:
+            if self._start_init_event is not None:
+                logger.info("Agent: awaiting start_init_event before init")
+                await self._start_init_event.wait()
+                logger.info("Agent: start_init_event received")
             # Initialize exit stack for async contexts
             self._exit_stack = AsyncExitStack()
             await self._exit_stack.__aenter__()
