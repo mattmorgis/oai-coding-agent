@@ -105,6 +105,11 @@ class ReplConsole:
             erase_when_done=True,
         )
 
+        # Don’t start the agent until the first prompt is actually on screen.
+        start_event = asyncio.Event()
+        self.agent._start_init_event = start_event
+        prompt_session.app.pre_run_callables.append(lambda: start_event.set())
+
         async with self.agent:
             continue_loop = True
             while continue_loop:

@@ -73,6 +73,7 @@ class Agent(AgentProtocol):
     events: asyncio.Queue[AgentEvent]
 
     _agent_ready_event: asyncio.Event
+    _start_init_event: asyncio.Event | None
     _agent_init_task: Optional[asyncio.Task[None]]
     _agent_init_exception: Optional[AgentInitializationError]
 
@@ -95,6 +96,7 @@ class Agent(AgentProtocol):
         self.events = asyncio.Queue()
 
         self._agent_ready_event = asyncio.Event()
+        self._start_init_event = None
         self._agent_init_task = None
         self._agent_init_exception = None
 
@@ -112,6 +114,8 @@ class Agent(AgentProtocol):
         self._exit_stack = None
 
     async def __aenter__(self) -> "Agent":
+        if self._start_init_event is not None:
+            await self._start_init_event.wait()
         self._agent_init_task = asyncio.create_task(self._initialize_in_background())
         self._prompt_consumer_task = asyncio.create_task(self._prompt_queue_consumer())
         return self
