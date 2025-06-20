@@ -3,11 +3,16 @@ Map agent events to UI messages.
 """
 
 import logging
+from typing import TypedDict
 
 from ..agent.events import AgentEvent, MessageOutputEvent, ReasoningEvent, ToolCallEvent
-from .state import UIMessage
 
 logger = logging.getLogger(__name__)
+
+
+class UIMessage(TypedDict):
+    role: str
+    content: str
 
 
 def map_event_to_ui_message(event: AgentEvent) -> UIMessage:

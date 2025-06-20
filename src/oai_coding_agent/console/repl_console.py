@@ -1,36 +1,79 @@
 import asyncio
 
 from prompt_toolkit import PromptSession
+from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
+from prompt_toolkit.keys import Keys
 from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
 from oai_coding_agent.agent import AgentProtocol
-from oai_coding_agent.console.key_bindings import get_key_bindings
 from oai_coding_agent.console.rendering import clear_terminal, console, render_message
-from oai_coding_agent.console.slash_commands import (
-    handle_slash_command,
-    register_slash_commands,
-)
-from oai_coding_agent.console.state import UIState
-from oai_coding_agent.console.ui_event_mapper import map_event_to_ui_message
+from oai_coding_agent.console.ui_event_mapper import UIMessage, map_event_to_ui_message
 from oai_coding_agent.runtime_config import get_data_dir
 
 
 class ReplConsole:
     """Console that runs interactive REPL mode."""
 
+    agent: AgentProtocol
+
+    _prompt_session: PromptSession[str]
+
     def __init__(self, agent: AgentProtocol) -> None:
         self.agent = agent
 
+    async def _event_stream_consumer(self) -> None:
+        while True:
+            agent_event = await self.agent.events.get()
+            await run_in_terminal(
+                lambda: render_message(map_event_to_ui_message(agent_event))
+            )
+
+    def _get_key_bindings(self) -> KeyBindings:
+        """Return the custom KeyBindings (e.g. Tab behaviour)."""
+        kb = KeyBindings()
+
+        @kb.add(Keys.Tab)
+        def _(event: KeyPressEvent) -> None:
+            buffer = event.current_buffer
+            suggestion = buffer.suggestion
+            if suggestion:
+                buffer.insert_text(suggestion.text)
+            else:
+                buffer.complete_next()
+
+        @kb.add("escape")
+        async def _(event: KeyPressEvent) -> None:
+            """Handle ESC - cancel current job."""
+            await self.agent.cancel()
+            await run_in_terminal(
+                lambda: render_message(
+                    UIMessage(role="error", content="Agent cancelled by user")
+                )
+            )
+
+        # Support Ctrl+J for newline without submission.
+        @kb.add("c-j", eager=True)
+        def _(event: KeyPressEvent) -> None:
+            """Insert newline on Ctrl+J (recommended Shift+Enter mapping in terminal)."""
+            event.current_buffer.insert_text("\n")
+
+        # Support Alt+Enter for newline without submission.
+        @kb.add(Keys.Escape, Keys.Enter, eager=True)
+        def _(event: KeyPressEvent) -> None:
+            """Insert newline on Alt+Enter."""
+            event.current_buffer.insert_text("\n")
+
+        return kb
+
     async def run(self) -> None:
         """Interactive REPL loop for the console interface."""
-        state = UIState()
-        clear_terminal()
+        asyncio.create_task(self._event_stream_consumer())
 
-        register_slash_commands(state)
+        clear_terminal()
 
         console.print(
             Panel(
@@ -42,7 +85,7 @@ class ReplConsole:
             )
         )
 
-        kb = get_key_bindings()
+        kb = self._get_key_bindings()
 
         # Store prompt history under the XDG data directory
         history_dir = get_data_dir()
@@ -54,7 +97,6 @@ class ReplConsole:
             auto_suggest=AutoSuggestFromHistory(),
             enable_history_search=True,
             complete_while_typing=True,
-            completer=WordCompleter([f"/{c}" for c in state.slash_commands]),
             complete_in_thread=True,
             key_bindings=kb,
             style=Style.from_dict(
@@ -67,26 +109,17 @@ class ReplConsole:
             continue_loop = True
             while continue_loop:
                 try:
-                    user_input = await asyncio.to_thread(
-                        lambda: prompt_session.prompt("› ")
-                    )
+                    user_input = await prompt_session.prompt_async("› ")
                     if not user_input.strip():
                         continue
 
                     if user_input.strip().lower() in ["exit", "quit", "/exit", "/quit"]:
-                        continue_loop = state.slash_commands["exit"]("")
-                        continue
-
-                    if user_input.startswith("/"):
-                        continue_loop = handle_slash_command(state, user_input)
+                        continue_loop = False
                         continue
 
                     console.print(f"[dim]› {user_input}[/dim]\n")
 
-                    event_stream = await self.agent.run(user_input)
-                    async for event in event_stream:
-                        ui_msg = map_event_to_ui_message(event)
-                        render_message(ui_msg)
+                    await self.agent.run(user_input)
 
                 except (KeyboardInterrupt, EOFError):
                     continue_loop = False

@@ -3,7 +3,7 @@ import os
 from rich.console import Console, ConsoleOptions, RenderResult
 from rich.markdown import Heading, Markdown
 
-from oai_coding_agent.console.state import UIMessage
+from oai_coding_agent.console.ui_event_mapper import UIMessage
 
 
 # Classes to override the default Markdown renderer
@@ -38,18 +38,18 @@ def render_message(msg: UIMessage) -> None:
     """Render a single message via Rich."""
     role = msg.get("role")
     content = msg.get("content", "")
-    if role == "user":
-        console.print(f"[bold blue]You:[/bold blue] {content}")
-    elif role == "assistant":
+    if role == "assistant":
         console.print("[bold cyan]oai:[/bold cyan]", end=" ")
         md = Markdown(content, code_theme="nord", hyperlinks=True)
         console.print(md)
-    elif role == "system":
-        console.print(f"[dim yellow]System:[/dim yellow] [yellow]{content}[/yellow]")
     elif role == "thought":
-        md = Markdown(content, code_theme="nord", hyperlinks=True)
+        md = Markdown(content, code_theme="nord", hyperlinks=True, style="dim")
         console.print(md)
+        console.print()
     elif role == "tool":
-        console.print(f"[dim green]Tool: {content}[/dim green]")
-
-    console.print()
+        console.print("[dim]tool›[/dim]", end=" ")
+        console.print(f"[dim green]{content}[/dim green]")
+        console.print()
+    elif role == "error":
+        console.print(f"[bold red]error: {content}[/bold red]")
+        console.print()

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Annotated, Callable, Optional
@@ -187,6 +188,10 @@ def create_app(
         Typer application
     """
     setup_logging()
+    logger = logging.getLogger(__name__)
+    logger.info(
+        f"OAI v0.1.0 starting up (Python v{sys.version.split()[0]}, PID: {os.getpid()})"
+    )
 
     # Load API keys and related settings from .env if not already set in the environment
     load_envs()
@@ -210,9 +215,11 @@ def create_app(
     return app
 
 
-# Create default app instance for backward compatibility
-app = create_app()
+def run():
+    """Entry point for the CLI."""
+    app = create_app()
+    app()
 
 
 if __name__ == "__main__":
-    app()
+    run()

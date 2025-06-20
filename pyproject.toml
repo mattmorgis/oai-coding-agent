@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-oai = "oai_coding_agent.cli:app"
+oai = "oai_coding_agent.cli:run"
 
 [tool.uv]
 package = true
