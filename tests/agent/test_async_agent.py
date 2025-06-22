@@ -1,3 +1,4 @@
+# ruff: noqa: PLC0415
 """Minimal unit tests for the AsyncAgent class.
 
 These tests focus on a very narrow happy-path and a cancel path so that we
