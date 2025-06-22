@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import pytest
 from conftest import MockAgent
@@ -20,7 +20,7 @@ class DummyPromptSession:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         pass
 
-    def prompt(self, prompt_str: str) -> str:
+    async def prompt_async(self, prompt_str: str, pre_run: Callable[[], None]) -> str:
         # Immediately exit on slash command
         return "/exit"
 

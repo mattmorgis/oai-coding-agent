@@ -1,3 +1,4 @@
+import asyncio
 import os
 from pathlib import Path
 from typing import Any, AsyncGenerator, Optional, cast
@@ -124,7 +125,7 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
         "run_streamed",
         lambda *args, **kwargs: fake_result,
     )
-    # Initialize agent and set dummy SDK agent
+    # Initialize agent
     config = RuntimeConfig(
         openai_api_key="k",
         github_token="TOK",
@@ -133,14 +134,31 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
         mode=ModeChoice.async_,
     )
     agent = Agent(config, max_turns=1)
-    agent._openai_agent = cast(OpenAIAgent, object())
-
-    event_stream = await agent.run("input text")
-    # Verify we can iterate the mapped events from the stream
-    collected = []
-    async for event in event_stream:
-        collected.append(event)
-    assert len(collected) == 3
+    
+    # Set up the start init event (mimicking what REPL console does)
+    agent._start_init_event = asyncio.Event()
+    
+    # Use the agent within async context manager
+    async with agent:
+        # Bypass normal initialization by setting the agent directly
+        agent._openai_agent = cast(OpenAIAgent, object())
+        
+        # Signal that initialization can start
+        agent._start_init_event.set()
+        agent._agent_ready_event.set()
+        
+        # Start the run (this queues the prompt)
+        await agent.run("input text")
+        
+        # Give the background task time to process
+        await asyncio.sleep(0.1)
+        
+        # Collect events from the agent's event queue
+        collected = []
+        while not agent.events.empty():
+            event = await agent.events.get()
+            collected.append(event)
+        assert len(collected) == 3
 
     # Check that events were properly mapped
     assert isinstance(collected[0], ToolCallEvent)
