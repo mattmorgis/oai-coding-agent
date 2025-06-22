@@ -335,7 +335,8 @@ class AsyncAgent(AsyncAgentProtocol):
             # When a run is cancelled, the last response ID cannot be used to resume
             # We must get the full history and pass that on the next run
             # This will include all reasoning and tool calls up until the run was cancelled
-            # But omit any pending tool calls it's awaiting a response fromself._agent_cancelled_mid_run = True
+            # But omit any pending tool calls it's awaiting a response from
+            self._agent_cancelled_mid_run = True
             logger.info("Set _agent_cancelled_mid_run = True")
             self._pending_history = self._active_run_result.to_input_list()
             logger.info(
