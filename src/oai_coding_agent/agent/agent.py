@@ -161,12 +161,6 @@ class AsyncAgent(AsyncAgentProtocol):
                 self._exit_stack,
             )
 
-            # Begin tracing
-            trace_id = gen_trace_id()
-            trace_ctx = trace(workflow_name="OAI Coding Agent", trace_id=trace_id)
-            trace_ctx.__enter__()
-            self._exit_stack.callback(trace_ctx.__exit__, None, None, None)
-
             # Build instructions and fetch filtered MCP function-tools
             dynamic_instructions = build_instructions(self.config)
             function_tools = await get_filtered_function_tools(mcp_servers, self.config)
