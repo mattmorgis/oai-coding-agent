@@ -11,7 +11,7 @@ from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
 from oai_coding_agent.agent import AsyncAgentProtocol
-from oai_coding_agent.console.rendering import clear_terminal, console, render_message
+from oai_coding_agent.console.rendering import console, render_message
 from oai_coding_agent.console.ui_event_mapper import UIMessage, map_event_to_ui_message
 from oai_coding_agent.runtime_config import get_data_dir
 
@@ -75,8 +75,6 @@ class ReplConsole:
     async def run(self) -> None:
         """Interactive REPL loop for the console interface."""
         event_consumer_task = asyncio.create_task(self._event_stream_consumer())
-
-        clear_terminal()
 
         console.print(
             Panel(

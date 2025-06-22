@@ -1,5 +1,3 @@
-import os
-
 from rich.console import Console, ConsoleOptions, RenderResult
 from rich.markdown import Heading, Markdown
 
@@ -27,11 +25,6 @@ Markdown.elements["heading_open"] = PlainHeading
 
 
 console = Console()
-
-
-def clear_terminal() -> None:
-    """Clear the terminal screen."""
-    os.system("cls" if os.name == "nt" else "clear")
 
 
 def render_message(msg: UIMessage) -> None:

@@ -31,8 +31,6 @@ def setup_repl(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Console:
     recorder = Console(record=True, width=80)
     monkeypatch.setattr(rendering, "console", recorder)
     monkeypatch.setattr(repl_console_module, "console", recorder)
-    monkeypatch.setattr(rendering, "clear_terminal", lambda: None)
-    monkeypatch.setattr(repl_console_module, "clear_terminal", lambda: None)
 
     # Force history path into tmp_path
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
