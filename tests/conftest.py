@@ -1,7 +1,7 @@
 import asyncio
-from typing import Any, AsyncIterator
+from typing import Any
 
-from oai_coding_agent.agent import AgentProtocol, AsyncAgentProtocol, AgentEvent
+from oai_coding_agent.agent import AgentEvent, AgentProtocol, AsyncAgentProtocol
 from oai_coding_agent.runtime_config import RuntimeConfig
 
 

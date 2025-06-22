@@ -134,25 +134,25 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
         mode=ModeChoice.async_,
     )
     agent = AsyncAgent(config, max_turns=1)
-    
+
     # Set up the start init event (mimicking what REPL console does)
     agent.start_init_event = asyncio.Event()
-    
+
     # Use the agent within async context manager
     async with agent:
         # Bypass normal initialization by setting the agent directly
         agent._openai_agent = cast(OpenAIAgent, object())
-        
+
         # Signal that initialization can start
         agent.start_init_event.set()
         agent._agent_ready_event.set()
-        
+
         # Start the run (this queues the prompt)
         await agent.run("input text")
-        
+
         # Give the background task time to process
         await asyncio.sleep(0.1)
-        
+
         # Collect events from the agent's event queue
         collected = []
         while not agent.events.empty():

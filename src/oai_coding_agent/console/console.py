@@ -1,6 +1,6 @@
-from typing import Protocol, TypeVar
+from typing import Protocol
 
-from oai_coding_agent.agent import AgentProtocol, AsyncAgentProtocol, HeadlessAgentProtocol
+from oai_coding_agent.agent import HeadlessAgentProtocol
 from oai_coding_agent.console.rendering import console, render_message
 from oai_coding_agent.console.repl_console import ReplConsole
 from oai_coding_agent.console.ui_event_mapper import map_event_to_ui_message
