@@ -10,6 +10,7 @@ __all__ = [
     "HeadlessAgentProtocol",
 ]
 import asyncio
+import contextlib
 import logging
 from contextlib import AsyncExitStack
 from typing import Any, AsyncIterator, Optional, Protocol, runtime_checkable
@@ -112,6 +113,7 @@ class AsyncAgent(AsyncAgentProtocol):
     _pending_history: list[ResponseInputItemParam] | None
 
     _exit_stack: Optional[AsyncExitStack]
+    _shutdown_event: asyncio.Event
 
     def __init__(self, config: RuntimeConfig, max_turns: int = 100):
         self.config = config
@@ -135,6 +137,7 @@ class AsyncAgent(AsyncAgentProtocol):
         self._active_run_task = None
 
         self._exit_stack = None
+        self._shutdown_event = asyncio.Event()
 
     async def __aenter__(self) -> "AsyncAgent":
         self._agent_init_task = asyncio.create_task(self._initialize_in_background())
@@ -142,49 +145,105 @@ class AsyncAgent(AsyncAgentProtocol):
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        if self._exit_stack:
-            await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
+        """Gracefully shut down all background tasks and MCP servers."""
+
+        # Stop the prompt consumer first to ensure no new work is submitted
+        if self._prompt_consumer_task and not self._prompt_consumer_task.done():
+            # Put a sentinel value to break the consumer loop gracefully
+            await self._prompt_queue.put(None)  # type: ignore[arg-type]
+            await self._prompt_consumer_task
+
+        # Tell the background init task to perform cleanup (this will close the
+        # AsyncExitStack inside the same task it was created in).
+        self._shutdown_event.set()
+
+        # Wait for background init to finish teardown.
+        if self._agent_init_task and not self._agent_init_task.done():
+            await self._agent_init_task
+
+        # Ensure any remaining active run is cancelled
+        if self._active_run_task and not self._active_run_task.done():
+            self._active_run_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._active_run_task
 
     async def _initialize_in_background(self) -> None:
+        """Initialize MCP servers and the OpenAI agent in a background task.
+
+        This coroutine stays alive for the entire lifetime of the AsyncAgent so
+        that it can also be responsible for shutting the MCP servers down.  This
+        is required because the underlying MCP library relies on anyio
+        CancelScopes which must be exited in **the same task** that created
+        them.  Attempting to close the contexts from a different task raises the
+        dreaded
+
+            "Attempted to exit cancel scope in a different task than it was entered in"
+
+        exception.  By owning the full *enter* ➔ *exit* lifecycle inside one
+        long-running task we guarantee clean teardown.
+        """
         logger.info("Initializing agent in background")
+
+        if self.start_init_event is not None:
+            logger.info("Agent: awaiting start_init_event before init")
+            await self.start_init_event.wait()
+            logger.info("Agent: start_init_event received")
+
         try:
-            if self.start_init_event is not None:
-                logger.info("Agent: awaiting start_init_event before init")
-                await self.start_init_event.wait()
-                logger.info("Agent: start_init_event received")
-            # Initialize exit stack for async contexts
-            self._exit_stack = AsyncExitStack()
-            await self._exit_stack.__aenter__()
-            # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
-            mcp_servers = await start_mcp_servers(
-                self.config,
-                self._exit_stack,
-            )
+            async with AsyncExitStack() as stack:
+                # Keep a reference so we can use it elsewhere, e.g. to enter
+                # additional contexts (though exit will still be handled here).
+                self._exit_stack = stack
 
-            # Build instructions and fetch filtered MCP function-tools
-            dynamic_instructions = build_instructions(self.config)
-            function_tools = await get_filtered_function_tools(mcp_servers, self.config)
+                # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
+                mcp_servers = await start_mcp_servers(
+                    self.config,
+                    stack,
+                )
 
-            # Instantiate the OpenAI agent with the filtered function-tools
-            self._openai_agent = OpenAIAgent(
-                name="Coding Agent",
-                instructions=dynamic_instructions,
-                model=self.config.model.value,
-                model_settings=ModelSettings(
-                    reasoning=Reasoning(summary="auto", effort="high"),
-                    parallel_tool_calls=True,
-                ),
-                tools=function_tools,
-            )
+                # Build instructions and fetch filtered MCP function-tools
+                dynamic_instructions = build_instructions(self.config)
+                function_tools = await get_filtered_function_tools(
+                    mcp_servers, self.config
+                )
+
+                # Instantiate the OpenAI agent with the filtered function-tools
+                self._openai_agent = OpenAIAgent(
+                    name="Coding Agent",
+                    instructions=dynamic_instructions,
+                    model=self.config.model.value,
+                    model_settings=ModelSettings(
+                        reasoning=Reasoning(summary="auto", effort="high"),
+                        parallel_tool_calls=True,
+                    ),
+                    tools=function_tools,
+                )
+
+                logger.info("Agent background initialization complete")
+
+                # Signal that initialization finished successfully
+                self._agent_ready_event.set()
+
+                # ────────────────────────────────────────────────
+                # Wait until the main task wants to shut down.
+                # ────────────────────────────────────────────────
+                await self._shutdown_event.wait()
+                logger.info("Shutdown event received – cleaning up MCP servers …")
+
+            # Exiting the *with* block closes the AsyncExitStack in the *same*
+            # task, preventing the cancel-scope cross-task error.
+            logger.info("Background cleanup finished")
 
         except Exception as e:
+            # Make sure any waiter on _agent_ready_event is released even on failure
+            if not self._agent_ready_event.is_set():
+                self._agent_ready_event.set()
+
             self._agent_init_exception = AgentInitializationError(
                 "Failed to initialize agent",
                 e,
             )
             logger.error("Failed to initialize agent", exc_info=True)
-        finally:
-            self._agent_ready_event.set()
 
     async def _prompt_queue_consumer(self) -> None:
         await self._agent_ready_event.wait()
