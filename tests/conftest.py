@@ -1,14 +1,18 @@
+import asyncio
 from typing import Any, AsyncIterator
 
-from oai_coding_agent.agent import AgentProtocol
+from oai_coding_agent.agent import AgentProtocol, AsyncAgentProtocol, AgentEvent
 from oai_coding_agent.runtime_config import RuntimeConfig
 
 
-class MockAgent:
+class MockAgent(AsyncAgentProtocol):
     """Mock agent for testing."""
 
     def __init__(self, config: RuntimeConfig):
         self.config = config
+        self.max_turns = 100
+        self.events = asyncio.Queue[AgentEvent]()
+        self.start_init_event: asyncio.Event | None = None
         self.run_called = False
         self.run_args: list[str] = []
 
@@ -21,15 +25,12 @@ class MockAgent:
     async def run(
         self,
         user_input: str,
-    ) -> AsyncIterator[Any]:
+    ) -> None:
         self.run_called = True
         self.run_args.append(user_input)
 
-        async def empty_stream() -> AsyncIterator[Any]:
-            if False:
-                yield
-
-        return empty_stream()
+    async def cancel(self) -> None:
+        pass
 
 
 class MockConsole:

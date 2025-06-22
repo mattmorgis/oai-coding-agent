@@ -16,7 +16,7 @@ from agents.items import (  # type: ignore[attr-defined]
 from agents.mcp import MCPServerStdioParams
 
 import oai_coding_agent.agent.mcp_servers as mcp_servers_module
-from oai_coding_agent.agent.agent import Agent
+from oai_coding_agent.agent.agent import AsyncAgent
 from oai_coding_agent.agent.events import (
     MessageOutputEvent,
     ReasoningEvent,
@@ -133,10 +133,10 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
         repo_path=Path("."),
         mode=ModeChoice.async_,
     )
-    agent = Agent(config, max_turns=1)
+    agent = AsyncAgent(config, max_turns=1)
     
     # Set up the start init event (mimicking what REPL console does)
-    agent._start_init_event = asyncio.Event()
+    agent.start_init_event = asyncio.Event()
     
     # Use the agent within async context manager
     async with agent:
@@ -144,7 +144,7 @@ async def test_run_streams_and_returns(monkeypatch: pytest.MonkeyPatch) -> None:
         agent._openai_agent = cast(OpenAIAgent, object())
         
         # Signal that initialization can start
-        agent._start_init_event.set()
+        agent.start_init_event.set()
         agent._agent_ready_event.set()
         
         # Start the run (this queues the prompt)

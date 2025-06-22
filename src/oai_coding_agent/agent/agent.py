@@ -2,11 +2,17 @@
 Agent for streaming OAI agent interactions with a local codebase.
 """
 
-__all__ = ["Agent", "AgentProtocol"]
+__all__ = [
+    "AsyncAgent",
+    "HeadlessAgent",
+    "AgentProtocol",
+    "AsyncAgentProtocol",
+    "HeadlessAgentProtocol",
+]
 import asyncio
 import logging
 from contextlib import AsyncExitStack
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, AsyncIterator, Optional, Protocol, runtime_checkable
 
 from agents import (
     Agent as OpenAIAgent,
@@ -41,26 +47,43 @@ logger = logging.getLogger(__name__)
 
 @runtime_checkable
 class AgentProtocol(Protocol):
-    """Protocol defining the interface for agents."""
+    """Base protocol defining the common interface for all agents."""
 
     config: RuntimeConfig
     max_turns: int
-    events: asyncio.Queue[AgentEvent]
 
     async def __aenter__(self) -> "AgentProtocol": ...
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...
+
+    async def cancel(self) -> None: ...
+
+
+@runtime_checkable
+class AsyncAgentProtocol(AgentProtocol, Protocol):
+    """Protocol for async agents with event queues and background init."""
+
+    events: asyncio.Queue[AgentEvent]
+    start_init_event: asyncio.Event | None
 
     async def run(
         self,
         prompt: str,
     ) -> None: ...
 
-    async def cancel(self) -> None: ...
+
+@runtime_checkable
+class HeadlessAgentProtocol(AgentProtocol, Protocol):
+    """Protocol for headless agents that return an async iterator."""
+
+    def run(
+        self,
+        prompt: str,
+    ) -> AsyncIterator[AgentEvent]: ...
 
 
-class Agent(AgentProtocol):
-    """Agent class
+class AsyncAgent(AsyncAgentProtocol):
+    """Async agent with background initialization and message queue.
 
     Attributes:
         config: Runtime configuration for the agent
@@ -73,7 +96,7 @@ class Agent(AgentProtocol):
     events: asyncio.Queue[AgentEvent]
 
     _agent_ready_event: asyncio.Event
-    _start_init_event: asyncio.Event | None
+    start_init_event: asyncio.Event | None
     _agent_init_task: Optional[asyncio.Task[None]]
     _agent_init_exception: Optional[AgentInitializationError]
 
@@ -96,7 +119,7 @@ class Agent(AgentProtocol):
         self.events = asyncio.Queue()
 
         self._agent_ready_event = asyncio.Event()
-        self._start_init_event = None
+        self.start_init_event = None
         self._agent_init_task = None
         self._agent_init_exception = None
 
@@ -113,7 +136,7 @@ class Agent(AgentProtocol):
 
         self._exit_stack = None
 
-    async def __aenter__(self) -> "Agent":
+    async def __aenter__(self) -> "AsyncAgent":
         self._agent_init_task = asyncio.create_task(self._initialize_in_background())
         self._prompt_consumer_task = asyncio.create_task(self._prompt_queue_consumer())
         return self
@@ -125,9 +148,9 @@ class Agent(AgentProtocol):
     async def _initialize_in_background(self) -> None:
         logger.info("Initializing agent in background")
         try:
-            if self._start_init_event is not None:
+            if self.start_init_event is not None:
                 logger.info("Agent: awaiting start_init_event before init")
-                await self._start_init_event.wait()
+                await self.start_init_event.wait()
                 logger.info("Agent: start_init_event received")
             # Initialize exit stack for async contexts
             self._exit_stack = AsyncExitStack()
@@ -271,3 +294,96 @@ class Agent(AgentProtocol):
 
         if self._active_run_task and not self._active_run_task.done():
             self._active_run_task.cancel()
+
+
+class HeadlessAgent(HeadlessAgentProtocol):
+    """Agent for headless mode without background initialization or queues.
+
+    Attributes:
+        config: Runtime configuration for the agent
+        max_turns: Maximum number of conversation turns allowed
+        events: Queue for agent events
+    """
+
+    config: RuntimeConfig
+    max_turns: int
+    events: asyncio.Queue[AgentEvent]
+
+    _openai_agent: Optional[OpenAIAgent]
+    _exit_stack: Optional[AsyncExitStack]
+
+    def __init__(self, config: RuntimeConfig, max_turns: int = 100):
+        self.config = config
+        self.max_turns = max_turns
+        self.events = asyncio.Queue()
+
+        self._openai_agent = None
+        self._exit_stack = None
+
+    async def __aenter__(self) -> "HeadlessAgent":
+        # Initialize exit stack for async contexts
+        self._exit_stack = AsyncExitStack()
+        await self._exit_stack.__aenter__()
+
+        # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
+        mcp_servers = await start_mcp_servers(
+            self.config,
+            self._exit_stack,
+        )
+
+        # Begin tracing
+        trace_id = gen_trace_id()
+        trace_ctx = trace(workflow_name="OAI Coding Agent", trace_id=trace_id)
+        trace_ctx.__enter__()
+        self._exit_stack.callback(trace_ctx.__exit__, None, None, None)
+
+        # Build instructions and fetch filtered MCP function-tools
+        dynamic_instructions = build_instructions(self.config)
+        function_tools = await get_filtered_function_tools(mcp_servers, self.config)
+
+        # Instantiate the OpenAI agent with the filtered function-tools
+        self._openai_agent = OpenAIAgent(
+            name="Coding Agent",
+            instructions=dynamic_instructions,
+            model=self.config.model.value,
+            model_settings=ModelSettings(
+                reasoning=Reasoning(summary="auto", effort="high"),
+                parallel_tool_calls=True,
+            ),
+            tools=function_tools,
+        )
+
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        if self._exit_stack:
+            await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
+
+    async def run(
+        self,
+        prompt: str,
+    ) -> AsyncIterator[AgentEvent]:
+        """
+        Run the agent with a single prompt and yield events as they stream.
+
+        This is a simpler version that doesn't use queues or background tasks.
+        Returns an async iterator of AgentEvent objects.
+        """
+        if self._openai_agent is None:
+            raise AgentInitializationError(
+                "OpenAI agent not initialized, ensure used with async context"
+            )
+
+        run_result = Runner.run_streamed(
+            self._openai_agent,
+            prompt,
+            max_turns=self.max_turns,
+        )
+
+        async for stream_event in run_result.stream_events():
+            if event := map_sdk_event_to_agent_event(stream_event):
+                yield event
+
+    async def cancel(self) -> None:
+        """Cancel is not supported in headless agent."""
+        logger.warning("Cancel is not supported in HeadlessAgent")

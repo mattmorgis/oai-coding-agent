@@ -10,7 +10,7 @@ from prompt_toolkit.keys import Keys
 from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
-from oai_coding_agent.agent import AgentProtocol
+from oai_coding_agent.agent import AsyncAgentProtocol
 from oai_coding_agent.console.rendering import clear_terminal, console, render_message
 from oai_coding_agent.console.ui_event_mapper import UIMessage, map_event_to_ui_message
 from oai_coding_agent.runtime_config import get_data_dir
@@ -21,11 +21,11 @@ logger = logging.getLogger(__name__)
 class ReplConsole:
     """Console that runs interactive REPL mode."""
 
-    agent: AgentProtocol
+    agent: AsyncAgentProtocol
 
     _prompt_session: PromptSession[str]
 
-    def __init__(self, agent: AgentProtocol) -> None:
+    def __init__(self, agent: AsyncAgentProtocol) -> None:
         self.agent = agent
 
     async def _event_stream_consumer(self) -> None:
@@ -109,7 +109,7 @@ class ReplConsole:
         )
 
         start_event = asyncio.Event()
-        self.agent._start_init_event = start_event
+        self.agent.start_init_event = start_event
 
         def _pre_run_callback() -> None:
             logger.info("Prompt session pre-run callback: setting start_init_event")

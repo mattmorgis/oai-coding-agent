@@ -7,7 +7,13 @@ from typing import Annotated, Callable, Optional
 
 import typer
 
-from oai_coding_agent.agent import Agent, AgentProtocol
+from oai_coding_agent.agent import (
+    AgentProtocol,
+    AsyncAgent,
+    AsyncAgentProtocol,
+    HeadlessAgent,
+    HeadlessAgentProtocol,
+)
 from oai_coding_agent.console import GitHubConsole
 from oai_coding_agent.console.console import (
     ConsoleInterface,
@@ -33,15 +39,24 @@ _console_factory: Optional[Callable[[AgentProtocol], ConsoleInterface]] = None
 
 def default_agent_factory(config: RuntimeConfig) -> AgentProtocol:
     """Default factory for creating Agent instances."""
-    return Agent(config)
+    if config.prompt:
+        return HeadlessAgent(config)
+    else:
+        return AsyncAgent(config)
 
 
 def default_console_factory(agent: AgentProtocol) -> ConsoleInterface:
     """Default factory for creating ConsoleInterface instances."""
     if agent.config.prompt:
-        return HeadlessConsole(agent)
+        if isinstance(agent, HeadlessAgentProtocol):
+            return HeadlessConsole(agent)
+        else:
+            raise TypeError("HeadlessConsole requires HeadlessAgentProtocol")
     else:
-        return ReplConsole(agent)
+        if isinstance(agent, AsyncAgentProtocol):
+            return ReplConsole(agent)
+        else:
+            raise TypeError("ReplConsole requires AsyncAgentProtocol")
 
 
 def create_github_cli_app() -> typer.Typer:
@@ -215,7 +230,7 @@ def create_app(
     return app
 
 
-def run():
+def run() -> None:
     """Entry point for the CLI."""
     app = create_app()
     app()
