@@ -32,7 +32,12 @@ class HeadlessConsole(ConsoleInterface):
 
         console.print(f"[bold cyan]Prompt:[/bold cyan] {self.agent.config.prompt}")
         async with self.agent:
-            async for event in self.agent.run(self.agent.config.prompt):
-                ui_msg = map_event_to_ui_message(event)
-                if ui_msg:
-                    render_message(ui_msg)
+            try:
+                async for event in self.agent.run(self.agent.config.prompt):
+                    ui_msg = map_event_to_ui_message(event)
+                    if ui_msg:
+                        render_message(ui_msg)
+            except KeyboardInterrupt:
+                # Cancel agent gracefully on interrupt
+                await self.agent.cancel()
+                raise

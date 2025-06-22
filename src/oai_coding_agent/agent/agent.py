@@ -360,17 +360,19 @@ class HeadlessAgent(HeadlessAgentProtocol):
 
     config: RuntimeConfig
     max_turns: int
-    events: asyncio.Queue[AgentEvent]
 
     _openai_agent: Optional[OpenAIAgent]
+    _run_result: Optional[RunResultStreaming]
+
     _exit_stack: Optional[AsyncExitStack]
 
     def __init__(self, config: RuntimeConfig, max_turns: int = 100):
         self.config = config
         self.max_turns = max_turns
-        self.events = asyncio.Queue()
 
         self._openai_agent = None
+        self._run_result = None
+
         self._exit_stack = None
 
     async def __aenter__(self) -> "HeadlessAgent":
@@ -386,7 +388,9 @@ class HeadlessAgent(HeadlessAgentProtocol):
 
         # Begin tracing
         trace_id = gen_trace_id()
-        trace_ctx = trace(workflow_name="OAI Coding Agent", trace_id=trace_id)
+        trace_ctx = trace(
+            workflow_name="OAI Coding Agent - Headless", trace_id=trace_id
+        )
         trace_ctx.__enter__()
         self._exit_stack.callback(trace_ctx.__exit__, None, None, None)
 
@@ -427,16 +431,21 @@ class HeadlessAgent(HeadlessAgentProtocol):
                 "OpenAI agent not initialized, ensure used with async context"
             )
 
-        run_result = Runner.run_streamed(
+        self._run_result = Runner.run_streamed(
             self._openai_agent,
             prompt,
             max_turns=self.max_turns,
         )
-
-        async for stream_event in run_result.stream_events():
-            if event := map_sdk_event_to_agent_event(stream_event):
-                yield event
+        try:
+            async for stream_event in self._run_result.stream_events():
+                if event := map_sdk_event_to_agent_event(stream_event):
+                    yield event
+        finally:
+            self._run_result = None
 
     async def cancel(self) -> None:
-        """Cancel is not supported in headless agent."""
-        logger.warning("Cancel is not supported in HeadlessAgent")
+        """Cancel the currently executing turn, if any."""
+        if self._run_result is not None:
+            self._run_result.cancel()
+        else:
+            logger.warning("No active headless run to cancel")
