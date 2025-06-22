@@ -145,25 +145,26 @@ class AsyncAgent(AsyncAgentProtocol):
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Gracefully shut down all background tasks and MCP servers."""
 
-        # Stop the prompt consumer first to ensure no new work is submitted
+        # First, cancel any active run so that the prompt consumer can exit cleanly
+        await self.cancel()
+
+        # Stop the prompt consumer to ensure no new work is submitted and wait for it
         if self._prompt_consumer_task and not self._prompt_consumer_task.done():
             # Put a sentinel value to break the consumer loop gracefully
             await self._prompt_queue.put(None)  # type: ignore[arg-type]
-            await self._prompt_consumer_task
+            # The consumer task should exit promptly now that the active run is
+            # cancelled and the sentinel has been delivered.
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._prompt_consumer_task
 
-        # Tell the background init task to perform cleanup (this will close the
+        # Tell the background-initialisation task to perform cleanup (this will close the
         # AsyncExitStack inside the same task it was created in).
         self._shutdown_event.set()
 
         # Wait for background init to finish teardown.
         if self._agent_init_task and not self._agent_init_task.done():
-            await self._agent_init_task
-
-        # Ensure any remaining active run is cancelled
-        if self._active_run_task and not self._active_run_task.done():
-            self._active_run_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
-                await self._active_run_task
+                await self._agent_init_task
 
     async def _initialize_in_background(self) -> None:
         """Initialize MCP servers and the OpenAI agent in a background task.
