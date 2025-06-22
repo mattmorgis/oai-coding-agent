@@ -106,20 +106,12 @@ class ReplConsole:
             erase_when_done=True,
         )
 
-        start_event = asyncio.Event()
-        self.agent.start_init_event = start_event
-
-        def _pre_run_callback() -> None:
-            logger.info("Prompt session pre-run callback: setting start_init_event")
-            start_event.set()
-
         async with self.agent:
             continue_loop = True
             while continue_loop:
                 try:
-                    user_input = await prompt_session.prompt_async(
-                        "› ", pre_run=_pre_run_callback
-                    )
+                    logger.info("Prompting user...")
+                    user_input = await prompt_session.prompt_async("› ")
                     if not user_input.strip():
                         continue
 

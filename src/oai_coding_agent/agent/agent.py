@@ -65,7 +65,6 @@ class AsyncAgentProtocol(AgentProtocol, Protocol):
     """Protocol for async agents with event queues and background init."""
 
     events: asyncio.Queue[AgentEvent]
-    start_init_event: asyncio.Event | None
 
     async def run(
         self,
@@ -97,7 +96,6 @@ class AsyncAgent(AsyncAgentProtocol):
     events: asyncio.Queue[AgentEvent]
 
     _agent_ready_event: asyncio.Event
-    start_init_event: asyncio.Event | None
     _agent_init_task: Optional[asyncio.Task[None]]
     _agent_init_exception: Optional[AgentInitializationError]
 
@@ -121,7 +119,6 @@ class AsyncAgent(AsyncAgentProtocol):
         self.events = asyncio.Queue()
 
         self._agent_ready_event = asyncio.Event()
-        self.start_init_event = None
         self._agent_init_task = None
         self._agent_init_exception = None
 
@@ -142,6 +139,7 @@ class AsyncAgent(AsyncAgentProtocol):
     async def __aenter__(self) -> "AsyncAgent":
         self._agent_init_task = asyncio.create_task(self._initialize_in_background())
         self._prompt_consumer_task = asyncio.create_task(self._prompt_queue_consumer())
+
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -184,11 +182,6 @@ class AsyncAgent(AsyncAgentProtocol):
         """
         logger.info("Initializing agent in background")
 
-        if self.start_init_event is not None:
-            logger.info("Agent: awaiting start_init_event before init")
-            await self.start_init_event.wait()
-            logger.info("Agent: start_init_event received")
-
         try:
             async with AsyncExitStack() as stack:
                 # Keep a reference so we can use it elsewhere, e.g. to enter
@@ -196,6 +189,7 @@ class AsyncAgent(AsyncAgentProtocol):
                 self._exit_stack = stack
 
                 # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
+                logger.info("Starting MCP servers")
                 mcp_servers = await start_mcp_servers(
                     self.config,
                     stack,
