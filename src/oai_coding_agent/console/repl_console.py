@@ -74,7 +74,7 @@ class ReplConsole:
 
     async def run(self) -> None:
         """Interactive REPL loop for the console interface."""
-        asyncio.create_task(self._event_stream_consumer())
+        event_consumer_task = asyncio.create_task(self._event_stream_consumer())
 
         clear_terminal()
 
@@ -134,4 +134,13 @@ class ReplConsole:
                     await self.agent.run(user_input)
 
                 except (KeyboardInterrupt, EOFError):
+                    # Cancel any running agent task
+                    await self.agent.cancel()
                     continue_loop = False
+
+            # Cancel the event consumer task when exiting
+            event_consumer_task.cancel()
+            try:
+                await event_consumer_task
+            except asyncio.CancelledError:
+                pass
