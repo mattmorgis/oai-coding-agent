@@ -145,64 +145,39 @@ class AsyncAgent(AsyncAgentProtocol):
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Gracefully shut down all background tasks and MCP servers."""
 
-        # First, cancel any active run so that the prompt consumer can exit cleanly
         await self.cancel()
 
-        # Stop the prompt consumer to ensure no new work is submitted and wait for it
         if self._prompt_consumer_task and not self._prompt_consumer_task.done():
-            # Put a sentinel value to break the consumer loop gracefully
             await self._prompt_queue.put(None)  # type: ignore[arg-type]
-            # The consumer task should exit promptly now that the active run is
-            # cancelled and the sentinel has been delivered.
             with contextlib.suppress(asyncio.CancelledError):
                 await self._prompt_consumer_task
 
-        # signal for any stubbed initializer to exit
         self._shutdown_event.set()
 
-        # cancel real background initialization so the exit stack tears down in that task
         if self._agent_init_task and not self._agent_init_task.done():
             self._agent_init_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._agent_init_task
 
     async def _initialize_in_background(self) -> None:
-        """Initialize MCP servers and the OpenAI agent in a background task.
-
-        This coroutine stays alive for the entire lifetime of the AsyncAgent so
-        that it can also be responsible for shutting the MCP servers down.  This
-        is required because the underlying MCP library relies on anyio
-        CancelScopes which must be exited in **the same task** that created
-        them.  Attempting to close the contexts from a different task raises the
-        dreaded
-
-            "Attempted to exit cancel scope in a different task than it was entered in"
-
-        exception.  By owning the full *enter* ➔ *exit* lifecycle inside one
-        long-running task we guarantee clean teardown.
-        """
+        """Initialize MCP servers and the OpenAI agent in a background task."""
         logger.info("Initializing agent in background")
 
         try:
             async with AsyncExitStack() as stack:
-                # Keep a reference so we can use it elsewhere, e.g. to enter
-                # additional contexts (though exit will still be handled here).
                 self._exit_stack = stack
 
-                # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
                 logger.info("Starting MCP servers")
                 mcp_servers = await start_mcp_servers(
                     self.config,
                     stack,
                 )
 
-                # Build instructions and fetch filtered MCP function-tools
                 dynamic_instructions = build_instructions(self.config)
                 function_tools = await get_filtered_function_tools(
                     mcp_servers, self.config
                 )
 
-                # Instantiate the OpenAI agent with the filtered function-tools
                 self._openai_agent = OpenAIAgent(
                     name="Coding Agent",
                     instructions=dynamic_instructions,
@@ -216,10 +191,8 @@ class AsyncAgent(AsyncAgentProtocol):
 
                 logger.info("Agent background initialization complete")
 
-                # Signal that initialization finished successfully
                 self._agent_ready_event.set()
 
-                # block until this task is cancelled, so cleanup happens in the same task as startup
                 try:
                     await asyncio.Future()
                 except asyncio.CancelledError:
@@ -228,12 +201,9 @@ class AsyncAgent(AsyncAgentProtocol):
                     )
                     raise
 
-            # Exiting the *with* block closes the AsyncExitStack in the *same*
-            # task, preventing the cancel-scope cross-task error.
             logger.info("Background cleanup finished")
 
         except Exception as e:
-            # Make sure any waiter on _agent_ready_event is released even on failure
             if not self._agent_ready_event.is_set():
                 self._agent_ready_event.set()
 
@@ -375,17 +345,14 @@ class HeadlessAgent(HeadlessAgentProtocol):
         self._exit_stack = None
 
     async def __aenter__(self) -> "HeadlessAgent":
-        # Initialize exit stack for async contexts
         self._exit_stack = AsyncExitStack()
         await self._exit_stack.__aenter__()
 
-        # Start MCP servers (filesystem, CLI, Git, GitHub) and register cleanup
         mcp_servers = await start_mcp_servers(
             self.config,
             self._exit_stack,
         )
 
-        # Begin tracing
         trace_id = gen_trace_id()
         trace_ctx = trace(
             workflow_name="OAI Coding Agent - Headless", trace_id=trace_id
@@ -393,11 +360,9 @@ class HeadlessAgent(HeadlessAgentProtocol):
         trace_ctx.__enter__()
         self._exit_stack.callback(trace_ctx.__exit__, None, None, None)
 
-        # Build instructions and fetch filtered MCP function-tools
         dynamic_instructions = build_instructions(self.config)
         function_tools = await get_filtered_function_tools(mcp_servers, self.config)
 
-        # Instantiate the OpenAI agent with the filtered function-tools
         self._openai_agent = OpenAIAgent(
             name="Coding Agent",
             instructions=dynamic_instructions,
