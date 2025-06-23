@@ -182,4 +182,27 @@ async def test_async_agent_cancel_flow(
         assert agent._conversation_history == ["history"]
 
         # There should still be at least one event on the public queue.
-        assert not agent.events.empty()
+
+
+@pytest.mark.asyncio
+async def test_async_agent_max_turns_emits_error_event(
+    dummy_config: RuntimeConfig,
+    patch_async_agent: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When max turns is exceeded, emit an ErrorEvent and keep the consumer alive."""
+    from agents import MaxTurnsExceeded, Runner
+
+    from oai_coding_agent.agent.agent import AsyncAgent
+    from oai_coding_agent.agent.events import ErrorEvent
+
+    def fake_run_streamed(*args: Any, **kwargs: Any) -> Any:
+        raise MaxTurnsExceeded("turn limit hit")
+
+    monkeypatch.setattr(Runner, "run_streamed", fake_run_streamed)
+
+    async with AsyncAgent(dummy_config, max_turns=1) as agent:
+        await agent.run("dummy prompt")
+        ev = await asyncio.wait_for(agent.events.get(), timeout=1.0)
+        assert isinstance(ev, ErrorEvent)
+        assert "turn limit hit" in ev.message

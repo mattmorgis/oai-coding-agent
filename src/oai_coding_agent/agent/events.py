@@ -48,8 +48,16 @@ class MessageOutputEvent:
     text: str
 
 
+# Internal agent event types
+@dataclass
+class ErrorEvent:
+    """An error event emitted by the agent (e.g. MaxTurnsExceeded)."""
+
+    message: str
+
+
 # Union type for all agent events
-AgentEvent = Union[ToolCallEvent, ReasoningEvent, MessageOutputEvent]
+AgentEvent = Union[ToolCallEvent, ReasoningEvent, MessageOutputEvent, ErrorEvent]
 
 
 def _extract_tool_call_info(raw_item: ToolCallItemTypes) -> Optional[ToolCallEvent]:

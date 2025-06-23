@@ -37,6 +37,7 @@ from oai_coding_agent.runtime_config import RuntimeConfig
 
 from .events import (
     AgentEvent,
+    ErrorEvent,
     map_sdk_event_to_agent_event,
 )
 
@@ -113,7 +114,7 @@ class AsyncAgent(AsyncAgentProtocol):
     _exit_stack: Optional[AsyncExitStack]
     _shutdown_event: asyncio.Event
 
-    def __init__(self, config: RuntimeConfig, max_turns: int = 2):
+    def __init__(self, config: RuntimeConfig, max_turns: int = 100):
         self.config = config
         self.max_turns = max_turns
         self.events = asyncio.Queue()
@@ -261,7 +262,8 @@ class AsyncAgent(AsyncAgentProtocol):
                 pass
             except MaxTurnsExceeded as e:
                 logger.error("Max turns exceeded: %s", e)
-                break
+                # emit an error event instead of stopping the consumer loop
+                await self.events.put(ErrorEvent(message=str(e)))
             except AgentsException as e:
                 logger.error("Error running agent: %s", e)
                 break
