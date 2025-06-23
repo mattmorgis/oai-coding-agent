@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 ALLOWED_CLI_COMMANDS = [
     "grep",
     "rg",
+    "nl",
     "find",
     "ls",
     "cat",
