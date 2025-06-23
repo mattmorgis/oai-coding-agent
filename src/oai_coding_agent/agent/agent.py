@@ -68,6 +68,7 @@ class AsyncAgentProtocol(AgentProtocol, Protocol):
     """Protocol for async agents with event queues and background init."""
 
     events: asyncio.Queue[AgentEvent]
+    is_processing: bool
 
     async def run(
         self,
@@ -270,6 +271,11 @@ class AsyncAgent(AsyncAgentProtocol):
                 )
                 self._active_run_task = None
                 self._prompt_queue.task_done()
+
+    @property
+    def is_processing(self) -> bool:
+        """Check if the agent is currently processing a prompt."""
+        return self._active_run_task is not None and not self._active_run_task.done()
 
     async def run(
         self,
