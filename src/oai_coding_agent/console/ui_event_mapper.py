@@ -11,6 +11,7 @@ from ..agent.events import (
     MessageOutputEvent,
     ReasoningEvent,
     ToolCallEvent,
+    ToolCallOutputEvent,
 )
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,8 @@ def map_event_to_ui_message(event: AgentEvent) -> UIMessage:
     match event:
         case ToolCallEvent(name=name, arguments=arguments):
             return UIMessage(role="tool", content=f"{name}({arguments})")
+        case ToolCallOutputEvent(output=output):
+            return UIMessage(role="tool", content=f"{output}")
         case ReasoningEvent(text=text):
             return UIMessage(role="thought", content=f"{text}")
         case MessageOutputEvent(text=text):

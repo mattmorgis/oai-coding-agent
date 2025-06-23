@@ -8,12 +8,15 @@ from agents.items import (  # type: ignore[attr-defined]
     ReasoningItem,
     ResponseFunctionToolCall,
     ToolCallItem,
+    ToolCallOutputItem,
 )
+from openai.types.responses.response_input_item_param import FunctionCallOutput
 
 from oai_coding_agent.agent.events import (
     MessageOutputEvent,
     ReasoningEvent,
     ToolCallEvent,
+    ToolCallOutputEvent,
     map_sdk_event_to_agent_event,
 )
 
@@ -156,6 +159,27 @@ def test_map_message_with_multiple_content_items() -> None:
 
     assert isinstance(result, MessageOutputEvent)
     assert result.text == "First content\nSecond content\nThird content"
+
+
+def test_map_tool_call_output_event() -> None:
+    """Test mapping a FunctionCallOutput via ToolCallOutputItem."""
+    raw_fc: FunctionCallOutput = {
+        "call_id": "cid",
+        "output": '{"foo": "bar"}',
+        "type": "function_call_output",
+    }
+    tool_output_item = ToolCallOutputItem(
+        agent=Mock(), raw_item=raw_fc, output={"foo": "bar"}
+    )
+
+    event = Mock(spec=RunItemStreamEvent)
+    event.item = tool_output_item
+
+    result = map_sdk_event_to_agent_event(event)
+
+    assert isinstance(result, ToolCallOutputEvent)
+    assert result.call_id == "cid"
+    assert result.output == '{"foo": "bar"}'
 
 
 def test_map_non_run_item_event_returns_none() -> None:

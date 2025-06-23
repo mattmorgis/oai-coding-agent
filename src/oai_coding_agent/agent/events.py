@@ -22,6 +22,7 @@ from agents.items import (  # type: ignore[attr-defined]
     ResponseFunctionWebSearch,
     ToolCallItem,
     ToolCallItemTypes,
+    ToolCallOutputItem,
 )
 
 
@@ -32,6 +33,7 @@ class ToolCallEvent:
 
     name: str
     arguments: str
+    call_id: Optional[str] = None
 
 
 @dataclass
@@ -56,15 +58,25 @@ class ErrorEvent:
     message: str
 
 
+@dataclass
+class ToolCallOutputEvent:
+    """The output side of a tool call (e.g. function call result)."""
+
+    call_id: str
+    output: str
+
+
 # Union type for all agent events
-AgentEvent = Union[ToolCallEvent, ReasoningEvent, MessageOutputEvent, ErrorEvent]
+AgentEvent = Union[
+    ToolCallEvent, ReasoningEvent, MessageOutputEvent, ErrorEvent, ToolCallOutputEvent
+]
 
 
 def _extract_tool_call_info(raw_item: ToolCallItemTypes) -> Optional[ToolCallEvent]:
     """Extract name and arguments from a tool call item."""
     match raw_item:
-        case ResponseFunctionToolCall(name=name, arguments=arguments):
-            return ToolCallEvent(name=name, arguments=arguments)
+        case ResponseFunctionToolCall(name=name, arguments=arguments, call_id=call_id):
+            return ToolCallEvent(name=name, arguments=arguments, call_id=call_id)
 
         case McpCall(name=name, arguments=arguments):
             return ToolCallEvent(name=name, arguments=arguments)
@@ -122,6 +134,15 @@ def map_sdk_event_to_agent_event(
             match item:
                 case ToolCallItem(raw_item=raw_item):
                     return _extract_tool_call_info(raw_item)
+
+                case ToolCallOutputItem(
+                    raw_item={
+                        "call_id": call_id,
+                        "output": output,
+                        "type": "function_call_output",
+                    }
+                ):
+                    return ToolCallOutputEvent(call_id=call_id, output=output)  # type: ignore[arg-type]
 
                 case ReasoningItem(raw_item=raw_item) if raw_item.summary:
                     # Concatenate all summary items
