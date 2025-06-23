@@ -157,12 +157,12 @@ class AsyncAgent(AsyncAgentProtocol):
             with contextlib.suppress(asyncio.CancelledError):
                 await self._prompt_consumer_task
 
-        # Tell the background-initialisation task to perform cleanup (this will close the
-        # AsyncExitStack inside the same task it was created in).
+        # signal for any stubbed initializer to exit
         self._shutdown_event.set()
 
-        # Wait for background init to finish teardown.
+        # cancel real background initialization so the exit stack tears down in that task
         if self._agent_init_task and not self._agent_init_task.done():
+            self._agent_init_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._agent_init_task
 
@@ -219,11 +219,14 @@ class AsyncAgent(AsyncAgentProtocol):
                 # Signal that initialization finished successfully
                 self._agent_ready_event.set()
 
-                # ────────────────────────────────────────────────
-                # Wait until the main task wants to shut down.
-                # ────────────────────────────────────────────────
-                await self._shutdown_event.wait()
-                logger.info("Shutdown event received – cleaning up MCP servers …")
+                # block until this task is cancelled, so cleanup happens in the same task as startup
+                try:
+                    await asyncio.Future()
+                except asyncio.CancelledError:
+                    logger.info(
+                        "Initialization task cancelled – cleaning up MCP servers …"
+                    )
+                    raise
 
             # Exiting the *with* block closes the AsyncExitStack in the *same*
             # task, preventing the cancel-scope cross-task error.
