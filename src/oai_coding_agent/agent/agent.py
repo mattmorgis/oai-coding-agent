@@ -19,6 +19,8 @@ from agents import (
     Agent as OpenAIAgent,
 )
 from agents import (
+    AgentsException,
+    MaxTurnsExceeded,
     ModelSettings,
     Runner,
     RunResultStreaming,
@@ -106,12 +108,12 @@ class AsyncAgent(AsyncAgentProtocol):
     _active_run_task: Optional[asyncio.Task[None]]
 
     _openai_agent: Optional[OpenAIAgent]
-    _pending_history: list[ResponseInputItemParam]
+    _conversation_history: list[ResponseInputItemParam]
 
     _exit_stack: Optional[AsyncExitStack]
     _shutdown_event: asyncio.Event
 
-    def __init__(self, config: RuntimeConfig, max_turns: int = 100):
+    def __init__(self, config: RuntimeConfig, max_turns: int = 2):
         self.config = config
         self.max_turns = max_turns
         self.events = asyncio.Queue()
@@ -124,7 +126,7 @@ class AsyncAgent(AsyncAgentProtocol):
         self._prompt_consumer_task = None
 
         self._openai_agent = None
-        self._pending_history: list[ResponseInputItemParam] = []
+        self._conversation_history: list[ResponseInputItemParam] = []
 
         self._active_run_result = None
         self._active_run_task = None
@@ -230,10 +232,10 @@ class AsyncAgent(AsyncAgentProtocol):
 
             async def _events_queue_producer(prompt: str) -> None:
                 logger.info("Running agent with prompt: %s", prompt)
-                # always resume from pending history
-                input_items: list[ResponseInputItemParam] = self._pending_history + [
-                    {"role": "user", "content": prompt}
-                ]
+
+                input_items: list[ResponseInputItemParam] = (
+                    self._conversation_history + [{"role": "user", "content": prompt}]
+                )
 
                 self._active_run_result = Runner.run_streamed(
                     self._openai_agent,  # type: ignore[arg-type]
@@ -244,11 +246,11 @@ class AsyncAgent(AsyncAgentProtocol):
                     if event := map_sdk_event_to_agent_event(stream_event):
                         await self.events.put(event)
 
-                # update pending history for next run
-                self._pending_history = self._active_run_result.to_input_list()
+                # update conversation history for next run
+                self._conversation_history = self._active_run_result.to_input_list()
                 logger.info(
-                    "Updated pending history for next run. Conversation length: %s",
-                    len(self._pending_history),
+                    "Updated conversation history for next run. Conversation length: %s",
+                    len(self._conversation_history),
                 )
 
             self._active_run_task = asyncio.create_task(_events_queue_producer(prompt))
@@ -257,6 +259,12 @@ class AsyncAgent(AsyncAgentProtocol):
             except asyncio.CancelledError:
                 logger.info("Prompt cancelled")
                 pass
+            except MaxTurnsExceeded as e:
+                logger.error("Max turns exceeded: %s", e)
+                break
+            except AgentsException as e:
+                logger.error("Error running agent: %s", e)
+                break
             finally:
                 self._active_run_task = None
                 self._prompt_queue.task_done()
@@ -275,11 +283,10 @@ class AsyncAgent(AsyncAgentProtocol):
         logger.info("Cancelling agent")
         if self._active_run_result is not None:
             self._active_run_result.cancel()
-            # When a run is cancelled, preserve history for the next run.
-            self._pending_history = self._active_run_result.to_input_list()
+            self._conversation_history = self._active_run_result.to_input_list()
             logger.info(
                 "Captured history from cancelled run. Conversation length: %s",
-                len(self._pending_history),
+                len(self._conversation_history),
             )
 
         if self._active_run_task and not self._active_run_task.done():
