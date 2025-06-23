@@ -33,10 +33,10 @@ def render_message(msg: UIMessage) -> None:
     content = msg.get("content", "")
     if role == "assistant":
         console.print("[bold cyan]oai:[/bold cyan]", end=" ")
-        md = Markdown(content, code_theme="nord", hyperlinks=True)
+        md = Markdown(content, code_theme="ansi_dark", hyperlinks=True)
         console.print(md)
     elif role == "thought":
-        md = Markdown(content, code_theme="nord", hyperlinks=True, style="dim")
+        md = Markdown(content, code_theme="ansi_dark", hyperlinks=True, style="dim")
         console.print(md)
         console.print()
     elif role == "tool":
