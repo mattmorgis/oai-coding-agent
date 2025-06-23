@@ -106,9 +106,7 @@ class AsyncAgent(AsyncAgentProtocol):
     _active_run_task: Optional[asyncio.Task[None]]
 
     _openai_agent: Optional[OpenAIAgent]
-    _agent_cancelled_mid_run: bool
-    _checkpoint_response_id: Optional[str] | None
-    _pending_history: list[ResponseInputItemParam] | None
+    _pending_history: list[ResponseInputItemParam]
 
     _exit_stack: Optional[AsyncExitStack]
     _shutdown_event: asyncio.Event
@@ -126,9 +124,7 @@ class AsyncAgent(AsyncAgentProtocol):
         self._prompt_consumer_task = None
 
         self._openai_agent = None
-        self._agent_cancelled_mid_run = False
-        self._checkpoint_response_id = None
-        self._pending_history = None
+        self._pending_history: list[ResponseInputItemParam] = []
 
         self._active_run_result = None
         self._active_run_task = None
@@ -234,47 +230,26 @@ class AsyncAgent(AsyncAgentProtocol):
 
             async def _events_queue_producer(prompt: str) -> None:
                 logger.info("Running agent with prompt: %s", prompt)
-                input_items: str | list[ResponseInputItemParam]
-                if self._pending_history:
-                    logger.info(
-                        "Resuming with conversation history, length: %s",
-                        len(self._pending_history),
-                    )
-                    input_items = self._pending_history + [
-                        {"role": "user", "content": prompt}
-                    ]
-                    prev_id = None
-                    self._pending_history = None
-                else:
-                    logger.info(
-                        "Resuming with checkpoint response id: %s",
-                        self._checkpoint_response_id,
-                    )
-                    input_items = prompt
-                    prev_id = self._checkpoint_response_id
+                # always resume from pending history
+                input_items: list[ResponseInputItemParam] = self._pending_history + [
+                    {"role": "user", "content": prompt}
+                ]
 
                 self._active_run_result = Runner.run_streamed(
                     self._openai_agent,  # type: ignore[arg-type]
                     input_items,
-                    previous_response_id=prev_id,
                     max_turns=self.max_turns,
                 )
                 async for stream_event in self._active_run_result.stream_events():
                     if event := map_sdk_event_to_agent_event(stream_event):
                         await self.events.put(event)
 
-                if not (self._agent_cancelled_mid_run):
-                    self._checkpoint_response_id = (
-                        self._active_run_result.last_response_id
-                    )
-                    logger.info(
-                        "Set checkpoint response id: %s",
-                        self._checkpoint_response_id,
-                    )
-                else:
-                    logger.info("Stream ended for cancelled run")
-                self._agent_cancelled_mid_run = False
-                logger.info("Set _agent_cancelled_mid_run = False")
+                # update pending history for next run
+                self._pending_history = self._active_run_result.to_input_list()
+                logger.info(
+                    "Updated pending history for next run. Conversation length: %s",
+                    len(self._pending_history),
+                )
 
             self._active_run_task = asyncio.create_task(_events_queue_producer(prompt))
             try:
@@ -300,19 +275,12 @@ class AsyncAgent(AsyncAgentProtocol):
         logger.info("Cancelling agent")
         if self._active_run_result is not None:
             self._active_run_result.cancel()
-            # When a run is cancelled, the last response ID cannot be used to resume
-            # We must get the full history and pass that on the next run
-            # This will include all reasoning and tool calls up until the run was cancelled
-            # But omit any pending tool calls it's awaiting a response from
-            self._agent_cancelled_mid_run = True
-            logger.info("Set _agent_cancelled_mid_run = True")
+            # When a run is cancelled, preserve history for the next run.
             self._pending_history = self._active_run_result.to_input_list()
             logger.info(
                 "Captured history from cancelled run. Conversation length: %s",
                 len(self._pending_history),
             )
-            self._checkpoint_response_id = None
-            logger.info("Reset checkpoint response id to None due to cancelled run")
 
         if self._active_run_task and not self._active_run_task.done():
             self._active_run_task.cancel()

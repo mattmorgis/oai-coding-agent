@@ -179,7 +179,6 @@ async def test_async_agent_cancel_flow(
         assert rr.cancel_called is True
 
         # After cancellation the agent captures history for the next resume.
-        assert agent._checkpoint_response_id is None
         assert agent._pending_history == ["history"]
 
         # There should still be at least one event on the public queue.
