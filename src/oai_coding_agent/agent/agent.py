@@ -247,13 +247,6 @@ class AsyncAgent(AsyncAgentProtocol):
                     if event := map_sdk_event_to_agent_event(stream_event):
                         await self.events.put(event)
 
-                # update conversation history for next run
-                self._conversation_history = self._active_run_result.to_input_list()
-                logger.info(
-                    "Updated conversation history for next run. Conversation length: %s",
-                    len(self._conversation_history),
-                )
-
             self._active_run_task = asyncio.create_task(_events_queue_producer(prompt))
             try:
                 await self._active_run_task
@@ -262,12 +255,19 @@ class AsyncAgent(AsyncAgentProtocol):
                 pass
             except MaxTurnsExceeded as e:
                 logger.error("Max turns exceeded: %s", e)
-                # emit an error event instead of stopping the consumer loop
                 await self.events.put(ErrorEvent(message=str(e)))
             except AgentsException as e:
                 logger.error("Error running agent: %s", e)
-                break
+                await self.events.put(ErrorEvent(message=str(e)))
+            except Exception as e:
+                logger.error("Error running agent: %s", e)
+                await self.events.put(ErrorEvent(message=str(e)))
             finally:
+                self._conversation_history = self._active_run_result.to_input_list()  # type: ignore[union-attr]
+                logger.info(
+                    "Updated conversation history for next run. Conversation length: %s",
+                    len(self._conversation_history),
+                )
                 self._active_run_task = None
                 self._prompt_queue.task_done()
 
