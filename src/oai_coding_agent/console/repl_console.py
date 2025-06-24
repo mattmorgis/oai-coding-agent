@@ -206,7 +206,7 @@ class ReplConsole:
         @kb.add("tab", filter=has_completions)
         def accept_or_cycle(event: KeyPressEvent) -> None:
             buf = event.current_buffer
-            state = buf.complete_state  # type: ignore
+            state = buf.complete_state
 
             # If there is only one completion, treat Tab like "auto-complete"
             if len(state.completions) == 1:  # type: ignore
@@ -275,15 +275,18 @@ class ReplConsole:
             key_bindings=kb,
             erase_when_done=True,
         )
-        buf = self.prompt_session.default_buffer
-        buf.on_completions_changed += on_completions_changed
+        if hasattr(self.prompt_session, "default_buffer"):
+            buf = self.prompt_session.default_buffer
+            buf.on_completions_changed += on_completions_changed
 
         async with self.agent:
             try:
                 continue_loop = True
                 while continue_loop:
                     logger.info("Prompting user...")
-                    user_input = await self.prompt_session.prompt_async()
+                    user_input = await self.prompt_session.prompt_async(
+                        self.prompt_fragments()
+                    )
                     if not user_input.strip():
                         continue
 
