@@ -1,20 +1,103 @@
 import asyncio
 import logging
-from typing import Optional
+from typing import Generator, Optional
 
 from prompt_toolkit.application import run_in_terminal
-from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
+from prompt_toolkit.buffer import Buffer
+from prompt_toolkit.completion import CompleteEvent, Completer, Completion
+from prompt_toolkit.document import Document
 from prompt_toolkit.filters import has_completions
 from prompt_toolkit.formatted_text import HTML, FormattedText, to_formatted_text
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.shortcuts import PromptSession
+from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
 from oai_coding_agent.agent import AsyncAgentProtocol
 from oai_coding_agent.console.rendering import console, render_event
 from oai_coding_agent.runtime_config import get_data_dir
+
+# --- Slash-command autocomplete (inline) ---
+commands = [
+    ("/add-dir", "Add a new working directory"),
+    ("/bug", "Submit feedback about Claude Code"),
+    ("/clear", "Clear conversation history and free up context"),
+    (
+        "/compact",
+        "Clear conversation history but keep a summary in context. Optional: /compact [instructions for summarization]",
+    ),
+    ("/config (theme)", "Open config panel"),
+    ("/cost", "Show the total cost and duration of the current session"),
+    ("/doctor", "Checks the health of your Claude Code installation"),
+    ("/exit (quit)", "Exit the REPL"),
+    ("/help", "Show help and available commands"),
+    ("/ide", "Manage IDE integrations and show status"),
+]
+
+
+class SlashCompleter(Completer):
+    def get_completions(
+        self, document: Document, complete_event: CompleteEvent
+    ) -> Generator[Completion, None, None]:
+        text = document.text
+
+        # Only complete if we're on the first line and text starts with /
+        if document.cursor_position_row == 0 and text.startswith("/"):
+            for cmd, desc in commands:
+                base_cmd = cmd.split()[0]
+                if base_cmd.lower().startswith(text.lower()):
+                    display = f"{cmd:<20} {desc}"
+                    yield Completion(
+                        base_cmd, start_position=-len(text), display=display
+                    )
+
+
+class SlashAutoSuggest(AutoSuggest):
+    """Auto-suggest for slash commands."""
+
+    def get_suggestion(
+        self, buffer: Buffer, document: Document
+    ) -> Optional[Suggestion]:
+        text = document.text
+
+        # Only suggest if we're on first line and text starts with / and has length > 1
+        if document.cursor_position_row == 0 and text.startswith("/") and len(text) > 1:
+            for cmd, desc in commands:
+                base_cmd = cmd.split()[0]
+                if (
+                    base_cmd.lower().startswith(text.lower())
+                    and base_cmd.lower() != text.lower()
+                ):
+                    return Suggestion(base_cmd[len(text) :])
+
+        return None
+
+
+# Minimal style for the slash menu
+style = Style.from_dict(
+    {
+        "completion-menu": "noinherit",
+        "completion-menu.completion": "noinherit",
+        "completion-menu.scrollbar": "noinherit",
+        "completion-menu.completion.current": "noinherit bold",
+        "scrollbar": "noinherit",
+        "scrollbar.background": "noinherit",
+        "scrollbar.button": "noinherit",
+        "bottom-toolbar": "noreverse",
+    }
+)
+
+
+def on_completions_changed(buf: Buffer) -> None:
+    state = buf.complete_state
+    if state and state.complete_index is None:
+        state.complete_index = 0
+
+
+# --- End slash-command autocomplete ---
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +203,20 @@ class ReplConsole:
             else:
                 buffer.complete_next()
 
+        @kb.add("tab", filter=has_completions)
+        def _(event: KeyPressEvent) -> None:
+            buf = event.current_buffer
+            state = buf.complete_state
+            assert state is not None
+            if len(state.completions) == 1:
+                if state.current_completion is None:
+                    state.complete_index = 0
+                assert state.current_completion is not None
+                buf.apply_completion(state.current_completion)
+                buf.cancel_completion()
+            else:
+                buf.complete_next()
+
         @kb.add("escape")
         async def _(event: KeyPressEvent) -> None:
             """Handle ESC - cancel current job."""
@@ -171,13 +268,17 @@ class ReplConsole:
         self.prompt_session = PromptSession(
             message=self.prompt_fragments,
             history=FileHistory(str(history_path)),
-            auto_suggest=AutoSuggestFromHistory(),
+            completer=SlashCompleter(),
+            auto_suggest=SlashAutoSuggest(),
+            style=style,
             enable_history_search=True,
             complete_while_typing=True,
             complete_in_thread=True,
             key_bindings=kb,
             erase_when_done=True,
         )
+        buf = self.prompt_session.default_buffer
+        buf.on_completions_changed += on_completions_changed
 
         async with self.agent:
             try:
