@@ -164,7 +164,7 @@ async def main() -> None:  # noqa: C901 (keep everything together for clarity)
     message_q: asyncio.Queue[str | None] = asyncio.Queue()
 
     session = PromptSession(
-        prompt_fragments,
+        message=prompt_fragments,
         multiline=False,
         erase_when_done=True,
         key_bindings=kb,
@@ -181,7 +181,7 @@ async def main() -> None:  # noqa: C901 (keep everything together for clarity)
         try:
             while True:
                 try:
-                    user_input = await session.prompt_async(prompt_fragments)
+                    user_input = await session.prompt_async()
                 except EOFError:
                     raise KeyboardInterrupt  # treat Ctrl-D like Ctrl-C
 
