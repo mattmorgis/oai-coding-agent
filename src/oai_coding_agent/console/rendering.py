@@ -186,7 +186,7 @@ def render_edit_file_tool(
 
     # Determine label color based on presence of error/failure keywords
     lower_out = output_text.lower()
-    label_style = "red" if ("error" in lower_out or "failed" in lower_out) else "green"
+    label_style = "red" if ("error" in lower_out or "failed" in lower_out) else ""
     label = Text("▶ Edited ", style=label_style) + Text(filename, style="bold")
     root = Tree(label)
     if output_text.strip():
@@ -325,7 +325,7 @@ def render_git_commit_tool(
 ) -> None:
     """Render git_commit tool with a rich tree for commit message and output."""
     message = args_data.get("message", "")
-    root = Tree(Text("▶ Committing: ") + Text(message, style="bold"))
+    root = Tree(Text("▶ Committing with message: \n") + Text(message, style="bold"))
     style = "red" if "failed" in tool_output.lower() else "green"
     root.add(Text(_truncate_output_lines(tool_output), style=style))
     console.print(root)
@@ -361,9 +361,7 @@ def render_command_tool(
         # Truncate output for readability
         truncated = _truncate_output_lines(output_text)
         lower_out = truncated.lower()
-        err_style = (
-            "red" if ("error" in lower_out or "failed" in lower_out) else "green"
-        )
+        err_style = "red" if ("error" in lower_out or "failed" in lower_out) else "dim"
         root.add(Text(truncated, style=err_style))
 
     console.print(root)
