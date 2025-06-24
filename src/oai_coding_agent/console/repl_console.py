@@ -2,17 +2,16 @@ import asyncio
 import logging
 from typing import Optional
 
-from prompt_toolkit.application import Application, run_in_terminal
+from prompt_toolkit.application import run_in_terminal
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.filters import has_completions
-from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.formatted_text import HTML, FormattedText, to_formatted_text
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.keys import Keys
-from prompt_toolkit.layout import Dimension, HSplit, Layout, Window
-from prompt_toolkit.layout.controls import FormattedTextControl
-from prompt_toolkit.styles import Style
-from prompt_toolkit.widgets import TextArea
+from prompt_toolkit.shortcuts import PromptSession
 from rich.panel import Panel
+from rich.prompt import Prompt
 
 from oai_coding_agent.agent import AsyncAgentProtocol
 from oai_coding_agent.console.rendering import console, render_event
@@ -49,7 +48,7 @@ class ReplConsole:
     """Console that runs interactive REPL mode."""
 
     agent: AsyncAgentProtocol
-    app: Optional[Application[None]]
+    prompt_session: Optional[PromptSession[str]]
 
     _render_task: Optional[asyncio.Task[None]]
     _should_stop_render: bool
@@ -58,26 +57,24 @@ class ReplConsole:
         self.agent = agent
 
         # Create live status area (1 line, non-focusable; shows spinner "thinking..." or bullet "idle")
-        self._live_status_control = FormattedTextControl(
-            text="", focusable=False, show_cursor=False
-        )
-        self._live_status_area = Window(
-            content=self._live_status_control,
-            height=Dimension.exact(1),
-            wrap_lines=False,
-            style="class:live-status",
-        )
+        self._live_status: FormattedText = to_formatted_text(HTML("idle"))
 
-        # Create prompt area (single line input)
-        self._prompt_area = TextArea(
-            prompt=HTML("<ansicyan><b>› </b></ansicyan>"),
-            multiline=True,
-            wrap_lines=True,
-        )
-        self.app = None
+        self.prompt_session = None
         self._spinner = Spinner()
         self._render_task = None
         self._should_stop_render = False
+
+    def prompt_fragments(self) -> FormattedText:
+        """Return the complete prompt: status + prompt symbol."""
+        if not self.agent.is_processing:
+            return to_formatted_text("\n› ")
+
+        # First line: cyan spinner + status, Second line: actual prompt
+        formatted_text = HTML(
+            f"<ansicyan>{self._spinner.current_frame} thinking...</ansicyan> "
+            f"(<ansigray><b>ESC</b></ansigray> to interrupt)\n›"
+        )
+        return to_formatted_text(formatted_text)
 
     async def _render_loop(self) -> None:
         """Main render loop - updates live area based on agent state."""
@@ -86,19 +83,9 @@ class ReplConsole:
                 if self.agent.is_processing:
                     # Update spinner and show live area
                     self._spinner.update()
-                    spinner_frame = self._spinner.current_frame
-                    formatted_text = HTML(
-                        f"<ansicyan>{spinner_frame} thinking...</ansicyan> "
-                        f"(<ansigray><b>ESC</b></ansigray> to interrupt)\n"
-                    )
-                    self._live_status_control.text = formatted_text
-                else:
-                    # Always show an "idle" line when not processing
-                    formatted_text = HTML("")
-                    self._live_status_control.text = formatted_text
 
-                if self.app:
-                    self.app.invalidate()
+                if self.prompt_session and self.prompt_session.app:
+                    self.prompt_session.app.invalidate()
 
                 await asyncio.sleep(0.1)  # 10 FPS
         except asyncio.CancelledError:
@@ -156,37 +143,6 @@ class ReplConsole:
             """Insert newline on Alt+Enter."""
             event.current_buffer.insert_text("\n")
 
-        # Handle Ctrl+C - clean shutdown
-        @kb.add("c-c")
-        def _(event: KeyPressEvent) -> None:
-            """Handle Ctrl+C - clean shutdown."""
-            # Clear live area before exiting
-            self._live_status_control.text = ""
-            if self.app:
-                self.app.invalidate()
-            event.app.exit()
-
-        # Handle Enter - submit prompt
-        @kb.add(Keys.Enter)
-        def _(event: KeyPressEvent) -> None:
-            """Handle Enter - submit user input."""
-            user_input = self._prompt_area.text.strip()
-            if not user_input:
-                return
-
-            if user_input.lower() in ["exit", "quit", "/exit", "/quit"]:
-                event.app.exit()
-                return
-
-            # Append to history, then clear the prompt area
-            self._prompt_area.buffer.append_to_history()
-            self._prompt_area.buffer.reset()
-            # Print the input to terminal
-            run_in_terminal(lambda: console.print(f"[dim]› {user_input}[/dim]\n"))
-
-            # Start agent processing
-            asyncio.create_task(self.agent.run(user_input))
-
         return kb
 
     async def run(self) -> None:
@@ -213,31 +169,47 @@ class ReplConsole:
         history_dir.mkdir(parents=True, exist_ok=True)
         history_path = history_dir / "prompt_history"
 
-        # Configure prompt area with history and styling
-        self._prompt_area.buffer.history = FileHistory(str(history_path))
-
-        # Create application with layout (live status always present)
-        layout = HSplit([self._live_status_area, self._prompt_area])
-        self.app = Application(
-            layout=Layout(layout),
+        self.prompt_session = PromptSession(
+            message=self.prompt_fragments,
+            history=FileHistory(str(history_path)),
+            auto_suggest=AutoSuggestFromHistory(),
+            enable_history_search=True,
+            complete_while_typing=True,
+            complete_in_thread=True,
             key_bindings=kb,
-            full_screen=False,
-            style=Style.from_dict(
-                {
-                    "prompt": "ansicyan bold",
-                    "auto-suggestion": "#888888",
-                    "live-status": "ansigray",
-                }
-            ),
+            erase_when_done=True,
         )
 
         async with self.agent:
             try:
-                logger.info("Starting prompt application...")
-                await self.app.run_async()
+                continue_loop = True
+                while continue_loop:
+                    logger.info("Prompting user...")
+                    user_input = await self.prompt_session.prompt_async()
+                    if not user_input.strip():
+                        continue
+
+                    if user_input.strip().lower() in ["exit", "quit", "/exit", "/quit"]:
+                        continue_loop = False
+                        continue
+
+                    def _run_this() -> None:
+                        prompt = Prompt.ask("Enter the code to run")
+                        console.print(f"[dim]› {prompt}[/dim]\n")
+
+                    if user_input.strip().lower() in ["/run"]:
+                        run_in_terminal(_run_this)
+
+                    run_in_terminal(
+                        lambda: console.print(f"[dim]› {user_input}[/dim]\n")
+                    )
+
+                    await self.agent.run(user_input)
+
             except (KeyboardInterrupt, EOFError):
                 # Cancel any running agent task
                 await self.agent.cancel()
+                continue_loop = False
 
             # Cancel the event consumer task when exiting
             event_consumer_task.cancel()
