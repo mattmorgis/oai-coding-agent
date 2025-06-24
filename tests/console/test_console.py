@@ -20,7 +20,7 @@ class DummyPromptSession:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         pass
 
-    async def prompt_async(self, prompt_str: str) -> str:
+    async def prompt_async(self) -> str:
         # Immediately exit on slash command
         return "/exit"
 

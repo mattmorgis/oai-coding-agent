@@ -284,9 +284,7 @@ class ReplConsole:
                 continue_loop = True
                 while continue_loop:
                     logger.info("Prompting user...")
-                    user_input = await self.prompt_session.prompt_async(
-                        self.prompt_fragments()
-                    )
+                    user_input = await self.prompt_session.prompt_async()
                     if not user_input.strip():
                         continue
 
