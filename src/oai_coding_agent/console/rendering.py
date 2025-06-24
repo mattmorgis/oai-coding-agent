@@ -154,6 +154,8 @@ def render_tool_call_with_output(
         render_git_add_tool(tool_call, output_text, args_data)
     elif tool_call.name == "git_commit":
         render_git_commit_tool(tool_call, output_text, args_data)
+    elif tool_call.name == "git_status":
+        render_git_status_tool(tool_call, output_text, args_data)
     elif tool_call.name in ["run_command", "shell"]:
         render_command_tool(tool_call, output_text, args_data)
 
@@ -322,6 +324,17 @@ def render_git_commit_tool(
     root = Tree(Text("▶ Committing: ") + Text(message, style="bold"))
     style = "red" if "failed" in tool_output.lower() else "green"
     root.add(Text(_truncate_output_lines(tool_output), style=style))
+    console.print(root)
+    console.print()
+
+
+def render_git_status_tool(
+    tool_call: ToolCallEvent, output_text: str, args_data: dict
+) -> None:
+    """Render git_status tool with a tree showing status output."""
+    root = Tree(Text("▶ Running git_status", style="bold"))
+    if output_text.strip():
+        root.add(Text(output_text, style="dim"))
     console.print(root)
     console.print()
 
