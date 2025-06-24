@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Protocol
+from typing import Any, Dict, Protocol
 
 from rich.console import Console, ConsoleOptions, RenderResult
 from rich.markdown import Heading, Markdown
@@ -76,7 +76,7 @@ def _parse_output_data(output: str) -> str:
     try:
         output_data = json.loads(output)
         if isinstance(output_data, dict) and "text" in output_data:
-            return output_data["text"]
+            return str(output_data["text"])  # type: str
         elif isinstance(output_data, list):
             # Handle run_command output format: [{'type': 'text', 'text': '...'}]
             text_parts = []
@@ -164,7 +164,7 @@ def render_tool_call_with_output(
 
 
 def render_read_file_tool(
-    tool_call: ToolCallEvent, output_text: str, args_data: dict
+    tool_call: ToolCallEvent, output_text: str, args_data: Dict[str, Any]
 ) -> None:
     """Render read_file tool as a tree with line count."""
     filename = args_data.get("path", "file")
@@ -179,12 +179,16 @@ def render_read_file_tool(
 
 
 def render_edit_file_tool(
-    tool_call: ToolCallEvent, output_text: str, args_data: dict
+    tool_call: ToolCallEvent, output_text: str, args_data: Dict[str, Any]
 ) -> None:
     """Render edit_file tool as a tree with diff output."""
     filename = args_data.get("path", "file")
 
-    root = Tree(Text("▶ Edited ") + Text(filename, style="bold"))
+    # Determine label color based on presence of error/failure keywords
+    lower_out = output_text.lower()
+    label_style = "red" if ("error" in lower_out or "failed" in lower_out) else "green"
+    label = Text("▶ Edited ", style=label_style) + Text(filename, style="bold")
+    root = Tree(label)
     if output_text.strip():
         diff_syntax = Syntax(output_text, "diff", theme="ansi_dark", line_numbers=False)
         root.add(diff_syntax)
@@ -193,7 +197,7 @@ def render_edit_file_tool(
 
 
 def render_list_directory_tool(
-    tool_call: ToolCallEvent, tool_output: str, args_data: dict
+    tool_call: ToolCallEvent, tool_output: str, args_data: Dict[str, Any]
 ) -> None:
     """Render list_directory tool with directory contents."""
     directory_name = args_data.get("path", ".")
@@ -225,7 +229,7 @@ def render_list_directory_tool(
 
 
 def render_search_files_tool(
-    tool_call: ToolCallEvent, tool_output: str, args_data: dict
+    tool_call: ToolCallEvent, tool_output: str, args_data: Dict[str, Any]
 ) -> None:
     """Render search_files tool as a tree with the result count."""
     path = args_data.get("path", ".")
@@ -248,7 +252,7 @@ def render_search_files_tool(
 
 
 def render_read_multiple_files_tool(
-    tool_call: ToolCallEvent, tool_output: str, args_data: dict
+    tool_call: ToolCallEvent, tool_output: str, args_data: Dict[str, Any]
 ) -> None:
     """Render read_multiple_files tool as a tree listing the files read."""
     paths = args_data.get("paths", [])
@@ -260,7 +264,7 @@ def render_read_multiple_files_tool(
 
 
 def render_directory_tree_tool(
-    tool_call: ToolCallEvent, tool_output: str, args_data: dict
+    tool_call: ToolCallEvent, tool_output: str, args_data: Dict[str, Any]
 ) -> None:
     """Render a simple one-line summary for directory_tree tool."""
     path = args_data.get("path", ".")
@@ -270,7 +274,7 @@ def render_directory_tree_tool(
 
 
 def render_write_file_tool(
-    tool_call: ToolCallEvent, tool_output: str, args_data: dict
+    tool_call: ToolCallEvent, tool_output: str, args_data: Dict[str, Any]
 ) -> None:
     """Render write_file tool as a tree with line count."""
     path = args_data.get("path", "")
@@ -285,7 +289,7 @@ def render_write_file_tool(
 
 
 def render_move_file_tool(
-    tool_call: ToolCallEvent, tool_output: str, args_data: dict
+    tool_call: ToolCallEvent, tool_output: str, args_data: Dict[str, Any]
 ) -> None:
     """Render move_file tool with source→destination and status."""
     src = args_data.get("source", "")
@@ -303,7 +307,7 @@ def render_move_file_tool(
 
 
 def render_git_add_tool(
-    tool_call: ToolCallEvent, tool_output: str, args_data: dict
+    tool_call: ToolCallEvent, tool_output: str, args_data: Dict[str, Any]
 ) -> None:
     """Render git_add tool with a rich tree for staging files."""
     files = args_data.get("files", [])
@@ -317,7 +321,7 @@ def render_git_add_tool(
 
 
 def render_git_commit_tool(
-    tool_call: ToolCallEvent, tool_output: str, args_data: dict
+    tool_call: ToolCallEvent, tool_output: str, args_data: Dict[str, Any]
 ) -> None:
     """Render git_commit tool with a rich tree for commit message and output."""
     message = args_data.get("message", "")
@@ -329,7 +333,7 @@ def render_git_commit_tool(
 
 
 def render_git_status_tool(
-    tool_call: ToolCallEvent, output_text: str, args_data: dict
+    tool_call: ToolCallEvent, output_text: str, args_data: Dict[str, Any]
 ) -> None:
     """Render git_status tool with a tree showing status output."""
     root = Tree(Text("▶ Running git_status", style="bold"))
@@ -340,7 +344,7 @@ def render_git_status_tool(
 
 
 def render_command_tool(
-    tool_call: ToolCallEvent, output_text: str, args_data: dict
+    tool_call: ToolCallEvent, output_text: str, args_data: Dict[str, Any]
 ) -> None:
     """Render shell/command tool with command and output."""
     command = (
@@ -356,14 +360,18 @@ def render_command_tool(
     if output_text.strip():
         # Truncate output for readability
         truncated = _truncate_output_lines(output_text)
-        root.add(Text(truncated, style="dim"))
+        lower_out = truncated.lower()
+        err_style = (
+            "red" if ("error" in lower_out or "failed" in lower_out) else "green"
+        )
+        root.add(Text(truncated, style=err_style))
 
     console.print(root)
     console.print()
 
 
 def render_generic_tool(
-    tool_call: ToolCallEvent, output_text: str, args_data: dict
+    tool_call: ToolCallEvent, output_text: str, args_data: Dict[str, Any]
 ) -> None:
     """Render generic tool calls."""
     # Build argument list for display
