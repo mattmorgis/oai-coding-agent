@@ -1,9 +1,8 @@
 from typing import Protocol
 
 from oai_coding_agent.agent import HeadlessAgentProtocol
-from oai_coding_agent.console.rendering import console, render_message
+from oai_coding_agent.console.rendering import console, render_event
 from oai_coding_agent.console.repl_console import ReplConsole
-from oai_coding_agent.console.ui_event_mapper import map_event_to_ui_message
 
 __all__ = ["ConsoleInterface", "HeadlessConsole", "ReplConsole"]
 
@@ -34,9 +33,7 @@ class HeadlessConsole(ConsoleInterface):
         async with self.agent:
             try:
                 async for event in self.agent.run(self.agent.config.prompt):
-                    ui_msg = map_event_to_ui_message(event)
-                    if ui_msg:
-                        render_message(ui_msg)
+                    render_event(event)
             except KeyboardInterrupt:
                 # Cancel agent gracefully on interrupt
                 await self.agent.cancel()

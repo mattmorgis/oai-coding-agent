@@ -78,8 +78,8 @@ def _extract_tool_call_info(raw_item: ToolCallItemTypes) -> Optional[ToolCallEve
         case ResponseFunctionToolCall(name=name, arguments=arguments, call_id=call_id):
             return ToolCallEvent(name=name, arguments=arguments, call_id=call_id)
 
-        case McpCall(name=name, arguments=arguments):
-            return ToolCallEvent(name=name, arguments=arguments)
+        case McpCall(id=id, name=name, arguments=arguments):
+            return ToolCallEvent(name=name, arguments=arguments, call_id=id)
 
         case LocalShellCall(action=action):
             # LocalShellCall has action with command array
@@ -137,12 +137,12 @@ def map_sdk_event_to_agent_event(
 
                 case ToolCallOutputItem(
                     raw_item={
+                        "type": "function_call_output",
                         "call_id": call_id,
                         "output": output,
-                        "type": "function_call_output",
                     }
                 ):
-                    return ToolCallOutputEvent(call_id=call_id, output=output)  # type: ignore[arg-type]
+                    return ToolCallOutputEvent(call_id=call_id, output=output)
 
                 case ReasoningItem(raw_item=raw_item) if raw_item.summary:
                     # Concatenate all summary items
