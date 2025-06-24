@@ -1,14 +1,9 @@
 import asyncio
 import logging
-from typing import Generator, Optional
+from typing import Optional
 
-from prompt_toolkit import PromptSession
 from prompt_toolkit.application import Application, run_in_terminal
-from prompt_toolkit.auto_suggest import AutoSuggest, AutoSuggestFromHistory, Suggestion
-from prompt_toolkit.buffer import Buffer
-from prompt_toolkit.completion import CompleteEvent, Completer, Completion
-from prompt_toolkit.document import Document
-from prompt_toolkit.filters import Condition, completion_is_selected, has_completions
+from prompt_toolkit.filters import Condition, has_completions
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
@@ -48,86 +43,6 @@ class Spinner:
     @property
     def current_frame(self) -> str:
         return self.frames[self.frame_index]
-
-
-# Slash commands completion and autosuggest (from ui-temp/slash_ui_clean.py)
-commands = [
-    ("/add-dir", "Add a new working directory"),
-    ("/bug", "Submit feedback about Claude Code"),
-    ("/clear", "Clear conversation history and free up context"),
-    (
-        "/compact",
-        "Clear conversation history but keep a summary in context. Optional: /compact [instructions for summarization]",
-    ),
-    ("/config (theme)", "Open config panel"),
-    ("/cost", "Show the total cost and duration of the current session"),
-    ("/doctor", "Checks the health of your Claude Code installation"),
-    ("/exit (quit)", "Exit the REPL"),
-    ("/help", "Show help and available commands"),
-    ("/ide", "Manage IDE integrations and show status"),
-]
-
-
-class SlashCompleter(Completer):
-    def get_completions(
-        self, document: Document, complete_event: CompleteEvent
-    ) -> Generator[Completion, None, None]:
-        text = document.text
-
-        # Only complete if we're on the first line and text starts with /
-        if document.cursor_position_row == 0 and text.startswith("/"):
-            for cmd, desc in commands:
-                base_cmd = cmd.split()[0]
-                if base_cmd.lower().startswith(text.lower()):
-                    # Format: left-align command in 20 chars, then description
-                    display = f"{cmd:<20} {desc}"
-
-                    yield Completion(
-                        base_cmd,
-                        start_position=-len(text),
-                        display=display,
-                    )
-
-
-class SlashAutoSuggest(AutoSuggest):
-    """Auto-suggest for slash commands."""
-
-    def get_suggestion(
-        self, buffer: Buffer, document: Document
-    ) -> Optional[Suggestion]:
-        text = document.text
-
-        # Only suggest if we're on first line and text starts with / and len(text) > 1
-        if document.cursor_position_row == 0 and text.startswith("/") and len(text) > 1:
-            for cmd, desc in commands:
-                base_cmd = cmd.split()[0]
-                if (
-                    base_cmd.lower().startswith(text.lower())
-                    and base_cmd.lower() != text.lower()
-                ):
-                    # Return the rest of the command as suggestion
-                    return Suggestion(base_cmd[len(text) :])
-
-        return None
-
-
-# Style overrides for completion menu
-_SLASH_STYLE = {
-    "completion-menu": "noinherit",
-    "completion-menu.completion": "noinherit",
-    "completion-menu.scrollbar": "noinherit",
-    "completion-menu.completion.current": "noinherit bold",
-    "scrollbar": "noinherit",
-    "scrollbar.background": "noinherit",
-    "scrollbar.button": "noinherit",
-    "bottom-toolbar": "noreverse",
-}
-
-
-def on_completions_changed(buf: Buffer) -> None:
-    state = buf.complete_state
-    if state and state.complete_index is None:
-        state.complete_index = 0
 
 
 class ReplConsole:
@@ -217,35 +132,12 @@ class ReplConsole:
 
         @kb.add("enter", filter=has_completions)
         def _(event: KeyPressEvent) -> None:
-            buf = event.current_buffer
-            state = buf.complete_state
-            if not state:
-                return
-            if not completion_is_selected():
-                state.complete_index = state.complete_index or 0
-            completion = state.current_completion
-            if not completion:
-                return
-            buf.apply_completion(completion)
-            buf.cancel_completion()
-            buf.validate_and_handle()
-
-        @kb.add("tab", filter=has_completions)
-        def _(event: KeyPressEvent) -> None:
-            buf = event.current_buffer
-            state = buf.complete_state
-            if not state:
-                return
-            completions = state.completions
-            if len(completions) == 1:
-                completion = state.current_completion
-                if not completion:
-                    return
-                state.complete_index = state.complete_index or 0
-                buf.apply_completion(completion)
-                buf.cancel_completion()
+            buffer = event.current_buffer
+            suggestion = buffer.suggestion
+            if suggestion:
+                buffer.insert_text(suggestion.text)
             else:
-                buf.complete_next()
+                buffer.complete_next()
 
         @kb.add("escape")
         async def _(event: KeyPressEvent) -> None:
@@ -344,7 +236,6 @@ class ReplConsole:
                     "prompt": "ansicyan bold",
                     "auto-suggestion": "#888888",
                     "live-status": "ansigray",
-                    **_SLASH_STYLE,
                 }
             ),
         )
