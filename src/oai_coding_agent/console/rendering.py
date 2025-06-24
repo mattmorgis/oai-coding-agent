@@ -349,28 +349,16 @@ def render_command_tool(
         else args_data.get("command", "")
     )
 
-    # Create text with bold command to match other tools
-    header = Text("▶ Running command: ")
-    header.append(command, style="bold")
-    console.print(header)
+    # Render command as tree header
+    root_label = Text("▶ Running command: ") + Text(command, style="bold")
+    root = Tree(root_label)
 
     if output_text.strip():
-        # Truncate output to first 8 lines for cleaner display
-        lines = output_text.split("\n")
-        if len(lines) > 8:
-            truncated_output = "\n".join(lines[:8]) + "\n..."
-        else:
-            truncated_output = output_text
+        # Truncate output for readability
+        truncated = _truncate_output_lines(output_text)
+        root.add(Text(truncated, style="dim"))
 
-        text = Text(truncated_output, style="dim")
-        # syntax = Syntax(
-        #     truncated_output,
-        #     "bash",
-        #     theme="ansi_dark",
-        #     background_color="default",
-        #     line_numbers=False,
-        # )
-        console.print(text)
+    console.print(root)
     console.print()
 
 
@@ -378,19 +366,27 @@ def render_generic_tool(
     tool_call: ToolCallEvent, output_text: str, args_data: dict
 ) -> None:
     """Render generic tool calls."""
-    header = Text(f"▶ {tool_call.name}")
-    console.print(header)
-
-    # Show arguments if present
-    if tool_call.arguments and isinstance(args_data, dict):
+    # Build argument list for display
+    args_list = []
+    if isinstance(args_data, dict):
         for key, value in args_data.items():
-            console.print(f"  [dim]{key}:[/dim] {value}")
+            args_list.append(f"{key}={value}")
+    elif tool_call.arguments:
+        args_list.append(tool_call.arguments)
 
-    # Show output
+    args_str = " ".join(args_list)
+    # Create tree header
+    root_label = Text("▶ Calling ") + Text(tool_call.name, style="bold")
+    if args_str:
+        root_label.append(" with ")
+        root_label.append(args_str, style="bold")
+    root = Tree(root_label)
+
     if output_text.strip():
-        if len(output_text) > 200:
-            output_text = output_text[:200] + "..."
-        console.print(f"  [dim green]→[/dim green] {output_text}")
+        truncated = _truncate_output_lines(output_text)
+        root.add(Text(truncated, style="dim"))
+
+    console.print(root)
     console.print()
 
 
