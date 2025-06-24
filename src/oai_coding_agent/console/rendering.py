@@ -418,7 +418,9 @@ def render_event(event: AgentEvent) -> None:
                 console.print()
 
         case ReasoningEvent(text=text):
-            md = Markdown(text, code_theme="ansi_dark", hyperlinks=True, style="dim")
+            md = Markdown(
+                text, code_theme="ansi_dark", hyperlinks=True, style="dim italic"
+            )
             console.print(md)
             console.print()
 
