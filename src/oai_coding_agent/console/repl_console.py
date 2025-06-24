@@ -45,7 +45,7 @@ class SlashCompleter(Completer):
         text = document.text
 
         # Only complete if we're on the first line and text starts with /
-        if document.cursor_position_row == 0 and text.startswith("/"):
+        if text.startswith("/"):
             for cmd, desc in commands:
                 base_cmd = cmd.split()[0]
                 if base_cmd.lower().startswith(text.lower()):
@@ -64,7 +64,7 @@ class SlashAutoSuggest(AutoSuggest):
         text = document.text
 
         # Only suggest if we're on first line and text starts with / and has length > 1
-        if document.cursor_position_row == 0 and text.startswith("/") and len(text) > 1:
+        if text.startswith("/") and len(text) > 1:
             for cmd, desc in commands:
                 base_cmd = cmd.split()[0]
                 if (
