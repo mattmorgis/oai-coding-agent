@@ -11,7 +11,6 @@ from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.shortcuts import PromptSession
 from rich.panel import Panel
-from rich.prompt import Prompt
 
 from oai_coding_agent.agent import AsyncAgentProtocol
 from oai_coding_agent.console.rendering import console, render_event
@@ -192,13 +191,6 @@ class ReplConsole:
                     if user_input.strip().lower() in ["exit", "quit", "/exit", "/quit"]:
                         continue_loop = False
                         continue
-
-                    def _run_this() -> None:
-                        prompt = Prompt.ask("Enter the code to run")
-                        console.print(f"[dim]› {prompt}[/dim]\n")
-
-                    if user_input.strip().lower() in ["/run"]:
-                        run_in_terminal(_run_this)
 
                     run_in_terminal(
                         lambda: console.print(f"[dim]› {user_input}[/dim]\n")
