@@ -294,6 +294,14 @@ class ReplConsole:
                         continue_loop = False
                         continue
 
+                    if user_input.strip().startswith("/"):
+                        run_in_terminal(
+                            lambda: console.print(
+                                f"[yellow]Slash command: {user_input}[/yellow]\n"
+                            )
+                        )
+                        continue
+
                     run_in_terminal(
                         lambda: console.print(f"[dim]› {user_input}[/dim]\n")
                     )
