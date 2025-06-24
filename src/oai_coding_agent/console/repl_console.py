@@ -7,7 +7,7 @@ from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
-from prompt_toolkit.filters import has_completions
+from prompt_toolkit.filters import completion_is_selected, has_completions
 from prompt_toolkit.formatted_text import HTML, FormattedText, to_formatted_text
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
@@ -21,20 +21,18 @@ from oai_coding_agent.console.rendering import console, render_event
 from oai_coding_agent.runtime_config import get_data_dir
 
 # --- Slash-command autocomplete (inline) ---
+
 commands = [
-    ("/add-dir", "Add a new working directory"),
-    ("/bug", "Submit feedback about Claude Code"),
     ("/clear", "Clear conversation history and free up context"),
-    (
-        "/compact",
-        "Clear conversation history but keep a summary in context. Optional: /compact [instructions for summarization]",
-    ),
-    ("/config (theme)", "Open config panel"),
+    ("/theme", "Toggle between light and dark mode (default is dark)"),
+    ("/vim", "Toggle between vim and emacs mode (default is emacs)"),
     ("/cost", "Show the total cost and duration of the current session"),
-    ("/doctor", "Checks the health of your Claude Code installation"),
+    (
+        "/install-workflow",
+        "Adds a workflow to the repo to use agent in GitHub Actions ",
+    ),
     ("/exit (quit)", "Exit the REPL"),
     ("/help", "Show help and available commands"),
-    ("/ide", "Manage IDE integrations and show status"),
 ]
 
 
@@ -45,7 +43,7 @@ class SlashCompleter(Completer):
         text = document.text
 
         # Only complete if we're on the first line and text starts with /
-        if text.startswith("/"):
+        if document.cursor_position_row == 0 and text.startswith("/"):
             for cmd, desc in commands:
                 base_cmd = cmd.split()[0]
                 if base_cmd.lower().startswith(text.lower()):
@@ -195,25 +193,27 @@ class ReplConsole:
         kb = KeyBindings()
 
         @kb.add("enter", filter=has_completions)
-        def _(event: KeyPressEvent) -> None:
+        def insert_or_accept(event: KeyPressEvent) -> None:
             buffer = event.current_buffer
-            suggestion = buffer.suggestion
-            if suggestion:
-                buffer.insert_text(suggestion.text)
-            else:
-                buffer.complete_next()
+            state = buffer.complete_state
+
+            if not completion_is_selected():  # user never arrowed/tabbed
+                state.complete_index = state.complete_index or 0  # type: ignore
+            buffer.apply_completion(state.current_completion)  # type: ignore
+            buffer.cancel_completion()
+            buffer.validate_and_handle()
 
         @kb.add("tab", filter=has_completions)
-        def _(event: KeyPressEvent) -> None:
+        def accept_or_cycle(event: KeyPressEvent) -> None:
             buf = event.current_buffer
-            state = buf.complete_state
-            assert state is not None
-            if len(state.completions) == 1:
-                if state.current_completion is None:
-                    state.complete_index = 0
-                assert state.current_completion is not None
-                buf.apply_completion(state.current_completion)
+            state = buf.complete_state  # type: ignore
+
+            # If there is only one completion, treat Tab like "auto-complete"
+            if len(state.completions) == 1:  # type: ignore
+                state.complete_index = 0  # type: ignore
+                buf.apply_completion(state.current_completion)  # type: ignore
                 buf.cancel_completion()
+            # If there are multiple completes, tab should cycle through
             else:
                 buf.complete_next()
 
@@ -271,7 +271,6 @@ class ReplConsole:
             completer=SlashCompleter(),
             auto_suggest=SlashAutoSuggest(),
             style=style,
-            enable_history_search=True,
             complete_while_typing=True,
             key_bindings=kb,
             erase_when_done=True,
