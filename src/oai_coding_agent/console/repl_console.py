@@ -3,7 +3,7 @@ import logging
 from typing import Optional
 
 from prompt_toolkit.application import Application, run_in_terminal
-from prompt_toolkit.filters import Condition, has_completions
+from prompt_toolkit.filters import has_completions
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
@@ -125,11 +125,6 @@ class ReplConsole:
         """Return the custom KeyBindings (e.g. Tab behaviour)."""
         kb = KeyBindings()
 
-        # Fallback Tab to trigger completion
-        @kb.add("tab")
-        def _(event: KeyPressEvent) -> None:
-            event.current_buffer.complete_next()
-
         @kb.add("enter", filter=has_completions)
         def _(event: KeyPressEvent) -> None:
             buffer = event.current_buffer
@@ -221,8 +216,6 @@ class ReplConsole:
         # Configure prompt area with history and styling
         self._prompt_area.buffer.history = FileHistory(str(history_path))
         self._prompt_area.buffer.auto_suggest = SlashAutoSuggest()
-        self._prompt_area.buffer.completer = SlashCompleter()
-        self._prompt_area.buffer.complete_while_typing = Condition(lambda: True)
         self._prompt_area.buffer.on_completions_changed += on_completions_changed
 
         # Create application with layout (live status always present)
