@@ -138,7 +138,7 @@ def test_map_reasoning_with_multiple_summaries() -> None:
     result = map_sdk_event_to_agent_event(event)
 
     assert isinstance(result, ReasoningEvent)
-    assert result.text == "First summary\nSecond summary\nThird summary"
+    assert result.text == "First summary\n\nSecond summary\n\nThird summary"
 
 
 def test_map_message_with_multiple_content_items() -> None:
@@ -158,7 +158,7 @@ def test_map_message_with_multiple_content_items() -> None:
     result = map_sdk_event_to_agent_event(event)
 
     assert isinstance(result, MessageOutputEvent)
-    assert result.text == "First content\nSecond content\nThird content"
+    assert result.text == "First content\n\nSecond content\n\nThird content"
 
 
 def test_map_tool_call_output_event() -> None:

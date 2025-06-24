@@ -147,13 +147,13 @@ def map_sdk_event_to_agent_event(
                 case ReasoningItem(raw_item=raw_item) if raw_item.summary:
                     # Concatenate all summary items
                     summary_texts = [item.text for item in raw_item.summary]
-                    combined_text = "\n".join(summary_texts)
+                    combined_text = "\n\n".join(summary_texts)
                     return ReasoningEvent(text=combined_text)
 
                 case MessageOutputItem(raw_item=raw_item) if raw_item.content:
                     # Concatenate all content items
                     content_texts = [item.text for item in raw_item.content]  # type: ignore[union-attr]
-                    combined_text = "\n".join(content_texts)
+                    combined_text = "\n\n".join(content_texts)
                     return MessageOutputEvent(text=combined_text)
 
                 case _:

@@ -12,6 +12,7 @@ from prompt_toolkit.layout import Dimension, HSplit, Layout, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.styles import Style
 from prompt_toolkit.widgets import TextArea
+from prompt_toolkit import PromptSession
 from rich.panel import Panel
 
 from oai_coding_agent.agent import AsyncAgentProtocol
