@@ -215,8 +215,6 @@ class ReplConsole:
 
         # Configure prompt area with history and styling
         self._prompt_area.buffer.history = FileHistory(str(history_path))
-        self._prompt_area.buffer.auto_suggest = SlashAutoSuggest()
-        self._prompt_area.buffer.on_completions_changed += on_completions_changed
 
         # Create application with layout (live status always present)
         layout = HSplit([self._live_status_area, self._prompt_area])
