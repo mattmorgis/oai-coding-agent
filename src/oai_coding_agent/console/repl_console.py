@@ -273,7 +273,6 @@ class ReplConsole:
             style=style,
             enable_history_search=True,
             complete_while_typing=True,
-            complete_in_thread=True,
             key_bindings=kb,
             erase_when_done=True,
         )
