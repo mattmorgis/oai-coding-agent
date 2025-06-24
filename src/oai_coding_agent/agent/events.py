@@ -141,7 +141,7 @@ def map_sdk_event_to_agent_event(
                         "call_id": call_id,
                         "output": output,
                     }
-                ):
+                ) if isinstance(call_id, str) and isinstance(output, str):
                     return ToolCallOutputEvent(call_id=call_id, output=output)
 
                 case ReasoningItem(raw_item=raw_item) if raw_item.summary:

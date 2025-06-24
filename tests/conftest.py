@@ -32,6 +32,10 @@ class MockAgent(AsyncAgentProtocol):
     async def cancel(self) -> None:
         pass
 
+    @property
+    def is_processing(self) -> bool:
+        return False
+
 
 class MockConsole:
     """Mock console for testing."""

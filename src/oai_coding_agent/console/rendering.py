@@ -76,7 +76,7 @@ def _parse_output_data(output: str) -> str:
     try:
         output_data = json.loads(output)
         if isinstance(output_data, dict) and "text" in output_data:
-            return str(output_data["text"])  # type: str
+            return str(output_data["text"])
         elif isinstance(output_data, list):
             # Handle run_command output format: [{'type': 'text', 'text': '...'}]
             text_parts = []

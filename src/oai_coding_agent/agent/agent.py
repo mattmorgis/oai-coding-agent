@@ -68,7 +68,9 @@ class AsyncAgentProtocol(AgentProtocol, Protocol):
     """Protocol for async agents with event queues and background init."""
 
     events: asyncio.Queue[AgentEvent]
-    is_processing: bool
+
+    @property
+    def is_processing(self) -> bool: ...
 
     async def run(
         self,

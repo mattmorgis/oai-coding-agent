@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import Optional
 
+from prompt_toolkit import PromptSession
 from prompt_toolkit.application import Application, run_in_terminal
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.formatted_text import HTML
@@ -12,7 +13,6 @@ from prompt_toolkit.layout import Dimension, HSplit, Layout, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.styles import Style
 from prompt_toolkit.widgets import TextArea
-from prompt_toolkit import PromptSession
 from rich.panel import Panel
 
 from oai_coding_agent.agent import AsyncAgentProtocol
@@ -50,7 +50,10 @@ class ReplConsole:
     """Console that runs interactive REPL mode."""
 
     agent: AsyncAgentProtocol
-    app: Optional[Application]
+    app: Optional[Application[None]]
+
+    _render_task: Optional[asyncio.Task[None]]
+    _should_stop_render: bool
 
     def __init__(self, agent: AsyncAgentProtocol) -> None:
         self.agent = agent
@@ -92,7 +95,7 @@ class ReplConsole:
                     self._live_status_control.text = formatted_text
                 else:
                     # Always show an "idle" line when not processing
-                    formatted_text = ""
+                    formatted_text = HTML("")
                     self._live_status_control.text = formatted_text
 
                 if self.app:
