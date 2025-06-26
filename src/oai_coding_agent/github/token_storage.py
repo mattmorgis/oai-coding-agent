@@ -3,15 +3,15 @@ from typing import Optional
 
 
 def get_auth_file_path() -> Path:
-    """Get the path to the OAI auth file in the XDG data directory."""
-    from ..runtime_config import get_data_dir  # noqa: PLC0415
+    """Get the path to the OAI auth file in the XDG config directory."""
+    from ..runtime_config import get_config_dir  # noqa: PLC0415
 
-    return get_data_dir() / "auth"
+    return get_config_dir() / "auth"
 
 
 def save_github_token(token: str) -> bool:
     """
-    Save GitHub token to the auth file in the XDG data directory.
+    Save GitHub token to the auth file in the XDG config directory.
 
     Args:
         token: GitHub personal access token
@@ -38,7 +38,7 @@ def save_github_token(token: str) -> bool:
 
 def get_github_token() -> Optional[str]:
     """
-    Retrieve GitHub token from the auth file in the XDG data directory.
+    Retrieve GitHub token from the auth file in the XDG config directory.
 
     Returns:
         GitHub token if found, None otherwise
@@ -65,7 +65,7 @@ def get_github_token() -> Optional[str]:
 
 def delete_github_token() -> bool:
     """
-    Delete the auth file in the XDG data directory.
+    Delete the auth file in the XDG config directory.
 
     Returns:
         True if deleted successfully, False otherwise
@@ -81,7 +81,7 @@ def delete_github_token() -> bool:
 
 def has_stored_token() -> bool:
     """
-    Check if a GitHub token is stored in the auth file in the XDG data directory.
+    Check if a GitHub token is stored in the auth file in the XDG config directory.
 
     Returns:
         True if token exists, False otherwise

@@ -19,9 +19,9 @@ def test_install_commit_msg_hook_creates_hook_and_configures_git(
     install_commit_msg_hook should write the commit-msg hook from the template,
     make it executable, and call git config to set core.hooksPath.
     """
-    # Point XDG_CONFIG_HOME to a temporary location
-    config_home = tmp_path / "config_home"
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(config_home))
+    # Point XDG_DATA_HOME to a temporary location
+    data_home = tmp_path / "data_home"
+    monkeypatch.setenv("XDG_DATA_HOME", str(data_home))
 
     # Create a fake repo directory
     repo = tmp_path / "repo"
@@ -47,8 +47,8 @@ def test_install_commit_msg_hook_creates_hook_and_configures_git(
     # Run the installer
     install_commit_msg_hook(repo)
 
-    # Check that the hook file was created in the XDG_CONFIG_HOME path
-    hooks_dir = config_home / "oai_coding_agent" / "hooks"
+    # Check that the hook file was created in the XDG_DATA_HOME path
+    hooks_dir = data_home / "oai_coding_agent" / "hooks"
     hook_file = hooks_dir / "commit-msg"
     assert hook_file.exists(), "Expected commit-msg hook file to be created"
 

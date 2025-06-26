@@ -14,32 +14,32 @@ from oai_coding_agent.github.token_storage import (
 def test_get_auth_file_path_default(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # No XDG_DATA_HOME, use HOME for fallback
+    # No XDG_CONFIG_HOME, use HOME for fallback
     home_dir = tmp_path / "home"
     monkeypatch.setenv("HOME", str(home_dir))
-    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
 
-    expected = home_dir / ".local" / "share" / "oai_coding_agent" / "auth"
+    expected = home_dir / ".config" / "oai_coding_agent" / "auth"
     assert get_auth_file_path() == expected
 
 
 def test_get_auth_file_path_override(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Use XDG_DATA_HOME override
-    xdg_data = tmp_path / "xdg_data"
-    monkeypatch.setenv("XDG_DATA_HOME", str(xdg_data))
+    # Use XDG_CONFIG_HOME override
+    xdg_config = tmp_path / "xdg_config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_config))
 
-    expected = xdg_data / "oai_coding_agent" / "auth"
+    expected = xdg_config / "oai_coding_agent" / "auth"
     assert get_auth_file_path() == expected
 
 
 def test_save_get_delete_token_roundtrip(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Use XDG_DATA_HOME override to avoid touching real user directories
-    xdg_data = tmp_path / "xdg_data"
-    monkeypatch.setenv("XDG_DATA_HOME", str(xdg_data))
+    # Use XDG_CONFIG_HOME override to avoid touching real user directories
+    xdg_config = tmp_path / "xdg_config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_config))
 
     # Ensure clean state
     delete_github_token()

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import git
 
-from oai_coding_agent.runtime_config import get_config_dir
+from oai_coding_agent.runtime_config import get_data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +22,10 @@ fi
 
 def install_commit_msg_hook(repo_path: Path) -> None:
     """
-    Install the commit-msg hook into the user's config dir so it's not tracked in the repo.
+    Install the commit-msg hook into the user's data dir so it's not tracked in the repo.
     """
-    config_home = get_config_dir()
-    hooks_dir = config_home / "hooks"
+    data_home = get_data_dir()
+    hooks_dir = data_home / "hooks"
     hook_file = hooks_dir / "commit-msg"
 
     if not hooks_dir.exists():
