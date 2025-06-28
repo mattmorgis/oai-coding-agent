@@ -2,9 +2,9 @@ import webbrowser
 from typing import Optional
 
 import pyperclip
-from prompt_toolkit import prompt
 from rich import print
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.prompt import Confirm
 
 from oai_coding_agent.github.github_browser_auth import (
     poll_for_token,
@@ -103,11 +103,7 @@ class GitHubConsole:
         print("Logging in to GitHub enables features like creating PRs and issues")
         print("Any actions taken will appear as if you did them directly")
 
-        response = (
-            prompt("\nWould you like to log in to GitHub? (y/n): ").strip().lower()
-        )
-
-        if response == "y":
+        if Confirm.ask("\nWould you like to log in to GitHub?"):
             return self.authenticate()
         else:
             print("\n[dim]Continuing without GitHub integration[/dim]")
@@ -118,14 +114,7 @@ class GitHubConsole:
         """Check for existing token or authenticate. Used by the auth subcommand."""
         token = get_github_token()
         if token:
-            response = (
-                prompt(
-                    "You are already logged in to GitHub. Would you like to log in again? (y/n): "
-                )
-                .strip()
-                .lower()
-            )
-            if response != "y":
+            if not Confirm.ask("\nWould you like to log in to GitHub?"):
                 print("[green]Using existing GitHub login.[/green]")
                 return token
 
@@ -137,13 +126,7 @@ class GitHubConsole:
             print("No stored GitHub token found.")
             return True
 
-        response = (
-            prompt("Are you sure you want to remove your GitHub token? (y/n): ")
-            .strip()
-            .lower()
-        )
-
-        if response == "y":
+        if Confirm.ask("\nAre you sure you want to remove your GitHub token?"):
             if delete_github_token():
                 print("[green]✓ Successfully logged out from GitHub.[/green]")
                 print("You'll need to log in again to use GitHub features.")
