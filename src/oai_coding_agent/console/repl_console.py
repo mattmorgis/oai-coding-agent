@@ -20,19 +20,21 @@ from oai_coding_agent.agent import AsyncAgentProtocol
 from oai_coding_agent.console.rendering import console, render_event
 from oai_coding_agent.runtime_config import get_data_dir
 
-# --- Slash-command autocomplete (inline) ---
-
 commands = [
-    ("/clear", "Clear conversation history and free up context"),
+    # UI and display commands
     ("/theme", "Toggle between light and dark mode (default is dark)"),
     ("/vim", "Toggle between vim and emacs mode (default is emacs)"),
+    # Session management
+    ("/clear", "Clear conversation history and free up context"),
     ("/cost", "Show the total cost and duration of the current session"),
+    # Repository integration
     (
         "/install-workflow",
         "Adds a workflow to the repo to use agent in GitHub Actions ",
     ),
-    ("/exit (quit)", "Exit the REPL"),
+    # Help and exit
     ("/help", "Show help and available commands"),
+    ("/exit (quit)", "Exit the REPL"),
 ]
 
 
@@ -94,8 +96,6 @@ def on_completions_changed(buf: Buffer) -> None:
     if state and state.complete_index is None:
         state.complete_index = 0
 
-
-# --- End slash-command autocomplete ---
 
 logger = logging.getLogger(__name__)
 
@@ -205,25 +205,25 @@ class ReplConsole:
 
         @kb.add("tab", filter=has_completions)
         def accept_or_cycle(event: KeyPressEvent) -> None:
-            buf = event.current_buffer
-            state = buf.complete_state
+            buffer = event.current_buffer
+            state = buffer.complete_state
 
             # If there is only one completion, treat Tab like "auto-complete"
             if len(state.completions) == 1:  # type: ignore
                 state.complete_index = 0  # type: ignore
-                buf.apply_completion(state.current_completion)  # type: ignore
-                buf.cancel_completion()
+                buffer.apply_completion(state.current_completion)  # type: ignore
+                buffer.cancel_completion()
             # If there are multiple completes, tab should cycle through
             else:
-                buf.complete_next()
+                buffer.complete_next()
 
         @kb.add("escape")
         async def _(event: KeyPressEvent) -> None:
             """Handle ESC - cancel current job."""
             await self.agent.cancel()
             await run_in_terminal(
-                lambda: console.print(
-                    "[bold red]error: Agent cancelled by user[/bold red]"
+                lambda: self._print_to_terminal(
+                    "error: Agent cancelled by user", "bold red"
                 )
             )
 
@@ -240,6 +240,19 @@ class ReplConsole:
             event.current_buffer.insert_text("\n")
 
         return kb
+
+    def _print_to_terminal(self, message: str, style: str = "") -> None:
+        """Helper method to print messages to terminal with optional styling."""
+        styled_message = f"[{style}]{message}[/{style}]" if style else message
+        run_in_terminal(lambda: console.print(styled_message))
+
+    def _handle_slash_command(self, user_input: str) -> bool:
+        """Handle slash commands. Returns True if command was handled, False otherwise."""
+        if not user_input.strip().startswith("/"):
+            return False
+
+        self._print_to_terminal(f"Slash command: {user_input}\n", "yellow")
+        return True
 
     async def run(self) -> None:
         """Interactive REPL loop for the console interface."""
@@ -276,40 +289,33 @@ class ReplConsole:
             erase_when_done=True,
         )
         if hasattr(self.prompt_session, "default_buffer"):
-            buf = self.prompt_session.default_buffer
-            buf.on_completions_changed += on_completions_changed
+            buffer = self.prompt_session.default_buffer
+            buffer.on_completions_changed += on_completions_changed
 
         async with self.agent:
             try:
-                continue_loop = True
-                while continue_loop:
+                should_continue = True
+                while should_continue:
                     logger.info("Prompting user...")
                     user_input = await self.prompt_session.prompt_async()
                     if not user_input.strip():
                         continue
 
                     if user_input.strip().lower() in ["exit", "quit", "/exit", "/quit"]:
-                        continue_loop = False
+                        should_continue = False
                         continue
 
-                    if user_input.strip().startswith("/"):
-                        run_in_terminal(
-                            lambda: console.print(
-                                f"[yellow]Slash command: {user_input}[/yellow]\n"
-                            )
-                        )
+                    if self._handle_slash_command(user_input):
                         continue
 
-                    run_in_terminal(
-                        lambda: console.print(f"[dim]› {user_input}[/dim]\n")
-                    )
+                    self._print_to_terminal(f"› {user_input}\n", "dim")
 
                     await self.agent.run(user_input)
 
             except (KeyboardInterrupt, EOFError):
                 # Cancel any running agent task
                 await self.agent.cancel()
-                continue_loop = False
+                should_continue = False
 
             # Cancel the event consumer task when exiting
             event_consumer_task.cancel()
