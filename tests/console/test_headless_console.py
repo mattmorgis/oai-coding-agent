@@ -2,8 +2,8 @@ from typing import Any, AsyncIterator, List, Optional
 
 import pytest
 
-from oai_coding_agent.console.console import HeadlessConsole
 import oai_coding_agent.console.console as console_mod
+from oai_coding_agent.console.console import HeadlessConsole
 
 
 class DummyConfig:
@@ -20,10 +20,7 @@ class DummyAgent:
     async def __aenter__(self) -> "DummyAgent":
         return self
 
-    async def __aexit__(
-        self, exc_type: Any, exc_val: Any, exc_tb: Any
-    ) -> None:
-        ...
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...
 
     def run(self, prompt: str) -> AsyncIterator[Any]:
         async def _gen() -> AsyncIterator[Any]:
@@ -46,7 +43,9 @@ async def test_run_raises_if_no_prompt() -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_prints_prompt_and_renders_events(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_run_prints_prompt_and_renders_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     events: List[Any] = ["event1", "event2"]
     agent = DummyAgent(DummyConfig(prompt="test prompt"), events=events)
     headless = HeadlessConsole(agent)  # type: ignore[arg-type]
@@ -63,12 +62,14 @@ async def test_run_prints_prompt_and_renders_events(monkeypatch: pytest.MonkeyPa
 
     await headless.run()
 
-    assert printed == [f"[bold cyan]Prompt:[/bold cyan] test prompt"]
+    assert printed == ["[bold cyan]Prompt:[/bold cyan] test prompt"]
     assert rendered == events
 
 
 @pytest.mark.asyncio
-async def test_run_cancel_on_keyboard_interrupt(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_run_cancel_on_keyboard_interrupt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     class InterruptAgent(DummyAgent):
         def __init__(self, config: DummyConfig) -> None:
             super().__init__(config, events=[])
