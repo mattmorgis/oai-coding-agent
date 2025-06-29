@@ -6,14 +6,18 @@ from rich import print
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Confirm
 
+from oai_coding_agent.auth.token_storage import (
+    delete_token as delete_github_token,
+)
+from oai_coding_agent.auth.token_storage import (
+    get_token as get_github_token,
+)
+from oai_coding_agent.auth.token_storage import (
+    save_token as save_github_token,
+)
 from oai_coding_agent.github.github_browser_auth import (
     poll_for_token,
     start_device_flow,
-)
-from oai_coding_agent.github.token_storage import (
-    delete_github_token,
-    get_github_token,
-    save_github_token,
 )
 
 
@@ -86,7 +90,7 @@ class GitHubConsole:
 
         if token:
             print("[green]✓ Successfully logged in to GitHub![/green]")
-            save_github_token(token)
+            save_github_token("GITHUB_TOKEN", token)
 
             return token
         else:
@@ -95,7 +99,7 @@ class GitHubConsole:
 
     def prompt_auth(self) -> Optional[str]:
         """Prompt user to authenticate if no token is found."""
-        token = get_github_token()
+        token = get_github_token("GITHUB_TOKEN")
         if token:
             return token
 
@@ -112,7 +116,7 @@ class GitHubConsole:
 
     def check_or_authenticate(self) -> Optional[str]:
         """Check for existing token or authenticate. Used by the auth subcommand."""
-        token = get_github_token()
+        token = get_github_token("GITHUB_TOKEN")
         if token:
             if not Confirm.ask("\nWould you like to log in to GitHub?"):
                 print("[green]Using existing GitHub login.[/green]")
@@ -122,12 +126,12 @@ class GitHubConsole:
 
     def logout(self) -> bool:
         """Log out from GitHub by removing stored token."""
-        if not get_github_token():
+        if not get_github_token("GITHUB_TOKEN"):
             print("No stored GitHub token found.")
             return True
 
         if Confirm.ask("\nAre you sure you want to remove your GitHub token?"):
-            if delete_github_token():
+            if delete_github_token("GITHUB_TOKEN"):
                 print("[green]✓ Successfully logged out from GitHub.[/green]")
                 print("You'll need to log in again to use GitHub features.")
                 return True

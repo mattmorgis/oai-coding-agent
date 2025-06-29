@@ -58,6 +58,12 @@ def mock_console_factory() -> Any:
 
 
 @pytest.fixture(autouse=True)
+def isolate_xdg_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    # prevent writing to real XDG_CONFIG_HOME during CLI tests
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+
+
+@pytest.fixture(autouse=True)
 def stub_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
     # Stub preflight checks for CLI tests to not block execution
     monkeypatch.setattr(

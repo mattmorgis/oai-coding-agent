@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Annotated, Callable, Optional
 
 import typer
+from click.core import ParameterSource
 
 from oai_coding_agent.agent import (
     AgentProtocol,
@@ -20,6 +21,7 @@ from oai_coding_agent.console.console import (
     HeadlessConsole,
     ReplConsole,
 )
+from oai_coding_agent.console.openai_console import OpenAIConsole
 from oai_coding_agent.logger import setup_logging
 from oai_coding_agent.preflight import PreflightCheckError, run_preflight_checks
 from oai_coding_agent.runtime_config import (
@@ -84,9 +86,13 @@ def github_logout() -> None:
 def main(
     ctx: typer.Context,
     openai_api_key: Annotated[
-        str,
-        typer.Option(envvar=OPENAI_API_KEY_ENV, help="OpenAI API key"),
-    ],
+        Optional[str],
+        typer.Option(
+            None,
+            envvar=OPENAI_API_KEY_ENV,
+            help="OpenAI API key (optional; will prompt if missing or forced)",
+        ),
+    ] = None,
     github_token: Annotated[
         Optional[str],
         typer.Option(
@@ -157,6 +163,14 @@ def main(
             token = github_console.prompt_auth()
             if token:
                 github_token = token
+
+        source = ctx.get_parameter_source("openai_api_key")
+        force = source == ParameterSource.COMMANDLINE
+        if not openai_api_key or force:
+            openai_console = OpenAIConsole()
+            openai_api_key = openai_console.check_or_authenticate(force, openai_api_key)
+
+        assert openai_api_key is not None, "OpenAI API key is required"
 
         cfg = RuntimeConfig(
             openai_api_key=openai_api_key,

@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-
 from oai_coding_agent.github.token_storage import (
     delete_github_token,
     get_auth_file_path,
