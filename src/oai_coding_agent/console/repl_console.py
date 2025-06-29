@@ -50,9 +50,6 @@ class SlashCommandHandler:
         self._printer = printer
         self._commands: List[SlashCommand] = [
             SlashCommand(
-                "/theme", "Toggle between light and dark mode (default is dark)"
-            ),
-            SlashCommand(
                 "/vim", "Toggle between vim and emacs mode (default is emacs)"
             ),
             SlashCommand("/clear", "Clear conversation history and free up context"),
@@ -60,8 +57,12 @@ class SlashCommandHandler:
                 "/cost", "Show the total cost and duration of the current session"
             ),
             SlashCommand(
+                "/github-login",
+                "Login to GitHub",
+            ),
+            SlashCommand(
                 "/install-workflow",
-                "Adds a workflow to the repo to use agent in GitHub Actions ",
+                "Adds a workflow to the repo to use agent in GitHub Actions",
             ),
             SlashCommand("/help", "Show help and available commands"),
             SlashCommand("/exit (quit)", "Exit the REPL"),
