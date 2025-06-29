@@ -5,7 +5,7 @@ These tests focus on a very narrow happy-path and a cancel path so that we
 exercise the public behaviour of the agent without spinning up real MCP
 servers or hitting the network.  External dependencies are stubbed via
 fixtures to keep the test-code itself small and readable.  The goal is *not* to
-re-implement every edge case – just to prove that the enqueue, streaming and
+re-implement every edge case - just to prove that the enqueue, streaming and
 cancellation flows are wired up correctly.
 """
 
@@ -206,3 +206,121 @@ async def test_async_agent_max_turns_emits_error_event(
         ev = await asyncio.wait_for(agent.events.get(), timeout=1.0)
         assert isinstance(ev, ErrorEvent)
         assert "turn limit hit" in ev.message
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Additional AsyncAgent tests for exception branches and state
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_async_agent_handles_agents_exception(
+    dummy_config: RuntimeConfig,
+    patch_async_agent: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When Runner.run_streamed raises AgentsException, emit an ErrorEvent."""
+    from agents import AgentsException, Runner
+
+    from oai_coding_agent.agent.agent import AsyncAgent
+    from oai_coding_agent.agent.events import ErrorEvent
+
+    def fake_run_streamed(*args: Any, **kwargs: Any) -> Any:
+        raise AgentsException("agent error")
+
+    monkeypatch.setattr(Runner, "run_streamed", fake_run_streamed)
+
+    async with AsyncAgent(dummy_config, max_turns=5) as agent:
+        await agent.run("prompt")
+        ev = await asyncio.wait_for(agent.events.get(), timeout=1.0)
+        assert isinstance(ev, ErrorEvent)
+        assert "agent error" in ev.message
+    # drain prompt consumer task to retrieve any cleanup exception
+    consumer = agent._prompt_consumer_task
+    assert consumer is not None
+    with pytest.raises(AttributeError):
+        await consumer
+
+
+@pytest.mark.asyncio
+async def test_async_agent_handles_generic_exception(
+    dummy_config: RuntimeConfig,
+    patch_async_agent: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When Runner.run_streamed raises a generic Exception, emit an ErrorEvent."""
+    from agents import Runner
+
+    from oai_coding_agent.agent.agent import AsyncAgent
+    from oai_coding_agent.agent.events import ErrorEvent
+
+    def fake_run_streamed(*args: Any, **kwargs: Any) -> Any:
+        raise RuntimeError("generic failure")
+
+    monkeypatch.setattr(Runner, "run_streamed", fake_run_streamed)
+
+    async with AsyncAgent(dummy_config, max_turns=5) as agent:
+        await agent.run("prompt")
+        ev = await asyncio.wait_for(agent.events.get(), timeout=1.0)
+        assert isinstance(ev, ErrorEvent)
+        assert "generic failure" in ev.message
+    # drain prompt consumer task to retrieve any cleanup exception
+    consumer = agent._prompt_consumer_task
+    assert consumer is not None
+    with pytest.raises(AttributeError):
+        await consumer
+
+
+@pytest.mark.asyncio
+async def test_async_agent_is_processing_flag(
+    dummy_config: RuntimeConfig,
+    patch_async_agent: None,
+) -> None:
+    """The is_processing property reflects whether a prompt is being handled."""
+    from oai_coding_agent.agent.agent import AsyncAgent
+
+    async with AsyncAgent(dummy_config, max_turns=5) as agent:
+        # No work yet
+        assert not agent.is_processing
+
+        await agent.run("check status")
+        # Wait until the run task starts
+        while agent._active_run_task is None:
+            await asyncio.sleep(0.01)
+        assert agent.is_processing
+
+        # Consume the event to let the stub run stay alive
+        _ = await asyncio.wait_for(agent.events.get(), timeout=1.0)
+        # Still processing (stubbed run hangs until cancel)
+        assert agent.is_processing
+
+        # Cancel to break out
+        await agent.cancel()
+        # Wait for consumer task to finalize active run
+        while agent._active_run_task is not None:
+            await asyncio.sleep(0.01)
+        # Now done
+        assert not agent.is_processing
+
+
+@pytest.mark.asyncio
+async def test_async_agent_initialization_failure(
+    dummy_config: RuntimeConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If background init fails, the prompt consumer task should error with AgentInitializationError."""
+    # Make start_mcp_servers fail to trigger init exception
+    import oai_coding_agent.agent.agent as agent_module
+    from oai_coding_agent.agent.agent import AgentInitializationError, AsyncAgent
+
+    async def fake_start_mcp_servers(config: Any, stack: Any) -> None:
+        raise RuntimeError("init fail")
+
+    monkeypatch.setattr(agent_module, "start_mcp_servers", fake_start_mcp_servers)
+
+    async with AsyncAgent(dummy_config, max_turns=5) as agent:
+        # prompt consumer should die on init exception
+        consumer = agent._prompt_consumer_task
+        assert consumer is not None
+        with pytest.raises(AgentInitializationError):
+            await asyncio.wait_for(consumer, timeout=1)

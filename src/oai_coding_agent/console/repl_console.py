@@ -136,14 +136,35 @@ logger = logging.getLogger(__name__)
 
 
 class Spinner:
-    def __init__(self) -> None:
+    def __init__(self, interval: float = 0.1) -> None:
         self._frames = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
         self._cycle = cycle(self._frames)
         self._current_frame = next(self._cycle)
+        self._interval = interval
+        self._task: Optional[asyncio.Task[None]] = None
 
     def update(self) -> None:
-        """Update spinner frame."""
+        """(Deprecated) Update spinner frame."""
         self._current_frame = next(self._cycle)
+
+    def start(self) -> None:
+        """Start the spinner animation."""
+        if not self._task or self._task.done():
+            self._task = asyncio.create_task(self._run())
+
+    def stop(self) -> None:
+        """Stop the spinner animation."""
+        if self._task and not self._task.done():
+            self._task.cancel()
+
+    async def _run(self) -> None:
+        """Advance spinner frames on a timer."""
+        try:
+            while True:
+                self._current_frame = next(self._cycle)
+                await asyncio.sleep(self._interval)
+        except asyncio.CancelledError:
+            pass
 
     @property
     def current_frame(self) -> str:
@@ -187,9 +208,7 @@ class ReplConsole:
         """Main render loop - updates live area based on agent state."""
         try:
             while not self._should_stop_render:
-                if self.agent.is_processing:
-                    # Update spinner and show live area
-                    self._spinner.update()
+                # Spinner auto‑ticks in background; just invalidate UI
 
                 if self.prompt_session and self.prompt_session.app:
                     self.prompt_session.app.invalidate()
@@ -277,7 +296,8 @@ class ReplConsole:
         """Interactive REPL loop for the console interface."""
         event_consumer_task = asyncio.create_task(self._event_stream_consumer())
 
-        # Start the render loop
+        # Start spinner and render loop
+        self._spinner.start()
         self._start_render_loop()
 
         console.print(
@@ -339,6 +359,7 @@ class ReplConsole:
             # Cancel the event consumer task when exiting
             event_consumer_task.cancel()
             self._stop_render_loop()
+            self._spinner.stop()
             try:
                 await event_consumer_task
             except asyncio.CancelledError:
