@@ -69,8 +69,12 @@ class DummyEvent:
 @pytest.fixture(autouse=True)
 def patch_run_in_terminal(monkeypatch):
     """Stub out run_in_terminal so key binding handlers can call printer."""
+
+    async def mock_run_in_terminal(fn):
+        return fn()
+
     monkeypatch.setattr(
-        "oai_coding_agent.console.repl_console.run_in_terminal", lambda fn: fn()
+        "oai_coding_agent.console.repl_console.run_in_terminal", mock_run_in_terminal
     )
 
 
@@ -92,7 +96,8 @@ def find_binding(bindings: KeyBindings, key_sequence) -> Binding:
 def test_enter_with_completions(handler_printer_agent, monkeypatch):
     handler, _, agent = handler_printer_agent
     kb = handler.bindings
-    binding = find_binding(kb, ("enter",))
+    # enter is ControlM
+    binding = find_binding(kb, (Keys.ControlM,))
 
     state = FakeState(completions=["X"], current="X")
     buf = FakeBuffer(state)
@@ -118,7 +123,8 @@ def test_enter_with_completions(handler_printer_agent, monkeypatch):
 def test_tab_single_and_multiple(handler_printer_agent, monkeypatch):
     handler, _, _ = handler_printer_agent
     kb = handler.bindings
-    binding = find_binding(kb, ("tab",))
+    # tab is ControlI
+    binding = find_binding(kb, (Keys.ControlI,))
 
     # Single completion
     state1 = FakeState(completions=["A"], current="A")

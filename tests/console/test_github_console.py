@@ -46,7 +46,9 @@ def test_prompt_auth_user_says_no(
     with patch(
         "oai_coding_agent.console.github_console.get_github_token", return_value=None
     ):
-        with patch("oai_coding_agent.console.github_console.prompt", return_value="n"):
+        with patch(
+            "oai_coding_agent.console.github_console.Confirm.ask", return_value=False
+        ):
             token = github_console.prompt_auth()
             assert token is None
             captured = capsys.readouterr()
@@ -58,7 +60,9 @@ def test_prompt_auth_user_says_yes(github_console: GitHubConsole) -> None:
     with patch(
         "oai_coding_agent.console.github_console.get_github_token", return_value=None
     ):
-        with patch("oai_coding_agent.console.github_console.prompt", return_value="y"):
+        with patch(
+            "oai_coding_agent.console.github_console.Confirm.ask", return_value=True
+        ):
             with patch.object(
                 github_console, "authenticate", return_value="new_token"
             ) as mock_auth:
@@ -164,7 +168,9 @@ def test_check_or_authenticate_existing_token_keep(
         "oai_coding_agent.console.github_console.get_github_token",
         return_value="existing_token",
     ):
-        with patch("oai_coding_agent.console.github_console.prompt", return_value="n"):
+        with patch(
+            "oai_coding_agent.console.github_console.Confirm.ask", return_value=False
+        ):
             token = github_console.check_or_authenticate()
             assert token == "existing_token"
             captured = capsys.readouterr()
@@ -179,7 +185,9 @@ def test_check_or_authenticate_existing_token_reauth(
         "oai_coding_agent.console.github_console.get_github_token",
         return_value="existing_token",
     ):
-        with patch("oai_coding_agent.console.github_console.prompt", return_value="y"):
+        with patch(
+            "oai_coding_agent.console.github_console.Confirm.ask", return_value=True
+        ):
             with patch.object(
                 github_console, "authenticate", return_value="new_token"
             ) as mock_auth:
@@ -208,7 +216,9 @@ def test_logout_user_cancels(
     with patch(
         "oai_coding_agent.console.github_console.get_github_token", return_value="token"
     ):
-        with patch("oai_coding_agent.console.github_console.prompt", return_value="n"):
+        with patch(
+            "oai_coding_agent.console.github_console.Confirm.ask", return_value=False
+        ):
             result = github_console.logout()
             assert result is True
             captured = capsys.readouterr()
@@ -222,7 +232,9 @@ def test_logout_success(
     with patch(
         "oai_coding_agent.console.github_console.get_github_token", return_value="token"
     ):
-        with patch("oai_coding_agent.console.github_console.prompt", return_value="y"):
+        with patch(
+            "oai_coding_agent.console.github_console.Confirm.ask", return_value=True
+        ):
             with patch(
                 "oai_coding_agent.console.github_console.delete_github_token",
                 return_value=True,
@@ -240,7 +252,9 @@ def test_logout_failure(
     with patch(
         "oai_coding_agent.console.github_console.get_github_token", return_value="token"
     ):
-        with patch("oai_coding_agent.console.github_console.prompt", return_value="y"):
+        with patch(
+            "oai_coding_agent.console.github_console.Confirm.ask", return_value=True
+        ):
             with patch(
                 "oai_coding_agent.console.github_console.delete_github_token",
                 return_value=False,
