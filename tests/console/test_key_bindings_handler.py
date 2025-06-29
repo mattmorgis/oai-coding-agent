@@ -199,3 +199,25 @@ def test_escape_noop_if_not_processing(handler_printer_agent):
 
     assert not agent.cancel_called
     assert not printer.called
+
+
+def test_enter_without_completions(handler_printer_agent, monkeypatch):
+    handler, _, _ = handler_printer_agent
+    kb = handler.bindings
+    binding = find_binding(kb, (Keys.ControlM,))
+    # Patch filters so the enter binding is inactive
+    monkeypatch.setattr(
+        "prompt_toolkit.filters.has_completions",
+        lambda: False,
+    )
+    assert not binding.filter()
+
+
+def test_tab_without_completions(handler_printer_agent, monkeypatch):
+    handler, _, _ = handler_printer_agent
+    kb = handler.bindings
+    binding = find_binding(kb, (Keys.ControlI,))
+    import prompt_toolkit.filters as filters
+
+    monkeypatch.setattr(filters, "has_completions", lambda: False)
+    assert not binding.filter()
