@@ -206,25 +206,21 @@ def render_list_directory_tool(
 
     file_count = sum(1 for line in lines if line.startswith("[FILE]"))
     dir_count = sum(1 for line in lines if line.startswith("[DIR]"))
-
-    # Format: "Listed src/ (7 items: 6 files, 1 directory)"
     total = file_count + dir_count
 
-    # Create text with bold directory name
-    header = Text("▶ Listed ")
-    header.append(f"{directory_name}/", style="bold")
+    root = Tree(Text("▶ Listed ") + Text(f"{directory_name}/", style="bold"))
 
     if total == 0:
-        header.append(" (empty)")
+        root.add(Text("empty", style="green"))
     else:
         parts = []
         if file_count > 0:
             parts.append(f"{file_count} file{'s' if file_count != 1 else ''}")
         if dir_count > 0:
             parts.append(f"{dir_count} director{'ies' if dir_count != 1 else 'y'}")
-        header.append(f" ({total} items: {', '.join(parts)})")
+        root.add(Text(f"{total} items: {', '.join(parts)}", style="green"))
 
-    console.print(header)
+    console.print(root)
     console.print()
 
 
