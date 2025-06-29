@@ -31,7 +31,20 @@ class SlashCommand:
 
 
 class SlashCommandHandler:
-    """Encapsulates slash-commands: completion, suggestion, and handling."""
+    """Encapsulates slash-commands: completion, suggestion, handling and style settings."""
+
+    style: Style = Style.from_dict(
+        {
+            "completion-menu": "noinherit",
+            "completion-menu.completion": "noinherit",
+            "completion-menu.scrollbar": "noinherit",
+            "completion-menu.completion.current": "noinherit bold",
+            "scrollbar": "noinherit",
+            "scrollbar.background": "noinherit",
+            "scrollbar.button": "noinherit",
+            "bottom-toolbar": "noreverse",
+        }
+    )
 
     def __init__(self, printer: Callable[[str, str], None]) -> None:
         self._printer = printer
@@ -109,21 +122,6 @@ class SlashCommandHandler:
             return False
         self._printer(f"Slash command: {user_input}\n", "yellow")
         return True
-
-
-# Minimal style for the slash menu
-style = Style.from_dict(
-    {
-        "completion-menu": "noinherit",
-        "completion-menu.completion": "noinherit",
-        "completion-menu.scrollbar": "noinherit",
-        "completion-menu.completion.current": "noinherit bold",
-        "scrollbar": "noinherit",
-        "scrollbar.background": "noinherit",
-        "scrollbar.button": "noinherit",
-        "bottom-toolbar": "noreverse",
-    }
-)
 
 
 logger = logging.getLogger(__name__)
@@ -305,7 +303,7 @@ class ReplConsole:
             history=FileHistory(str(history_path)),
             completer=self._slash_handler.completer,
             auto_suggest=self._slash_handler.auto_suggest,
-            style=style,
+            style=self._slash_handler.style,
             complete_while_typing=True,
             key_bindings=kb,
             erase_when_done=True,
