@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
+from itertools import cycle
 from typing import Callable, Generator, List, Optional
 
 from prompt_toolkit.application import run_in_terminal
@@ -136,26 +137,17 @@ logger = logging.getLogger(__name__)
 
 class Spinner:
     def __init__(self) -> None:
-        self.frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-        self.frame_index = 0
-        self.is_spinning = False
-
-    def start(self) -> None:
-        """Start spinning."""
-        self.is_spinning = True
-        self.frame_index = 0
-
-    def stop(self) -> None:
-        """Stop spinning."""
-        self.is_spinning = False
+        self._frames = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
+        self._cycle = cycle(self._frames)
+        self._current_frame = next(self._cycle)
 
     def update(self) -> None:
         """Update spinner frame."""
-        self.frame_index = (self.frame_index + 1) % len(self.frames)
+        self._current_frame = next(self._cycle)
 
     @property
     def current_frame(self) -> str:
-        return self.frames[self.frame_index]
+        return self._current_frame
 
 
 class ReplConsole:
