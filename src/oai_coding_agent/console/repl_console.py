@@ -175,11 +175,12 @@ class KeyBindingsHandler:
 
         @kb.add("escape")
         async def _(event: KeyPressEvent) -> None:
-            """Handle ESC - cancel current job."""
-            await self.agent.cancel()
-            await run_in_terminal(
-                lambda: self._printer("error: Agent cancelled by user", "bold red")
-            )
+            """Handle ESC - cancel current job if agent is processing."""
+            if self.agent.is_processing:
+                await self.agent.cancel()
+                await run_in_terminal(
+                    lambda: self._printer("error: Agent cancelled by user", "bold red")
+                )
 
         # Support Ctrl+J for newline without submission.
         @kb.add("c-j", eager=True)

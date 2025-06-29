@@ -4,7 +4,6 @@
 import asyncio
 
 import pytest
-from prompt_toolkit.filters import completion_is_selected, has_completions
 from prompt_toolkit.key_binding.key_bindings import Binding, KeyBindings
 from prompt_toolkit.keys import Keys
 
@@ -12,8 +11,9 @@ from oai_coding_agent.console.repl_console import KeyBindingsHandler
 
 
 class DummyAgent:
-    def __init__(self) -> None:
+    def __init__(self, is_processing: bool = True) -> None:
         self.cancel_called = False
+        self.is_processing = is_processing  # type: ignore[attr-defined]
 
     async def cancel(self) -> None:
         self.cancel_called = True
@@ -173,10 +173,23 @@ def test_escape_cancels_and_prints(handler_printer_agent):
     event = DummyEvent(buf)
 
     # Call async handler
-    import asyncio
 
     asyncio.run(binding.handler(event))
 
     assert agent.cancel_called
     assert printer.called
     assert printer.args == ("error: Agent cancelled by user", "bold red")
+
+
+def test_escape_noop_if_not_processing(handler_printer_agent):
+    handler, printer, agent = handler_printer_agent
+    agent.is_processing = False  # type: ignore[attr-defined]
+    kb = handler.bindings
+    binding = find_binding(kb, ("escape",))
+
+    buf = FakeBuffer(FakeState([], None))
+    event = DummyEvent(buf)
+    asyncio.run(binding.handler(event))
+
+    assert not agent.cancel_called
+    assert not printer.called
