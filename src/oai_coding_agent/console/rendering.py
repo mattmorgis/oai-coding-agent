@@ -208,7 +208,9 @@ def render_list_directory_tool(
     dir_count = sum(1 for line in lines if line.startswith("[DIR]"))
     total = file_count + dir_count
 
-    root = Tree(Text("▶ Listed ") + Text(f"{directory_name}/", style="bold"))
+    root = Tree(
+        Text("▶ Listing directory: ") + Text(f"{directory_name}/", style="bold")
+    )
 
     if total == 0:
         root.add(Text("empty", style="green"))
