@@ -135,6 +135,67 @@ class SlashCommandHandler:
 logger = logging.getLogger(__name__)
 
 
+class KeyBindingsHandler:
+    """Encapsulates custom key bindings for the REPL (Enter, Tab, ESC, Ctrl+J, Alt+Enter)."""
+
+    def __init__(
+        self, agent: AsyncAgentProtocol, printer: Callable[[str, str], None]
+    ) -> None:
+        self.agent = agent
+        self._printer = printer
+
+    @property
+    def bindings(self) -> KeyBindings:
+        kb = KeyBindings()
+
+        @kb.add("enter", filter=has_completions)
+        def insert_or_accept(event: KeyPressEvent) -> None:
+            buffer = event.current_buffer
+            state = buffer.complete_state
+
+            if not completion_is_selected():  # user never arrowed/tabbed
+                state.complete_index = state.complete_index or 0  # type: ignore
+            buffer.apply_completion(state.current_completion)  # type: ignore
+            buffer.cancel_completion()
+            buffer.validate_and_handle()
+
+        @kb.add("tab", filter=has_completions)
+        def accept_or_cycle(event: KeyPressEvent) -> None:
+            buffer = event.current_buffer
+            state = buffer.complete_state
+
+            # If there is only one completion, treat Tab like "auto-complete"
+            if len(state.completions) == 1:  # type: ignore
+                state.complete_index = 0  # type: ignore
+                buffer.apply_completion(state.current_completion)  # type: ignore
+                buffer.cancel_completion()
+            # If there are multiple completes, tab should cycle through
+            else:
+                buffer.complete_next()
+
+        @kb.add("escape")
+        async def _(event: KeyPressEvent) -> None:
+            """Handle ESC - cancel current job."""
+            await self.agent.cancel()
+            await run_in_terminal(
+                lambda: self._printer("error: Agent cancelled by user", "bold red")
+            )
+
+        # Support Ctrl+J for newline without submission.
+        @kb.add("c-j", eager=True)
+        def _(event: KeyPressEvent) -> None:
+            """Insert newline on Ctrl+J (recommended Shift+Enter mapping in terminal)."""
+            event.current_buffer.insert_text("\n")
+
+        # Support Alt+Enter for newline without submission.
+        @kb.add(Keys.Escape, Keys.Enter, eager=True)
+        def _(event: KeyPressEvent) -> None:
+            """Insert newline on Alt+Enter."""
+            event.current_buffer.insert_text("\n")
+
+        return kb
+
+
 class Spinner:
     def __init__(self, interval: float = 0.1) -> None:
         self._frames = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
@@ -191,6 +252,7 @@ class ReplConsole:
         self._render_task = None
         self._should_stop_render = False
         self._slash_handler = SlashCommandHandler(self._print_to_terminal)
+        self._kb_handler = KeyBindingsHandler(self.agent, self._print_to_terminal)
 
     def prompt_fragments(self) -> FormattedText:
         """Return the complete prompt: status + prompt symbol."""
@@ -234,59 +296,6 @@ class ReplConsole:
             agent_event = await self.agent.events.get()
             await run_in_terminal(lambda: render_event(agent_event))
 
-    def _get_key_bindings(self) -> KeyBindings:
-        """Return the custom KeyBindings (e.g. Tab behaviour)."""
-        kb = KeyBindings()
-
-        @kb.add("enter", filter=has_completions)
-        def insert_or_accept(event: KeyPressEvent) -> None:
-            buffer = event.current_buffer
-            state = buffer.complete_state
-
-            if not completion_is_selected():  # user never arrowed/tabbed
-                state.complete_index = state.complete_index or 0  # type: ignore
-            buffer.apply_completion(state.current_completion)  # type: ignore
-            buffer.cancel_completion()
-            buffer.validate_and_handle()
-
-        @kb.add("tab", filter=has_completions)
-        def accept_or_cycle(event: KeyPressEvent) -> None:
-            buffer = event.current_buffer
-            state = buffer.complete_state
-
-            # If there is only one completion, treat Tab like "auto-complete"
-            if len(state.completions) == 1:  # type: ignore
-                state.complete_index = 0  # type: ignore
-                buffer.apply_completion(state.current_completion)  # type: ignore
-                buffer.cancel_completion()
-            # If there are multiple completes, tab should cycle through
-            else:
-                buffer.complete_next()
-
-        @kb.add("escape")
-        async def _(event: KeyPressEvent) -> None:
-            """Handle ESC - cancel current job."""
-            await self.agent.cancel()
-            await run_in_terminal(
-                lambda: self._print_to_terminal(
-                    "error: Agent cancelled by user", "bold red"
-                )
-            )
-
-        # Support Ctrl+J for newline without submission.
-        @kb.add("c-j", eager=True)
-        def _(event: KeyPressEvent) -> None:
-            """Insert newline on Ctrl+J (recommended Shift+Enter mapping in terminal)."""
-            event.current_buffer.insert_text("\n")
-
-        # Support Alt+Enter for newline without submission.
-        @kb.add(Keys.Escape, Keys.Enter, eager=True)
-        def _(event: KeyPressEvent) -> None:
-            """Insert newline on Alt+Enter."""
-            event.current_buffer.insert_text("\n")
-
-        return kb
-
     def _print_to_terminal(self, message: str, style: str = "") -> None:
         """Helper method to print messages to terminal with optional styling."""
         styled_message = f"[{style}]{message}[/{style}]" if style else message
@@ -310,7 +319,7 @@ class ReplConsole:
             )
         )
 
-        kb = self._get_key_bindings()
+        kb = self._kb_handler.bindings
 
         # Store prompt history under the XDG data directory
         history_dir = get_data_dir()
