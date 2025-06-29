@@ -118,8 +118,14 @@ class SlashCommandHandler:
             state.complete_index = 0
 
     def handle(self, user_input: str) -> bool:
-        """Process a slash command; returns True if handled."""
-        if not user_input.strip().startswith("/"):
+        """Process a slash command; returns True if handled (only if valid command)."""
+        text = user_input.strip()
+        if not text.startswith("/"):
+            return False
+        # Extract base (first token) and check if it's a known slash command
+        base = text.split()[0]
+        valid_bases = [cmd.name.split()[0].lower() for cmd in self._commands]
+        if base.lower() not in valid_bases:
             return False
         self._printer(f"Slash command: {user_input}\n", "yellow")
         return True

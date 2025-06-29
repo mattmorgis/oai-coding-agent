@@ -78,3 +78,22 @@ def test_on_completions_changed_sets_index() -> None:
     buf.complete_state = fake_state
     SlashCommandHandler.on_completions_changed(buf)
     assert fake_state.complete_index == 0
+
+
+def test_handle_with_valid_command_and_args(
+    handler_and_printer: Tuple[SlashCommandHandler, DummyPrinter],
+) -> None:
+    handler, printer = handler_and_printer
+    user_input = "/clear some extra args"
+    assert handler.handle(user_input)
+    assert printer.called
+
+
+def test_handle_with_invalid_command_and_args(
+    handler_and_printer: Tuple[SlashCommandHandler, DummyPrinter],
+) -> None:
+    handler, printer = handler_and_printer
+    # Reset printer.called to ensure handler does not print
+    printer.called = False
+    assert not handler.handle("/foobar some args")
+    assert not printer.called
