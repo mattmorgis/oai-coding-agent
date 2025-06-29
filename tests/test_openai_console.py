@@ -1,7 +1,5 @@
-import os
 from pathlib import Path
-
-dir_path = Path(__file__).parent
+from typing import Generator
 
 import pytest
 import typer
@@ -14,10 +12,8 @@ from oai_coding_agent.auth.token_storage import (
 )
 from oai_coding_agent.console.openai_console import OpenAIConsole
 
+dir_path = Path(__file__).parent
 test_key = "OPENAI_API_KEY"
-
-
-from typing import Generator
 
 
 @pytest.fixture(autouse=True)
@@ -66,31 +62,43 @@ def test_prompt_auth_returns_existing_without_prompt(
     assert key == "existingkey"
 
 
-def test_prompt_auth_force_overwrite_yes(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_check_or_authenticate_prompts_if_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # No existing token, should prompt and save
+    console = OpenAIConsole()
+    monkeypatch.setattr(typer, "prompt", lambda *args, **kwargs: "freshkey")
+
+    key = console.check_or_authenticate()
+    assert key == "freshkey"
+    assert get_token(test_key) == "freshkey"
+
+
+def test_check_or_authenticate_overwrite_yes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     save_token(test_key, "oldkey")
     console = OpenAIConsole()
-    # Force=True, user says Yes-> overwrite with new
     monkeypatch.setattr(Confirm, "ask", lambda *args, **kwargs: True)
-    monkeypatch.setattr(typer, "prompt", lambda *args, **kwargs: "updatedkey")
+    monkeypatch.setattr(typer, "prompt", lambda *args, **kwargs: "newkey")
 
-    key = console.prompt_auth(force=True)
-    assert key == "updatedkey"
-    assert get_token(test_key) == "updatedkey"
+    key = console.check_or_authenticate()
+    assert key == "newkey"
+    assert get_token(test_key) == "newkey"
 
 
-def test_prompt_auth_force_overwrite_no(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_check_or_authenticate_overwrite_no(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     save_token(test_key, "keepkey")
     console = OpenAIConsole()
-    # Force=True, user says No -> keep old
     monkeypatch.setattr(Confirm, "ask", lambda *args, **kwargs: False)
     monkeypatch.setattr(
         typer,
         "prompt",
-        lambda *args, **kwargs: pytest.fail(
-            "Prompt should not be called when not overwriting"
-        ),
+        lambda *args, **kwargs: pytest.fail("Prompt should not be called"),
     )
 
-    key = console.prompt_auth(force=True)
+    key = console.check_or_authenticate()
     assert key == "keepkey"
     assert get_token(test_key) == "keepkey"

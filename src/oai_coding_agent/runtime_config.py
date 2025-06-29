@@ -16,6 +16,8 @@ from typing import Optional
 
 from dotenv import dotenv_values
 
+from oai_coding_agent.auth.token_storage import get_auth_file_path
+
 # Environment variable names for credentials and endpoints
 OPENAI_API_KEY_ENV: str = "OPENAI_API_KEY"
 OPENAI_BASE_URL_ENV: str = "OPENAI_BASE_URL"
@@ -36,7 +38,6 @@ def load_envs(env_file: Optional[str] = None) -> None:
     sources = []
 
     # 1. Load from auth file in the XDG data directory first (for GITHUB_TOKEN)
-    from oai_coding_agent.auth.token_storage import get_auth_file_path
 
     auth_file = get_auth_file_path()
     if auth_file.exists():
