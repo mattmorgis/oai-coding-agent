@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Dict, Optional
 
-from ..runtime_config import get_config_dir
+from ..xdg import get_config_dir
 
 _AUTH_FILE = "auth"
 

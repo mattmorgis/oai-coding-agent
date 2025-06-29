@@ -6,7 +6,7 @@ import logging
 
 from concurrent_log_handler import ConcurrentRotatingFileHandler as RotatingFileHandler
 
-from oai_coding_agent.runtime_config import get_data_dir
+from oai_coding_agent.xdg import get_data_dir
 
 
 def setup_logging(level: int = logging.INFO) -> None:

@@ -2,8 +2,7 @@ from pathlib import Path
 from typing import Generator
 
 import pytest
-import typer
-from rich.prompt import Confirm
+from rich.prompt import Confirm, Prompt
 
 from oai_coding_agent.auth.token_storage import (
     get_auth_file_path,
@@ -34,7 +33,7 @@ def test_prompt_auth_creates_and_returns_new_key(
 ) -> None:
     # No existing token; should prompt once and save
     console = OpenAIConsole()
-    monkeypatch.setattr(typer, "prompt", lambda *args, **kwargs: "newkey123")
+    monkeypatch.setattr(Prompt, "ask", lambda *args, **kwargs: "newkey123")
 
     key = console.prompt_auth()
     assert key == "newkey123"
@@ -53,8 +52,8 @@ def test_prompt_auth_returns_existing_without_prompt(
     console = OpenAIConsole()
     # If prompt called, fail
     monkeypatch.setattr(
-        typer,
-        "prompt",
+        Prompt,
+        "ask",
         lambda *args, **kwargs: pytest.fail("Prompt should not be called"),
     )
 
@@ -67,7 +66,7 @@ def test_check_or_authenticate_prompts_if_missing(
 ) -> None:
     # No existing token, should prompt and save
     console = OpenAIConsole()
-    monkeypatch.setattr(typer, "prompt", lambda *args, **kwargs: "freshkey")
+    monkeypatch.setattr(Prompt, "ask", lambda *args, **kwargs: "freshkey")
 
     key = console.check_or_authenticate()
     assert key == "freshkey"
@@ -80,7 +79,7 @@ def test_check_or_authenticate_overwrite_yes(
     save_token(test_key, "oldkey")
     console = OpenAIConsole()
     monkeypatch.setattr(Confirm, "ask", lambda *args, **kwargs: True)
-    monkeypatch.setattr(typer, "prompt", lambda *args, **kwargs: "newkey")
+    monkeypatch.setattr(Prompt, "ask", lambda *args, **kwargs: "newkey")
 
     key = console.check_or_authenticate()
     assert key == "newkey"
@@ -94,8 +93,8 @@ def test_check_or_authenticate_overwrite_no(
     console = OpenAIConsole()
     monkeypatch.setattr(Confirm, "ask", lambda *args, **kwargs: False)
     monkeypatch.setattr(
-        typer,
-        "prompt",
+        Prompt,
+        "ask",
         lambda *args, **kwargs: pytest.fail("Prompt should not be called"),
     )
 

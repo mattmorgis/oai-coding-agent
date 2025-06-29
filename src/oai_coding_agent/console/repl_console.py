@@ -20,7 +20,7 @@ from rich.panel import Panel
 
 from oai_coding_agent.agent import AsyncAgentProtocol
 from oai_coding_agent.console.rendering import console, render_event
-from oai_coding_agent.runtime_config import get_data_dir
+from oai_coding_agent.xdg import get_data_dir
 
 
 @dataclass(frozen=True)

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import git
 
-from oai_coding_agent.runtime_config import get_data_dir
+from oai_coding_agent.xdg import get_data_dir
 
 logger = logging.getLogger(__name__)
 

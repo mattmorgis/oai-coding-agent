@@ -12,8 +12,8 @@ from oai_coding_agent.runtime_config import (
     ModeChoice,
     ModelChoice,
     RuntimeConfig,
-    get_data_dir,
 )
+from oai_coding_agent.xdg import get_data_dir
 
 
 class DummyPromptSession:

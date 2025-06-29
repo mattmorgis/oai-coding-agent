@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Annotated, Callable, Optional
 
 import typer
-from click.core import ParameterSource
 
 from oai_coding_agent.agent import (
     AgentProtocol,
@@ -15,13 +14,12 @@ from oai_coding_agent.agent import (
     HeadlessAgent,
     HeadlessAgentProtocol,
 )
-from oai_coding_agent.console import GitHubConsole
+from oai_coding_agent.console import GitHubConsole, OpenAIConsole
 from oai_coding_agent.console.console import (
     ConsoleInterface,
     HeadlessConsole,
     ReplConsole,
 )
-from oai_coding_agent.console.openai_console import OpenAIConsole
 from oai_coding_agent.logger import setup_logging
 from oai_coding_agent.preflight import PreflightCheckError, run_preflight_checks
 from oai_coding_agent.runtime_config import (
@@ -72,7 +70,7 @@ def create_github_cli_app() -> typer.Typer:
 def github_login() -> None:
     """Log in to GitHub using browser-based flow."""
     github_console = GitHubConsole()
-    github_console.check_or_authenticate()
+    github_console.prompt_auth()
     # if not token:
     #     raise typer.Exit(code=1)
 
@@ -88,9 +86,8 @@ def main(
     openai_api_key: Annotated[
         Optional[str],
         typer.Option(
-            None,
             envvar=OPENAI_API_KEY_ENV,
-            help="OpenAI API key (optional; will prompt if missing or forced)",
+            help="OpenAI API key (optional; will prompt if missing)",
         ),
     ] = None,
     github_token: Annotated[
@@ -101,11 +98,15 @@ def main(
         ),
     ] = None,
     model: Annotated[
-        ModelChoice, typer.Option("--model", "-m", help="OpenAI model to use")
+        ModelChoice,
+        typer.Option("--model", "-m", help="OpenAI model to use"),
     ] = ModelChoice.codex_mini_latest,
     mode: Annotated[
         ModeChoice,
-        typer.Option("--mode", help="Agent mode: default, async, or plan"),
+        typer.Option(
+            "--mode",
+            help="Agent mode: default, async, or plan",
+        ),
     ] = ModeChoice.default,
     repo_path: Path = typer.Option(
         Path.cwd(),
@@ -117,7 +118,10 @@ def main(
     ),
     openai_base_url: Annotated[
         Optional[str],
-        typer.Option(envvar=OPENAI_BASE_URL_ENV, help="OpenAI base URL"),
+        typer.Option(
+            envvar=OPENAI_BASE_URL_ENV,
+            help="OpenAI base URL",
+        ),
     ] = None,
     prompt: Annotated[
         Optional[str],
@@ -139,6 +143,13 @@ def main(
     # If no subcommand, run default action
     if ctx.invoked_subcommand is None:
         logger = logging.getLogger(__name__)
+
+        if openai_api_key is None:
+            openai_console = OpenAIConsole()
+            openai_api_key = openai_console.prompt_auth()
+
+        assert openai_api_key is not None, "OpenAI API key is required"
+
         # Run preflight checks and get git info
         try:
             github_repo, branch_name = run_preflight_checks(repo_path)
@@ -163,14 +174,6 @@ def main(
             token = github_console.prompt_auth()
             if token:
                 github_token = token
-
-        source = ctx.get_parameter_source("openai_api_key")
-        force = source == ParameterSource.COMMANDLINE
-        if not openai_api_key or force:
-            openai_console = OpenAIConsole()
-            openai_api_key = openai_console.check_or_authenticate(force, openai_api_key)
-
-        assert openai_api_key is not None, "OpenAI API key is required"
 
         cfg = RuntimeConfig(
             openai_api_key=openai_api_key,

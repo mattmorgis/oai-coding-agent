@@ -10,10 +10,9 @@ from oai_coding_agent.runtime_config import (
     ModeChoice,
     ModelChoice,
     RuntimeConfig,
-    get_config_dir,
-    get_data_dir,
     load_envs,
 )
+from oai_coding_agent.xdg import get_config_dir, get_data_dir
 
 
 @pytest.mark.parametrize(

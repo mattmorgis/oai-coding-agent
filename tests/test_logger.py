@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from oai_coding_agent.logger import setup_logging
-from oai_coding_agent.runtime_config import get_data_dir
+from oai_coding_agent.xdg import get_data_dir
 
 
 def test_setup_logging_creates_log_dir_and_file(
