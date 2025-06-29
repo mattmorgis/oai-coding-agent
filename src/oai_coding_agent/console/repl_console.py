@@ -245,9 +245,6 @@ class ReplConsole:
     def __init__(self, agent: AsyncAgentProtocol) -> None:
         self.agent = agent
 
-        # Create live status area (1 line, non-focusable; shows spinner "thinking..." or bullet "idle")
-        self._live_status: FormattedText = to_formatted_text(HTML("idle"))
-
         self.prompt_session = None
         self._spinner = Spinner()
         self._render_task = None
