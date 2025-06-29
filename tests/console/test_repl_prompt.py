@@ -1,4 +1,3 @@
-import asyncio
 from itertools import cycle as _cycle
 
 import pytest
@@ -29,19 +28,17 @@ def test_prompt_fragments_busy(monkeypatch: pytest.MonkeyPatch) -> None:
     assert text.strip().endswith("›")
 
 
-@pytest.mark.asyncio
-async def test_spinner_self_ticking(monkeypatch: pytest.MonkeyPatch) -> None:
-    spinner = Spinner(interval=0)
+def test_spinner_update_cycles_frames() -> None:
+    spinner = Spinner()
+    # Override frames for predictability
     spinner._frames = ("A", "B", "C")  # type: ignore[assignment]
     spinner._cycle = _cycle(spinner._frames)
     spinner._current_frame = next(spinner._cycle)
 
-    async def dummy_sleep(_: float) -> None:
-        return
-
-    monkeypatch.setattr(asyncio, "sleep", dummy_sleep)
-
-    spinner.start()
-    await asyncio.sleep(0)
+    assert spinner.current_frame == "A"
+    spinner.update()
     assert spinner.current_frame == "B"
-    spinner.stop()
+    spinner.update()
+    assert spinner.current_frame == "C"
+    spinner.update()
+    assert spinner.current_frame == "A"
