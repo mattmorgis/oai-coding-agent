@@ -1,6 +1,7 @@
 import asyncio
 import logging
-from typing import Generator, Optional
+from dataclasses import dataclass
+from typing import Callable, Generator, List, Optional
 
 from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
@@ -20,60 +21,94 @@ from oai_coding_agent.agent import AsyncAgentProtocol
 from oai_coding_agent.console.rendering import console, render_event
 from oai_coding_agent.runtime_config import get_data_dir
 
-commands = [
-    # UI and display commands
-    ("/theme", "Toggle between light and dark mode (default is dark)"),
-    ("/vim", "Toggle between vim and emacs mode (default is emacs)"),
-    # Session management
-    ("/clear", "Clear conversation history and free up context"),
-    ("/cost", "Show the total cost and duration of the current session"),
-    # Repository integration
-    (
-        "/install-workflow",
-        "Adds a workflow to the repo to use agent in GitHub Actions ",
-    ),
-    # Help and exit
-    ("/help", "Show help and available commands"),
-    ("/exit (quit)", "Exit the REPL"),
-]
+
+@dataclass(frozen=True)
+class SlashCommand:
+    """Definition of a slash command: name and description."""
+
+    name: str
+    description: str
 
 
-class SlashCompleter(Completer):
-    def get_completions(
-        self, document: Document, complete_event: CompleteEvent
-    ) -> Generator[Completion, None, None]:
-        text = document.text
+class SlashCommandHandler:
+    """Encapsulates slash-commands: completion, suggestion, and handling."""
 
-        # Only complete if we're on the first line and text starts with /
-        if document.cursor_position_row == 0 and text.startswith("/"):
-            for cmd, desc in commands:
-                base_cmd = cmd.split()[0]
-                if base_cmd.lower().startswith(text.lower()):
-                    display = f"{cmd:<20} {desc}"
-                    yield Completion(
-                        base_cmd, start_position=-len(text), display=display
-                    )
+    def __init__(self, printer: Callable[[str, str], None]) -> None:
+        self._printer = printer
+        self._commands: List[SlashCommand] = [
+            SlashCommand(
+                "/theme", "Toggle between light and dark mode (default is dark)"
+            ),
+            SlashCommand(
+                "/vim", "Toggle between vim and emacs mode (default is emacs)"
+            ),
+            SlashCommand("/clear", "Clear conversation history and free up context"),
+            SlashCommand(
+                "/cost", "Show the total cost and duration of the current session"
+            ),
+            SlashCommand(
+                "/install-workflow",
+                "Adds a workflow to the repo to use agent in GitHub Actions ",
+            ),
+            SlashCommand("/help", "Show help and available commands"),
+            SlashCommand("/exit (quit)", "Exit the REPL"),
+        ]
 
+    @property
+    def completer(self) -> Completer:
+        handler = self
 
-class SlashAutoSuggest(AutoSuggest):
-    """Auto-suggest for slash commands."""
+        class _SlashCompleter(Completer):
+            def get_completions(
+                self, document: Document, complete_event: CompleteEvent
+            ) -> Generator[Completion, None, None]:
+                text = document.text
+                if document.cursor_position_row != 0 or not text.startswith("/"):
+                    return
+                for cmd in handler._commands:
+                    base = cmd.name.split()[0]
+                    if base.lower().startswith(text.lower()):
+                        display = f"{cmd.name:<20} {cmd.description}"
+                        yield Completion(
+                            base, start_position=-len(text), display=display
+                        )
 
-    def get_suggestion(
-        self, buffer: Buffer, document: Document
-    ) -> Optional[Suggestion]:
-        text = document.text
+        return _SlashCompleter()
 
-        # Only suggest if we're on first line and text starts with / and has length > 1
-        if text.startswith("/") and len(text) > 1:
-            for cmd, desc in commands:
-                base_cmd = cmd.split()[0]
-                if (
-                    base_cmd.lower().startswith(text.lower())
-                    and base_cmd.lower() != text.lower()
-                ):
-                    return Suggestion(base_cmd[len(text) :])
+    @property
+    def auto_suggest(self) -> AutoSuggest:
+        handler = self
 
-        return None
+        class _SlashAutoSuggest(AutoSuggest):
+            def get_suggestion(
+                self, buffer: Buffer, document: Document
+            ) -> Optional[Suggestion]:
+                text = document.text
+                if not text.startswith("/") or len(text) <= 1:
+                    return None
+                for cmd in handler._commands:
+                    base = cmd.name.split()[0]
+                    if (
+                        base.lower().startswith(text.lower())
+                        and base.lower() != text.lower()
+                    ):
+                        return Suggestion(base[len(text) :])
+                return None
+
+        return _SlashAutoSuggest()
+
+    @staticmethod
+    def on_completions_changed(buf: Buffer) -> None:
+        state = buf.complete_state
+        if state and state.complete_index is None:
+            state.complete_index = 0
+
+    def handle(self, user_input: str) -> bool:
+        """Process a slash command; returns True if handled."""
+        if not user_input.strip().startswith("/"):
+            return False
+        self._printer(f"Slash command: {user_input}\n", "yellow")
+        return True
 
 
 # Minimal style for the slash menu
@@ -89,12 +124,6 @@ style = Style.from_dict(
         "bottom-toolbar": "noreverse",
     }
 )
-
-
-def on_completions_changed(buf: Buffer) -> None:
-    state = buf.complete_state
-    if state and state.complete_index is None:
-        state.complete_index = 0
 
 
 logger = logging.getLogger(__name__)
@@ -143,6 +172,7 @@ class ReplConsole:
         self._spinner = Spinner()
         self._render_task = None
         self._should_stop_render = False
+        self._slash_handler = SlashCommandHandler(self._print_to_terminal)
 
     def prompt_fragments(self) -> FormattedText:
         """Return the complete prompt: status + prompt symbol."""
@@ -246,14 +276,6 @@ class ReplConsole:
         styled_message = f"[{style}]{message}[/{style}]" if style else message
         run_in_terminal(lambda: console.print(styled_message))
 
-    def _handle_slash_command(self, user_input: str) -> bool:
-        """Handle slash commands. Returns True if command was handled, False otherwise."""
-        if not user_input.strip().startswith("/"):
-            return False
-
-        self._print_to_terminal(f"Slash command: {user_input}\n", "yellow")
-        return True
-
     async def run(self) -> None:
         """Interactive REPL loop for the console interface."""
         event_consumer_task = asyncio.create_task(self._event_stream_consumer())
@@ -281,8 +303,8 @@ class ReplConsole:
         self.prompt_session = PromptSession(
             message=self.prompt_fragments,
             history=FileHistory(str(history_path)),
-            completer=SlashCompleter(),
-            auto_suggest=SlashAutoSuggest(),
+            completer=self._slash_handler.completer,
+            auto_suggest=self._slash_handler.auto_suggest,
             style=style,
             complete_while_typing=True,
             key_bindings=kb,
@@ -290,7 +312,7 @@ class ReplConsole:
         )
         if hasattr(self.prompt_session, "default_buffer"):
             buffer = self.prompt_session.default_buffer
-            buffer.on_completions_changed += on_completions_changed
+            buffer.on_completions_changed += self._slash_handler.on_completions_changed
 
         async with self.agent:
             try:
@@ -305,7 +327,7 @@ class ReplConsole:
                         should_continue = False
                         continue
 
-                    if self._handle_slash_command(user_input):
+                    if self._slash_handler.handle(user_input):
                         continue
 
                     self._print_to_terminal(f"› {user_input}\n", "dim")
