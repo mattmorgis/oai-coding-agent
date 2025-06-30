@@ -3,7 +3,7 @@ import logging
 import random
 from dataclasses import dataclass
 from itertools import cycle
-from typing import Callable, Generator, List, Optional
+from typing import Callable, Generator, List, Optional, Sequence
 
 from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
@@ -26,10 +26,11 @@ from oai_coding_agent.xdg import get_data_dir
 
 @dataclass(frozen=True)
 class SlashCommand:
-    """Definition of a slash command: name and description."""
+    """Definition of a slash command."""
 
-    name: str
+    name: str  # e.g. "/help"
     description: str
+    handler: Callable[[Sequence[str]], None]  # Args tokens after the command
 
 
 class SlashCommandHandler:
@@ -51,25 +52,49 @@ class SlashCommandHandler:
 
     def __init__(self, printer: Callable[[str, str], None]) -> None:
         self._printer = printer
+
+        # Helper handler for unimplemented commands
+        def _todo(_: Sequence[str]) -> None:
+            self._printer("Not implemented yet\n", "yellow")
+
         self._commands: List[SlashCommand] = [
             SlashCommand(
-                "/vim", "Toggle between vim and emacs mode (default is emacs)"
+                "/vim", "Toggle between vim and emacs mode (default is emacs)", _todo
             ),
-            SlashCommand("/clear", "Clear conversation history and free up context"),
             SlashCommand(
-                "/cost", "Show the total cost and duration of the current session"
+                "/clear", "Clear conversation history and free up context", _todo
+            ),
+            SlashCommand(
+                "/cost",
+                "Show the total cost and duration of the current session",
+                _todo,
             ),
             SlashCommand(
                 "/github-login",
                 "Login to GitHub",
+                _todo,
             ),
             SlashCommand(
                 "/install-workflow",
                 "Adds a workflow to the repo to use agent in GitHub Actions",
+                _todo,
             ),
-            SlashCommand("/help", "Show help and available commands"),
-            SlashCommand("/exit (quit)", "Exit the REPL"),
+            SlashCommand("/help", "Show help and available commands", self._cmd_help),
         ]
+
+        # Dict for O(1) lookups
+        self._commands_by_base = {
+            cmd.name.split()[0].lower(): cmd for cmd in self._commands
+        }
+
+    # ---------------------------------------------------------------------
+    # Command Handlers
+    # ---------------------------------------------------------------------
+    def _cmd_help(self, _args: Sequence[str]) -> None:
+        """Show list of available slash-commands."""
+        lines = [f"{cmd.name:<18} {cmd.description}" for cmd in self._commands]
+        help_text = "Available commands:\n\n" + "\n".join(lines) + "\n"
+        self._printer(help_text, "cyan")
 
     @property
     def completer(self) -> Completer:
@@ -129,20 +154,18 @@ class SlashCommandHandler:
         text = user_input.strip()
         if not text.startswith("/"):
             return False
-        # Extract base (first token) and check if it's a known slash command
-        base = text.split()[0]
-        valid_bases = [cmd.name.split()[0].lower() for cmd in self._commands]
-        if base.lower() not in valid_bases:
-            return False
-        # Special-case "/help" to show available commands in a friendly list.
-        if base.lower() == "/help":
-            lines = [f"{cmd.name:<18} {cmd.description}" for cmd in self._commands]
-            help_text = "Available commands:\n\n" + "\n".join(lines) + "\n"
-            self._printer(help_text, "cyan")
-            return True
+        # Extract base (first token) and dispatch.
+        parts = text.split()
+        base = parts[0].lower()
+        cmd = self._commands_by_base.get(base)
+        if not cmd:
+            return False  # Not a recognised slash-command
 
-        # Placeholder for other, not-yet-implemented commands.
-        self._printer(f"Slash command: {user_input}\n", "yellow")
+        # Call the registered handler with remaining args (if any)
+        try:
+            cmd.handler(parts[1:])
+        except Exception as exc:  # noqa: BLE001
+            self._printer(f"error: {exc}\n", "red")
         return True
 
 
