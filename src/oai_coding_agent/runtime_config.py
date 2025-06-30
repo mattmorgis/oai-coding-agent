@@ -109,6 +109,3 @@ class RuntimeConfig:
     branch_name: Optional[str] = None
     prompt: Optional[str] = None
     atlassian: bool = False
-
-
-
