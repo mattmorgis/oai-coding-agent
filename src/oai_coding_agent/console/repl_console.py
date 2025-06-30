@@ -45,6 +45,7 @@ class SlashCommandHandler:
             "scrollbar.background": "noinherit",
             "scrollbar.button": "noinherit",
             "bottom-toolbar": "noreverse",
+            "auto-suggestion": "dim",
         }
     )
 
@@ -100,7 +101,11 @@ class SlashCommandHandler:
                 self, buffer: Buffer, document: Document
             ) -> Optional[Suggestion]:
                 text = document.text
-                if not text.startswith("/") or len(text) <= 1:
+                if (
+                    document.cursor_position_row == 0
+                    and text.startswith("/")
+                    and len(text) > 1
+                ):
                     return None
                 for cmd in handler._commands:
                     base = cmd.name.split()[0]
