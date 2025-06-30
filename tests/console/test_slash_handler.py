@@ -6,7 +6,7 @@ from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
 
-from oai_coding_agent.console.repl_console import SlashCommandHandler
+from oai_coding_agent.console.slash_commands import SlashCommandHandler
 
 
 class DummyPrinter:
@@ -43,7 +43,7 @@ def test_handle_returns_true_and_prints_for_slash(
     assert printer.called
     assert printer.args is not None
     message, style = printer.args
-    assert message == f"Slash command: {user_input}\n"
+    assert message == "Not implemented yet\n"
     assert style == "yellow"
 
 
