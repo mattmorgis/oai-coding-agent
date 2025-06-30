@@ -15,7 +15,7 @@ def test_prompt_fragments_idle() -> None:
     agent = DummyAgent(False)
     rc = ReplConsole(agent)  # type: ignore[arg-type]
     output = to_plain_text(rc.prompt_fragments())
-    assert output == "\n› "
+    assert output == "\n\n› "
 
 
 def test_prompt_fragments_busy(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -23,8 +23,8 @@ def test_prompt_fragments_busy(monkeypatch: pytest.MonkeyPatch) -> None:
     rc = ReplConsole(agent)  # type: ignore[arg-type]
     monkeypatch.setattr(rc._spinner, "_current_frame", "X")
     text = to_plain_text(rc.prompt_fragments())
-    assert "X thinking..." in text
-    assert "(ESC" in text
+    assert "X processing" in text
+    assert "(esc to interrupt)" in text
     assert text.strip().endswith("›")
 
 
