@@ -20,6 +20,7 @@ from prompt_toolkit.styles import Style
 from rich.panel import Panel
 
 from oai_coding_agent.agent import AsyncAgentProtocol
+from oai_coding_agent.agent.events import UsageEvent
 from oai_coding_agent.console.rendering import console, render_event
 from oai_coding_agent.xdg import get_data_dir
 
@@ -284,6 +285,7 @@ class ReplConsole:
 
     _render_task: Optional[asyncio.Task[None]]
     _should_stop_render: bool
+    _usage_state: UsageEvent
 
     def __init__(self, agent: AsyncAgentProtocol) -> None:
         self.agent = agent
@@ -312,6 +314,8 @@ class ReplConsole:
                 "reflecting",
             ],
         )
+        # Initialize cumulative usage state
+        self._usage_state: UsageEvent = UsageEvent(0, 0, 0, 0, 0)
 
     def prompt_fragments(self) -> FormattedText:
         """Return the complete prompt: status + prompt symbol."""
@@ -359,6 +363,16 @@ class ReplConsole:
     async def _event_stream_consumer(self) -> None:
         while True:
             agent_event = await self.agent.events.get()
+            if isinstance(agent_event, UsageEvent):
+                # Update cumulative usage and skip rendering
+                self._usage_state = UsageEvent(
+                    input_tokens=self._usage_state.input_tokens + agent_event.input_tokens,
+                    cached_input_tokens=self._usage_state.cached_input_tokens + agent_event.cached_input_tokens,
+                    output_tokens=self._usage_state.output_tokens + agent_event.output_tokens,
+                    reasoning_output_tokens=self._usage_state.reasoning_output_tokens + agent_event.reasoning_output_tokens,
+                    total_tokens=self._usage_state.total_tokens + agent_event.total_tokens,
+                )
+                continue
             await run_in_terminal(lambda: render_event(agent_event))
 
     def _print_to_terminal(self, message: str, style: str = "") -> None:
