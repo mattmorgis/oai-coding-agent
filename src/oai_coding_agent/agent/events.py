@@ -25,7 +25,7 @@ from agents.items import (  # type: ignore[attr-defined]
     ToolCallOutputItem,
 )
 from agents.stream_events import RawResponsesStreamEvent
-from openai.lib.streaming.responses._events import ResponseCompletedEvent
+from openai.types.responses import ResponseCompletedEvent
 
 
 # Internal agent event types
@@ -71,7 +71,9 @@ class ToolCallOutputEvent:
 @dataclass
 class UsageEvent:
     input_tokens: int
+    cached_input_tokens: int
     output_tokens: int
+    reasoning_output_tokens: int
     total_tokens: int
 
 
@@ -182,10 +184,11 @@ def map_sdk_event_to_agent_event(
                 return None
             return UsageEvent(
                 input_tokens=usage.input_tokens,
+                cached_input_tokens=usage.input_tokens_details.cached_tokens,
                 output_tokens=usage.output_tokens,
+                reasoning_output_tokens=usage.output_tokens_details.reasoning_tokens,
                 total_tokens=usage.total_tokens,
             )
         case _:
             # Other StreamEvent types we don't care about
-            # (RawResponsesStreamEvent, AgentUpdatedStreamEvent, etc.)
             return None
