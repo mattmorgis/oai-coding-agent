@@ -6,6 +6,7 @@ from rich import print
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Confirm, Prompt
 
+from oai_coding_agent.auth.github_browser_auth import poll_for_token, start_device_flow
 from oai_coding_agent.auth.token_storage import (
     delete_token as delete_github_token,
 )
@@ -14,10 +15,6 @@ from oai_coding_agent.auth.token_storage import (
 )
 from oai_coding_agent.auth.token_storage import (
     save_token as save_github_token,
-)
-from oai_coding_agent.github.github_browser_auth import (
-    poll_for_token,
-    start_device_flow,
 )
 
 
