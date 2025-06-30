@@ -1,21 +1,28 @@
 import asyncio
-import pytest
+from pathlib import Path
+from typing import Any, Callable
 
+import pytest
 from conftest import MockAgent
-from oai_coding_agent.agent.events import UsageEvent
+from pytest import MonkeyPatch
+
 import oai_coding_agent.console.repl_console as repl_mod
+from oai_coding_agent.agent.events import ErrorEvent, UsageEvent
 from oai_coding_agent.console.repl_console import ReplConsole
-from oai_coding_agent.runtime_config import RuntimeConfig, ModelChoice, ModeChoice
+from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConfig
 
 
 @pytest.mark.asyncio
-async def test_repl_console_usage_accumulates(monkeypatch, tmp_path):
+async def test_repl_console_usage_accumulates(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
     """
     Test that ReplConsole intercepts UsageEvent and maintains cumulative usage state,
     without rendering UsageEvent to the terminal.
     """
+
     # Monkey-patch run_in_terminal and render_event to avoid actual terminal I/O
-    async def dummy_run_in_terminal(func):
+    async def dummy_run_in_terminal(func: Callable[[], Any]) -> None:
         func()
 
     monkeypatch.setattr(repl_mod, "run_in_terminal", dummy_run_in_terminal)
@@ -34,8 +41,20 @@ async def test_repl_console_usage_accumulates(monkeypatch, tmp_path):
 
     # Prepare multiple UsageEvent instances with varying token counts
     events = [
-        UsageEvent(input_tokens=1, cached_input_tokens=2, output_tokens=3, reasoning_output_tokens=4, total_tokens=10),
-        UsageEvent(input_tokens=5, cached_input_tokens=6, output_tokens=7, reasoning_output_tokens=8, total_tokens=26),
+        UsageEvent(
+            input_tokens=1,
+            cached_input_tokens=2,
+            output_tokens=3,
+            reasoning_output_tokens=4,
+            total_tokens=10,
+        ),
+        UsageEvent(
+            input_tokens=5,
+            cached_input_tokens=6,
+            output_tokens=7,
+            reasoning_output_tokens=8,
+            total_tokens=26,
+        ),
     ]
 
     # Enqueue usage events
@@ -43,7 +62,7 @@ async def test_repl_console_usage_accumulates(monkeypatch, tmp_path):
         await agent.events.put(ev)
 
     # Enqueue a sentinel non-UsageEvent to advance the loop past UsageEvents
-    sentinel = object()
+    sentinel = ErrorEvent("sentinel")
     await agent.events.put(sentinel)
 
     # Start the event stream consumer

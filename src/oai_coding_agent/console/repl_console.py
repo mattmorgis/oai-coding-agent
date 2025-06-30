@@ -366,11 +366,16 @@ class ReplConsole:
             if isinstance(agent_event, UsageEvent):
                 # Update cumulative usage and skip rendering
                 self._usage_state = UsageEvent(
-                    input_tokens=self._usage_state.input_tokens + agent_event.input_tokens,
-                    cached_input_tokens=self._usage_state.cached_input_tokens + agent_event.cached_input_tokens,
-                    output_tokens=self._usage_state.output_tokens + agent_event.output_tokens,
-                    reasoning_output_tokens=self._usage_state.reasoning_output_tokens + agent_event.reasoning_output_tokens,
-                    total_tokens=self._usage_state.total_tokens + agent_event.total_tokens,
+                    input_tokens=self._usage_state.input_tokens
+                    + agent_event.input_tokens,
+                    cached_input_tokens=self._usage_state.cached_input_tokens
+                    + agent_event.cached_input_tokens,
+                    output_tokens=self._usage_state.output_tokens
+                    + agent_event.output_tokens,
+                    reasoning_output_tokens=self._usage_state.reasoning_output_tokens
+                    + agent_event.reasoning_output_tokens,
+                    total_tokens=self._usage_state.total_tokens
+                    + agent_event.total_tokens,
                 )
                 continue
             await run_in_terminal(lambda: render_event(agent_event))
