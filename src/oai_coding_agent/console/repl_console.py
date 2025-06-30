@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 from dataclasses import dataclass
 from itertools import cycle
 from typing import Callable, Generator, List, Optional
@@ -198,10 +199,16 @@ class KeyBindingsHandler:
 
 
 class WordCycler:
-    """Background word cycler: rotates through provided words every interval seconds."""
+    """Background word cycler: rotates through provided words every interval seconds.
 
-    def __init__(self, words: List[str], interval: float = 3.0) -> None:
+    If no interval is provided, a random interval between 12 and 24 seconds is chosen.
+    """
+
+    def __init__(self, words: List[str], interval: Optional[float] = None) -> None:
         self._words = words
+        if interval is None:
+            interval = random.uniform(12.0, 24.0)
+
         self._cycle = cycle(self._words)
         self._current_word = next(self._cycle)
         self._interval = interval
@@ -223,6 +230,7 @@ class WordCycler:
         try:
             while True:
                 await asyncio.sleep(self._interval)
+                run_in_terminal(lambda: console.print(f"[{self._current_word}]"))
                 self._current_word = next(self._cycle)
         except asyncio.CancelledError:
             pass
@@ -299,7 +307,6 @@ class ReplConsole:
                 "formulating",
                 "reflecting",
             ],
-            interval=3.0,
         )
 
     def prompt_fragments(self) -> FormattedText:
