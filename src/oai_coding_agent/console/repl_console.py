@@ -134,6 +134,14 @@ class SlashCommandHandler:
         valid_bases = [cmd.name.split()[0].lower() for cmd in self._commands]
         if base.lower() not in valid_bases:
             return False
+        # Special-case "/help" to show available commands in a friendly list.
+        if base.lower() == "/help":
+            lines = [f"{cmd.name:<18} {cmd.description}" for cmd in self._commands]
+            help_text = "Available commands:\n\n" + "\n".join(lines) + "\n"
+            self._printer(help_text, "cyan")
+            return True
+
+        # Placeholder for other, not-yet-implemented commands.
         self._printer(f"Slash command: {user_input}\n", "yellow")
         return True
 
