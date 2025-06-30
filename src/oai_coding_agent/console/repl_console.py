@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 from dataclasses import dataclass
 from itertools import cycle
 from typing import Callable, Generator, List, Optional
@@ -10,7 +11,7 @@ from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
 from prompt_toolkit.filters import completion_is_selected, has_completions
-from prompt_toolkit.formatted_text import HTML, FormattedText, to_formatted_text
+from prompt_toolkit.formatted_text import FormattedText, to_formatted_text
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.keys import Keys
@@ -44,6 +45,7 @@ class SlashCommandHandler:
             "scrollbar.background": "noinherit",
             "scrollbar.button": "noinherit",
             "bottom-toolbar": "noreverse",
+            "auto-suggestion": "dim",
         }
     )
 
@@ -99,7 +101,11 @@ class SlashCommandHandler:
                 self, buffer: Buffer, document: Document
             ) -> Optional[Suggestion]:
                 text = document.text
-                if not text.startswith("/") or len(text) <= 1:
+                if (
+                    document.cursor_position_row == 0
+                    and text.startswith("/")
+                    and len(text) > 1
+                ):
                     return None
                 for cmd in handler._commands:
                     base = cmd.name.split()[0]
@@ -197,6 +203,44 @@ class KeyBindingsHandler:
         return kb
 
 
+class WordCycler:
+    """Background word cycler: rotates through provided words every interval seconds.
+
+    If no interval is provided, a random interval between 12 and 24 seconds is chosen.
+    """
+
+    def __init__(self, words: List[str], interval: Optional[float] = None) -> None:
+        self._words = words
+        if interval is None:
+            interval = random.uniform(12.0, 24.0)
+
+        self._cycle = cycle(self._words)
+        self._current_word = next(self._cycle)
+        self._interval = interval
+        self._task: Optional[asyncio.Task[None]] = None
+
+    @property
+    def current_word(self) -> str:
+        return self._current_word
+
+    def start(self) -> None:
+        if not self._task or self._task.done():
+            self._task = asyncio.create_task(self._run())
+
+    def stop(self) -> None:
+        if self._task and not self._task.done():
+            self._task.cancel()
+
+    async def _run(self) -> None:
+        try:
+            while True:
+                await asyncio.sleep(self._interval)
+                run_in_terminal(lambda: console.print(f"[{self._current_word}]"))
+                self._current_word = next(self._cycle)
+        except asyncio.CancelledError:
+            pass
+
+
 class Spinner:
     def __init__(self, interval: float = 0.1) -> None:
         self._frames = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
@@ -251,16 +295,40 @@ class ReplConsole:
         self._should_stop_render = False
         self._slash_handler = SlashCommandHandler(self._print_to_terminal)
         self._kb_handler = KeyBindingsHandler(self.agent, self._print_to_terminal)
+        self._word_cycler = WordCycler(
+            [
+                "processing",
+                "analyzing",
+                "reasoning",
+                "planning",
+                "evaluating",
+                "considering",
+                "working",
+                "computing",
+                "deciding",
+                "pondering",
+                "calculating",
+                "strategizing",
+                "formulating",
+                "reflecting",
+            ],
+        )
 
     def prompt_fragments(self) -> FormattedText:
         """Return the complete prompt: status + prompt symbol."""
         if not self.agent.is_processing:
-            return to_formatted_text("\n› ")
+            return FormattedText([("ansicyan", "\n\n› ")])
 
-        # First line: cyan spinner + status, Second line: actual prompt
-        formatted_text = HTML(
-            f"<ansicyan>{self._spinner.current_frame} thinking...</ansicyan> "
-            f"(<ansigray><b>ESC</b></ansigray> to interrupt)\n›"
+        formatted_text = FormattedText(
+            [
+                ("", " "),
+                ("ansicyan", self._spinner.current_frame),
+                ("italic", f" {self._word_cycler.current_word}"),
+                ("dim", "     ("),
+                ("dim bold", "esc "),
+                ("dim", "to interrupt)\n\n"),
+                ("ansicyan", "› "),
+            ]
         )
         return to_formatted_text(formatted_text)
 
@@ -305,6 +373,7 @@ class ReplConsole:
 
         # Start spinner and render loop
         self._spinner.start()
+        self._word_cycler.start()
         self._start_render_loop()
 
         console.print(
@@ -367,6 +436,7 @@ class ReplConsole:
             event_consumer_task.cancel()
             self._stop_render_loop()
             self._spinner.stop()
+            self._word_cycler.stop()
             try:
                 await event_consumer_task
             except asyncio.CancelledError:
