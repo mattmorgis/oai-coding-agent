@@ -10,6 +10,8 @@ from agents.items import (  # type: ignore[attr-defined]
     ToolCallItem,
     ToolCallOutputItem,
 )
+from agents.stream_events import RawResponsesStreamEvent
+from openai.lib.streaming.responses._events import ResponseCompletedEvent
 from openai.types.responses.response_input_item_param import FunctionCallOutput
 
 from oai_coding_agent.agent.events import (
@@ -17,6 +19,7 @@ from oai_coding_agent.agent.events import (
     ReasoningEvent,
     ToolCallEvent,
     ToolCallOutputEvent,
+    UsageEvent,
     map_sdk_event_to_agent_event,
 )
 
@@ -202,3 +205,28 @@ def test_map_unknown_item_type_returns_none() -> None:
     result = map_sdk_event_to_agent_event(event)
 
     assert result is None
+
+
+def test_map_response_completed_event_to_usage_event() -> None:
+    """Test mapping a ResponseCompletedEvent wrapped in RawResponsesStreamEvent to UsageEvent."""
+    mock_input_tokens_details = Mock(cached_tokens=1)
+    mock_output_tokens_details = Mock(reasoning_tokens=2)
+    usage = Mock(
+        input_tokens=1,
+        output_tokens=2,
+        total_tokens=3,
+        input_tokens_details=mock_input_tokens_details,
+        output_tokens_details=mock_output_tokens_details,
+    )
+    response = Mock(usage=usage)
+    resp_ev = ResponseCompletedEvent.construct(
+        response=response, sequence_number=0, type="response.completed"
+    )
+    raw_event = RawResponsesStreamEvent(data=resp_ev)
+    result = map_sdk_event_to_agent_event(raw_event)
+    assert isinstance(result, UsageEvent)
+    assert result.input_tokens == 1
+    assert result.cached_input_tokens == 1
+    assert result.output_tokens == 2
+    assert result.reasoning_output_tokens == 2
+    assert result.total_tokens == 3
