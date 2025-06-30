@@ -100,7 +100,9 @@ def test_authenticate_success(
         "oai_coding_agent.console.github_console.start_device_flow",
         return_value=device_flow,
     ):
-        with patch("oai_coding_agent.console.github_console.input", return_value=""):
+        with patch(
+            "oai_coding_agent.console.github_console.Prompt.ask", return_value=""
+        ):
             with patch("oai_coding_agent.console.github_console.webbrowser.open"):
                 with patch(
                     "oai_coding_agent.console.github_console.poll_for_token",
@@ -134,7 +136,9 @@ def test_authenticate_timeout(
         "oai_coding_agent.console.github_console.start_device_flow",
         return_value=device_flow,
     ):
-        with patch("oai_coding_agent.console.github_console.input", return_value=""):
+        with patch(
+            "oai_coding_agent.console.github_console.Prompt.ask", return_value=""
+        ):
             with patch("oai_coding_agent.console.github_console.webbrowser.open"):
                 with patch(
                     "oai_coding_agent.console.github_console.poll_for_token",

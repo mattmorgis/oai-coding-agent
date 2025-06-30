@@ -102,9 +102,9 @@ class SlashCommandHandler:
             ) -> Optional[Suggestion]:
                 text = document.text
                 if (
-                    document.cursor_position_row == 0
-                    and text.startswith("/")
-                    and len(text) > 1
+                    document.cursor_position_row != 0
+                    or not text.startswith("/")
+                    or len(text) <= 1
                 ):
                     return None
                 for cmd in handler._commands:
@@ -235,7 +235,6 @@ class WordCycler:
         try:
             while True:
                 await asyncio.sleep(self._interval)
-                run_in_terminal(lambda: console.print(f"[{self._current_word}]"))
                 self._current_word = next(self._cycle)
         except asyncio.CancelledError:
             pass
