@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "concurrent-log-handler>=0.9.26",
-    "prompt-toolkit>=3.0.51",
     "python-dotenv>=1.0.0",
     "Jinja2>=3.0.0",
     "typer>=0.15.4",
@@ -18,6 +17,7 @@ dependencies = [
     "docker>=7.1.0",
     "requests>=2.31.0",
     "pyperclip>=1.9.0",
+    "prompt-toolkit",
 ]
 
 [project.scripts]
@@ -25,6 +25,10 @@ oai = "oai_coding_agent.cli:run"
 
 [tool.uv]
 package = true
+
+[tool.uv.sources]
+# Remove this if this is ever merged and released: https://github.com/prompt-toolkit/python-prompt-toolkit/pull/1999
+prompt-toolkit = { git = "https://github.com/mattmorgis/python-prompt-toolkit", rev = "23c55d6" }
 
 [dependency-groups]
 dev = [
