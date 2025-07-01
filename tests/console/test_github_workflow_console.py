@@ -2,7 +2,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from github import GithubException
 
 from oai_coding_agent.console.github_workflow_console import GitHubWorkflowConsole
 from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConfig
@@ -95,13 +94,15 @@ async def test_setup_openai_secret_use_current(
 ) -> None:
     """Use existing OpenAI key for setup_openai_secret happy path."""
     console = GitHubWorkflowConsole(runtime_config_with_github)
-    with patch.object(
-        console.prompt_session, "prompt_async", return_value="1"
-    ):
-        with patch.object(console, "_create_repository_secret", return_value=True) as mock_secret:
+    with patch.object(console.prompt_session, "prompt_async", return_value="1"):
+        with patch.object(
+            console, "_create_repository_secret", return_value=True
+        ) as mock_secret:
             result = await console.setup_openai_secret()
             assert result is True
-            mock_secret.assert_called_once_with(runtime_config_with_github.openai_api_key)
+            mock_secret.assert_called_once_with(
+                runtime_config_with_github.openai_api_key
+            )
     captured = capsys.readouterr()
     assert "Setup OpenAI API Key" in captured.out
 
@@ -121,18 +122,21 @@ async def test_prompt_for_new_api_key_valid(
 
 def test_create_repository_secret_success(
     runtime_config_with_github: RuntimeConfig,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Creating repository secret happy path."""
     console = GitHubWorkflowConsole(runtime_config_with_github)
     fake_repo = MagicMock()
+
     class FakeGH:
-        def __init__(self, token):
+        def __init__(self, token: str) -> None:
             assert token == runtime_config_with_github.github_token
-        def get_repo(self, repo_name):
+
+        def get_repo(self, repo_name: str) -> MagicMock:
             assert repo_name == runtime_config_with_github.github_repo
             return fake_repo
+
     monkeypatch.setattr(
         "oai_coding_agent.console.github_workflow_console.Github", FakeGH
     )
@@ -143,7 +147,7 @@ def test_create_repository_secret_success(
     assert "Created repository secret 'OPENAI_API_KEY'" in captured.out
 
 
-def test_create_workflow_pr_happy_path(monkeypatch) -> None:
+def test_create_workflow_pr_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
     """Happy path for create_workflow_pr."""
     console = GitHubWorkflowConsole(
         RuntimeConfig(
@@ -169,12 +173,14 @@ def test_create_workflow_pr_happy_path(monkeypatch) -> None:
 
 async def test_run_happy_path(
     runtime_config_with_github: RuntimeConfig,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Happy path for run(): all substeps return True."""
     console = GitHubWorkflowConsole(runtime_config_with_github)
-    async def stub_true_async(*args, **kwargs):
+
+    async def stub_true_async(*args: object, **kwargs: object) -> bool:
         return True
+
     monkeypatch.setattr(console, "install_app", stub_true_async)
     monkeypatch.setattr(console, "setup_openai_secret", stub_true_async)
     monkeypatch.setattr(console, "create_workflow_pr", lambda: True)
