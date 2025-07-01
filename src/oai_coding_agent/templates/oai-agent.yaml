@@ -1,0 +1,102 @@
+# .github/workflows/oai-agent.yml
+name: OAI Coding Agenttttt
+
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  run-agent:
+    # Only proceed if:
+    #   - on opened: issue has @oai in body OR already labeled "oai"
+    #   - on labeled: the new label is exactly "oai"
+    #   - on comment: the comment body contains "@oai"
+    if: >-
+      (
+        github.event_name == 'issues' &&
+        (
+          (github.event.action == 'opened' &&
+            (
+              contains(github.event.issue.labels.*.name, 'oai') ||
+              contains(github.event.issue.body, '@oai')
+            )
+          ) ||
+          (github.event.action == 'labeled' && github.event.label.name == 'oai')
+        )
+      ) ||
+      (
+        github.event_name == 'issue_comment' &&
+        contains(github.event.comment.body, '@oai')
+      )
+
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      issues: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # allow pushing back
+          persist-credentials: true
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Sync dependencies with uv
+        run: |
+          uv sync
+
+      - name: Set up Node.js (latest LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Get GitHub App access token via token exchange
+        id: get-token
+        run: |
+          # Get OIDC token from GitHub Actions
+          OIDC_TOKEN=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=oai-coding-agent-github-action" \
+            | jq -r '.value')
+
+          # Exchange OIDC token for GitHub App access token
+          GITHUB_ACCESS_TOKEN=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"oidc_token\": \"$OIDC_TOKEN\"}" \
+            "${{ vars.TOKEN_EXCHANGE_URL }}/github/github-app-token-exchange" \
+            | jq -r '.token')
+
+          echo "::add-mask::$GITHUB_ACCESS_TOKEN"
+          echo "github_access_token=$GITHUB_ACCESS_TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Create a fresh branch for the agent
+        run: |
+          git config user.name "oai-coding-agent[bot]"
+          git config user.email "214839426+oai-coding-agent[bot]@users.noreply.github.com"
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          BRANCH="oai/issue-${ISSUE_NUMBER}"
+          git checkout -b "$BRANCH"
+          git push --set-upstream origin HEAD
+
+      - name: Run OAI coding agent in headless mode
+        env:
+          RICH_FORCE_TERMINAL: "1" # these provide pretty logs in GHA
+          TTY_COMPATIBLE: "1"
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        shell: bash
+        run: |
+          uv sync
+          source .venv/bin/activate
+          oai --github-token ${{ steps.get-token.outputs.github_access_token }} --prompt - << 'PROMPT_END'
+          Complete the following GitHub issue:
+          Repository: ${{ github.event.repository.html_url }}
+          Issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
+
+          Body:
+          ${{ github.event.issue.body }}
+          PROMPT_END

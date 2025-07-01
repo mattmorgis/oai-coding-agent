@@ -172,7 +172,9 @@ class ReplConsole:
         self._spinner = Spinner()
         self._render_task = None
         self._should_stop_render = False
-        self._slash_handler = SlashCommandHandler(self._print_to_terminal)
+        self._slash_handler = SlashCommandHandler(
+            self._print_to_terminal, self.agent.config
+        )
         self._kb_handler = KeyBindingsHandler(self.agent, self._print_to_terminal)
         self._word_cycler = WordCycler(
             [
@@ -299,7 +301,7 @@ class ReplConsole:
                         should_continue = False
                         continue
 
-                    if self._slash_handler.handle(user_input):
+                    if await self._slash_handler.handle(user_input):
                         continue
 
                     self._print_to_terminal(f"› {user_input}\n", "dim")

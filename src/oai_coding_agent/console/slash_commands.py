@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from typing import Callable, Generator, List, Optional, Sequence
+from typing import Awaitable, Callable, Generator, List, Optional, Sequence
 
-from prompt_toolkit.application import run_in_terminal
+from prompt_toolkit.application import in_terminal
 from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
@@ -9,6 +9,8 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.styles import Style
 
 from oai_coding_agent.console.github_console import GitHubConsole
+from oai_coding_agent.console.github_workflow_console import GitHubWorkflowConsole
+from oai_coding_agent.runtime_config import RuntimeConfig
 
 
 @dataclass(frozen=True)
@@ -17,7 +19,7 @@ class SlashCommand:
 
     name: str  # e.g. "/help"
     description: str
-    handler: Callable[[Sequence[str]], None]  # Args tokens after the command
+    handler: Callable[[Sequence[str]], Awaitable[None]]  # Args tokens after the command
 
 
 class SlashCommandHandler:
@@ -37,11 +39,14 @@ class SlashCommandHandler:
         }
     )
 
-    def __init__(self, printer: Callable[[str, str], None]) -> None:
+    def __init__(
+        self, printer: Callable[[str, str], None], config: RuntimeConfig
+    ) -> None:
         self._printer = printer
+        self._config = config
 
         # Helper handler for unimplemented commands
-        def _todo(_: Sequence[str]) -> None:
+        async def _todo(_: Sequence[str]) -> None:
             self._printer("Not implemented yet\n", "yellow")
 
         self._commands: List[SlashCommand] = [
@@ -68,8 +73,8 @@ class SlashCommandHandler:
             ),
             SlashCommand(
                 "/install-workflow",
-                "Adds a workflow to the repo to use agent in GitHub Actions",
-                _todo,
+                "Install GitHub App for workflow access",
+                self._cmd_install_workflow,
             ),
             SlashCommand("/help", "Show help and available commands", self._cmd_help),
         ]
@@ -82,30 +87,27 @@ class SlashCommandHandler:
     # ---------------------------------------------------------------------
     # Command Handlers
     # ---------------------------------------------------------------------
-    def _cmd_help(self, _args: Sequence[str]) -> None:
+    async def _cmd_help(self, _args: Sequence[str]) -> None:
         """Show list of available slash-commands."""
         lines = [f"{cmd.name:<18} {cmd.description}" for cmd in self._commands]
         help_text = "Available commands:\n\n" + "\n".join(lines) + "\n"
         self._printer(help_text, "cyan")
 
-    def _cmd_github_login(self, _args: Sequence[str]) -> None:
+    async def _cmd_github_login(self, _args: Sequence[str]) -> None:
         """Login to GitHub using browser-based flow."""
+        print("Logging in to GitHub...")
+        github_console = GitHubConsole()
+        github_console.check_or_authenticate()
 
-        def _login() -> None:
-            print("Logging in to GitHub...")
-            github_console = GitHubConsole()
-            github_console.check_or_authenticate()
-
-        run_in_terminal(_login)
-
-    def _cmd_github_logout(self, _args: Sequence[str]) -> None:
+    async def _cmd_github_logout(self, _args: Sequence[str]) -> None:
         """Logout from GitHub by removing stored token."""
+        github_console = GitHubConsole()
+        github_console.logout()
 
-        def _logout() -> None:
-            github_console = GitHubConsole()
-            github_console.logout()
-
-        run_in_terminal(_logout)
+    async def _cmd_install_workflow(self, _args: Sequence[str]) -> None:
+        """Install GitHub App for workflow access."""
+        workflow_console = GitHubWorkflowConsole(self._config)
+        await workflow_console.run()
 
     @property
     def completer(self) -> Completer:
@@ -160,7 +162,7 @@ class SlashCommandHandler:
         if state and state.complete_index is None:
             state.complete_index = 0
 
-    def handle(self, user_input: str) -> bool:
+    async def handle(self, user_input: str) -> bool:
         """Process a slash command; returns True if handled (only if valid command)."""
         text = user_input.strip()
         if not text.startswith("/"):
@@ -174,7 +176,8 @@ class SlashCommandHandler:
 
         # Call the registered handler with remaining args (if any)
         try:
-            cmd.handler(parts[1:])
+            async with in_terminal():
+                await cmd.handler(parts[1:])
         except Exception as exc:  # noqa: BLE001
             self._printer(f"error: {exc}\n", "red")
         return True

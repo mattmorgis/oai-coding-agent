@@ -12,6 +12,7 @@ GITHUB_APP_CLIENT_ID = "Ov23liCVY3S4HY5FMODo"
 DEFAULT_SCOPES = [
     "repo",  # Full access to repositories (public and private)
     "read:user",  # Read basic user profile information
+    "workflow",  # Read and write GitHub Actions workflows
 ]
 
 

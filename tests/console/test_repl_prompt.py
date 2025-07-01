@@ -1,14 +1,25 @@
 from itertools import cycle as _cycle
+from pathlib import Path
 
 import pytest
 from prompt_toolkit.formatted_text import to_plain_text
 
 from oai_coding_agent.console.repl_console import ReplConsole, Spinner
+from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConfig
 
 
 class DummyAgent:
-    def __init__(self, is_processing: bool = False) -> None:
+    def __init__(
+        self, is_processing: bool = False, config: RuntimeConfig | None = None
+    ) -> None:
         self.is_processing = is_processing
+        self.config = config or RuntimeConfig(
+            openai_api_key="test-key",
+            github_token=None,
+            model=ModelChoice.codex_mini_latest,
+            repo_path=Path("/tmp"),
+            mode=ModeChoice.default,
+        )
 
 
 def test_prompt_fragments_idle() -> None:

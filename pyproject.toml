@@ -1,7 +1,7 @@
 [project]
 name = "oai-coding-agent"
-version = "0.1.0"
 description = "A terminal-based coding agent for lightweight, asynchronous development tasks"
+dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -18,10 +18,22 @@ dependencies = [
     "requests>=2.31.0",
     "pyperclip>=1.9.0",
     "prompt-toolkit",
+    "pygithub>=2.6.1",
+    "questionary>=2.1.0",
 ]
 
 [project.scripts]
 oai = "oai_coding_agent.cli:run"
+
+[build-system]
+requires = ["hatchling","uv-dynamic-versioning"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+fallback-version = "0.0.0"
 
 [tool.uv]
 package = true
@@ -62,5 +74,6 @@ incremental = false
 exclude = '^(ui-temp|\.venv)/'
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "--cov=oai_coding_agent --cov-report=term-missing"
