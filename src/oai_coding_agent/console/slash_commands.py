@@ -1,11 +1,14 @@
 from dataclasses import dataclass
 from typing import Callable, Generator, List, Optional, Sequence
 
+from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
 from prompt_toolkit.styles import Style
+
+from oai_coding_agent.console.github_console import GitHubConsole
 
 
 @dataclass(frozen=True)
@@ -56,7 +59,12 @@ class SlashCommandHandler:
             SlashCommand(
                 "/github-login",
                 "Login to GitHub",
-                _todo,
+                self._cmd_github_login,
+            ),
+            SlashCommand(
+                "/github-logout",
+                "Logout from GitHub",
+                self._cmd_github_logout,
             ),
             SlashCommand(
                 "/install-workflow",
@@ -79,6 +87,25 @@ class SlashCommandHandler:
         lines = [f"{cmd.name:<18} {cmd.description}" for cmd in self._commands]
         help_text = "Available commands:\n\n" + "\n".join(lines) + "\n"
         self._printer(help_text, "cyan")
+
+    def _cmd_github_login(self, _args: Sequence[str]) -> None:
+        """Login to GitHub using browser-based flow."""
+
+        def _login() -> None:
+            print("Logging in to GitHub...")
+            github_console = GitHubConsole()
+            github_console.check_or_authenticate()
+
+        run_in_terminal(_login)
+
+    def _cmd_github_logout(self, _args: Sequence[str]) -> None:
+        """Logout from GitHub by removing stored token."""
+
+        def _logout() -> None:
+            github_console = GitHubConsole()
+            github_console.logout()
+
+        run_in_terminal(_logout)
 
     @property
     def completer(self) -> Completer:

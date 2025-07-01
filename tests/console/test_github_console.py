@@ -226,7 +226,7 @@ def test_logout_user_cancels(
             result = github_console.logout()
             assert result is True
             captured = capsys.readouterr()
-            assert "Logout cancelled" in captured.out
+            assert "Using existing GitHub login" in captured.out
 
 
 def test_logout_success(

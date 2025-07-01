@@ -5,6 +5,7 @@ import pyperclip
 from rich import print
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Confirm, Prompt
+from rich.text import Text
 
 from oai_coding_agent.auth.token_storage import (
     delete_token as delete_github_token,
@@ -44,7 +45,9 @@ class GitHubConsole:
             return None
 
         # Display the code
-        print(f"\nYour authentication code: [bold]`{device_flow.user_code}`[/bold]")
+        text = Text("Your authentication code: ")
+        text.append(device_flow.user_code, style="bold")
+        print(text)
 
         # Try to copy to clipboard
         if self._copy_to_clipboard(device_flow.user_code):
@@ -74,7 +77,7 @@ class GitHubConsole:
 
         # Poll for completion with progress
         with Progress(
-            SpinnerColumn(),
+            SpinnerColumn(style="cyan"),
             TextColumn("[progress.description]{task.description}"),
             transient=True,
         ) as progress:
@@ -129,7 +132,7 @@ class GitHubConsole:
         token = get_github_token("GITHUB_TOKEN")
         if token:
             if not Confirm.ask("\nWould you like to log in to GitHub?"):
-                print("[green]Using existing GitHub login.[/green]")
+                print("[dim green]Using existing GitHub login.[/dim green]")
                 return token
 
         return self.authenticate()
@@ -149,5 +152,5 @@ class GitHubConsole:
                 print("[red]✗ Failed to remove token.[/red]")
                 return False
         else:
-            print("Logout cancelled.")
+            print("[dim green]Using existing GitHub login.[/dim green]")
             return True
