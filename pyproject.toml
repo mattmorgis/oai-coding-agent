@@ -17,9 +17,8 @@ dependencies = [
     "docker>=7.1.0",
     "requests>=2.31.0",
     "pyperclip>=1.9.0",
-    "prompt-toolkit",
     "pygithub>=2.6.1",
-    "questionary>=2.1.0",
+    "prompt-toolkit",
 ]
 
 [project.scripts]
@@ -39,8 +38,8 @@ fallback-version = "0.0.0"
 package = true
 
 [tool.uv.sources]
-# Remove this if this is ever merged and released: https://github.com/prompt-toolkit/python-prompt-toolkit/pull/1999
 prompt-toolkit = { git = "https://github.com/mattmorgis/python-prompt-toolkit", rev = "23c55d6" }
+
 
 [dependency-groups]
 dev = [
