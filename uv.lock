@@ -631,7 +631,7 @@ requires-dist = [
     { name = "gitpython", specifier = ">=3.1.44" },
     { name = "jinja2", specifier = ">=3.0.0" },
     { name = "mcp-server-git", specifier = ">=2025.1.14" },
-    { name = "openai-agents", specifier = ">=0.0.16" },
+    { name = "openai-agents", specifier = "==0.0.16" },
     { name = "prompt-toolkit-dim", specifier = ">=3.0.53" },
     { name = "pygithub", specifier = ">=2.6.1" },
     { name = "pyperclip", specifier = ">=1.9.0" },

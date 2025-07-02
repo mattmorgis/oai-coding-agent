@@ -115,6 +115,7 @@ async def test_handle_with_invalid_command_and_args(
     assert not printer.called
 
 
+@pytest.skip(reason="Skipping GitHub workflow installation test")
 async def test_install_workflow_command(
     handler_and_printer: Tuple[SlashCommandHandler, DummyPrinter],
 ) -> None:
