@@ -70,8 +70,7 @@ def patch_headless_agent(monkeypatch: pytest.MonkeyPatch) -> None:
 
     We replace:
     * Runner.run_streamed to return our dummy streaming result.
-    * start_mcp_servers, build_instructions, get_filtered_function_tools,
-      gen_trace_id, and trace to no-ops/stubs.
+    * start_mcp_servers, build_instructions, get_filtered_function_tools
     """
     import oai_coding_agent.agent.agent as agent_module
 
@@ -110,17 +109,6 @@ def patch_headless_agent(monkeypatch: pytest.MonkeyPatch) -> None:
         "get_filtered_function_tools",
         _fake_get_filtered_function_tools,
     )
-
-    monkeypatch.setattr(agent_module, "gen_trace_id", lambda: "trace-id")
-
-    class _DummyTraceCtx:
-        def __enter__(self) -> None:
-            pass
-
-        def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-            pass
-
-    monkeypatch.setattr(agent_module, "trace", lambda *args, **kwargs: _DummyTraceCtx())
 
 
 # ──────────────────────────────────────────────────────────────────────────────

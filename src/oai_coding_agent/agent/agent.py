@@ -24,8 +24,7 @@ from agents import (
     ModelSettings,
     Runner,
     RunResultStreaming,
-    gen_trace_id,
-    trace,
+    set_tracing_disabled,
 )
 from openai.types.responses import ResponseInputItemParam
 from openai.types.shared.reasoning import Reasoning
@@ -47,6 +46,7 @@ class AgentInitializationError(BaseException):
 
 
 logger = logging.getLogger(__name__)
+set_tracing_disabled(disabled=True)
 
 
 @runtime_checkable
@@ -337,13 +337,6 @@ class HeadlessAgent(HeadlessAgentProtocol):
             self.config,
             self._exit_stack,
         )
-
-        trace_id = gen_trace_id()
-        trace_ctx = trace(
-            workflow_name="OAI Coding Agent - Headless", trace_id=trace_id
-        )
-        trace_ctx.__enter__()
-        self._exit_stack.callback(trace_ctx.__exit__, None, None, None)
 
         dynamic_instructions = build_instructions(self.config)
         function_tools = await get_filtered_function_tools(mcp_servers, self.config)
