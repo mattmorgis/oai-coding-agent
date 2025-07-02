@@ -74,7 +74,7 @@ class SlashCommandHandler:
             SlashCommand(
                 "/install-workflow",
                 "Install GitHub App for workflow access",
-                self._cmd_install_workflow,
+                _todo,
             ),
             SlashCommand("/help", "Show help and available commands", self._cmd_help),
         ]
