@@ -604,7 +604,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "mcp-server-git" },
     { name = "openai-agents" },
-    { name = "prompt-toolkit" },
+    { name = "prompt-toolkit-dim" },
     { name = "pygithub" },
     { name = "pyperclip" },
     { name = "python-dotenv" },
@@ -632,7 +632,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.0.0" },
     { name = "mcp-server-git", specifier = ">=2025.1.14" },
     { name = "openai-agents", specifier = ">=0.0.16" },
-    { name = "prompt-toolkit", git = "https://github.com/mattmorgis/python-prompt-toolkit?rev=23c55d6" },
+    { name = "prompt-toolkit-dim", specifier = ">=3.0.53" },
     { name = "pygithub", specifier = ">=2.6.1" },
     { name = "pyperclip", specifier = ">=1.9.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
@@ -753,11 +753,14 @@ wheels = [
 ]
 
 [[package]]
-name = "prompt-toolkit"
-version = "3.0.51"
-source = { git = "https://github.com/mattmorgis/python-prompt-toolkit?rev=23c55d6#23c55d6f1039e8aa5b483dab76518bd78b070793" }
+name = "prompt-toolkit-dim"
+version = "3.0.53"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "wcwidth" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/83/6e/4e3f5696c840ba3cc8ce63a565daacb81fc0962932260ff2c60b51a0075e/prompt_toolkit_dim-3.0.53-py3-none-any.whl", hash = "sha256:a4e14b57dd5a9c230904a8bab76b3963055f41d71e8705ea726981ff23bdd826", size = 388111 },
 ]
 
 [[package]]

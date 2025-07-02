@@ -11,14 +11,14 @@ dependencies = [
     "typer>=0.15.4",
     "cli-mcp-server>=0.1.0",
     "mcp-server-git>=2025.1.14",
-    "openai-agents>=0.0.16",
+    "openai-agents==0.0.16",
     "rich>=14.0.0",
     "gitpython>=3.1.44",
     "docker>=7.1.0",
     "requests>=2.31.0",
     "pyperclip>=1.9.0",
     "pygithub>=2.6.1",
-    "prompt-toolkit",
+    "prompt-toolkit-dim>=3.0.53",
 ]
 
 [project.scripts]
@@ -36,9 +36,6 @@ fallback-version = "0.0.0"
 
 [tool.uv]
 package = true
-
-[tool.uv.sources]
-prompt-toolkit = { git = "https://github.com/mattmorgis/python-prompt-toolkit", rev = "23c55d6" }
 
 
 [dependency-groups]

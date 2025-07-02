@@ -109,7 +109,8 @@ async def start_mcp_servers(
         cli_ctx = QuietMCPServerStdio(
             name="cli-mcp-server",
             params={
-                "command": "cli-mcp-server",
+                "command": "uvx",
+                "args": ["cli-mcp-server"],
                 "env": {
                     "ALLOWED_DIR": str(config.repo_path),
                     "ALLOWED_COMMANDS": ",".join(ALLOWED_CLI_COMMANDS),
@@ -135,7 +136,8 @@ async def start_mcp_servers(
         git_ctx = QuietMCPServerStdio(
             name="mcp-server-git",
             params={
-                "command": "mcp-server-git",
+                "command": "uvx",
+                "args": ["mcp-server-git"],
                 # set OAI_AGENT so commit-msg hook sees it
                 "env": {"OAI_AGENT": "true"},
             },
