@@ -2,7 +2,27 @@
 
 A terminal-based coding agent designed for lightweight, asynchronous development tasks. Unlike traditional coding agents that require constant steering, this agent can work independently or collaboratively, enabling developers to run entire agent fleets for parallel development workflows.
 
-> **Status**: Work in progress
+> **Status**: Work in progress, not yet stable.
+
+## Getting Started
+
+```
+uv tool install oai-coding-agent
+```
+
+Navigate to your project
+
+```
+cd your-projects-repo
+```
+
+Start the agent
+
+```
+oai
+oai --help
+oai -p "tell me what you can do in 2-3 sentences"
+```
 
 ## Overview
 
