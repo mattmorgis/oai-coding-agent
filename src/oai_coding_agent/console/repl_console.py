@@ -60,6 +60,24 @@ class KeyBindingsHandler:
             else:
                 buffer.complete_next()
 
+        @kb.add("up")
+        def up_or_previous(event: KeyPressEvent) -> None:
+            """Handle up arrow - either navigate completions or history."""
+            buffer = event.current_buffer
+            if buffer.complete_state and buffer.complete_state.completions:
+                buffer.complete_previous()
+            else:
+                buffer.history_backward()
+
+        @kb.add("down")
+        def down_or_next(event: KeyPressEvent) -> None:
+            """Handle down arrow - either navigate completions or history."""
+            buffer = event.current_buffer
+            if buffer.complete_state and buffer.complete_state.completions:
+                buffer.complete_next()
+            else:
+                buffer.history_forward()
+
         @kb.add("escape")
         async def _(event: KeyPressEvent) -> None:
             """Handle ESC - cancel current job if agent is processing."""
