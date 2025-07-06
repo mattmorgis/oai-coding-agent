@@ -38,23 +38,18 @@ jobs:
       issues: read
       pull-requests: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          # allow pushing back
-          persist-credentials: true
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v6
-
-      - name: Sync dependencies with uv
-        run: |
-          uv sync
-
+      # Agent dependencies
       - name: Set up Node.js (latest LTS)
         uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install oai
+        run: |
+          uv tool install oai-coding-agent
 
       - name: Get GitHub App access token via token exchange
         id: get-token
@@ -74,24 +69,42 @@ jobs:
           echo "::add-mask::$GITHUB_ACCESS_TOKEN"
           echo "github_access_token=$GITHUB_ACCESS_TOKEN" >> $GITHUB_OUTPUT
 
-      - name: Create a fresh branch for the agent
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ steps.get-token.outputs.github_access_token }}
+
+      - name: Create or checkout branch for the agent
         run: |
           git config user.name "oai-coding-agent[bot]"
           git config user.email "214839426+oai-coding-agent[bot]@users.noreply.github.com"
           ISSUE_NUMBER="${{ github.event.issue.number }}"
           BRANCH="oai/issue-${ISSUE_NUMBER}"
-          git checkout -b "$BRANCH"
-          git push --set-upstream origin HEAD
 
-      - name: Run OAI coding agent in headless mode
+          # Check if branch exists on remote
+          if git ls-remote --heads origin "$BRANCH" | grep -q "$BRANCH"; then
+            echo "Branch $BRANCH already exists, checking it out"
+            git fetch origin "$BRANCH"
+            git checkout "$BRANCH"
+          else
+            echo "Creating new branch $BRANCH"
+            git checkout -b "$BRANCH"
+            git push --set-upstream origin HEAD
+          fi
+
+      # Enter your own repo set up here
+      - name: Sync dependencies with uv
+        run: |
+          uv sync
+
+      - name: Run oai coding agent in headless mode
         env:
           RICH_FORCE_TERMINAL: "1" # these provide pretty logs in GHA
           TTY_COMPATIBLE: "1"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
-          uv sync
-          source .venv/bin/activate
           oai --github-token ${{ steps.get-token.outputs.github_access_token }} --prompt - << 'PROMPT_END'
           Complete the following GitHub issue:
           Repository: ${{ github.event.repository.html_url }}
