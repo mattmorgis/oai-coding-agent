@@ -34,9 +34,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: write
-      issues: read
-      pull-requests: write
     steps:
       # Agent dependencies
       - name: Set up Node.js (latest LTS)
@@ -46,6 +43,8 @@ jobs:
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
+        with:
+          ignore-empty-workdir: true
 
       - name: Install oai
         run: |
