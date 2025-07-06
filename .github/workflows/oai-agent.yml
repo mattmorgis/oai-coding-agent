@@ -98,6 +98,10 @@ jobs:
         run: |
           uv sync
 
+      - name: Install Git hooks
+        run: |
+          uv run pre-commit install --install-hooks
+
       - name: Run oai coding agent in headless mode
         env:
           RICH_FORCE_TERMINAL: "1" # these provide pretty logs in GHA
