@@ -60,6 +60,16 @@ class KeyBindingsHandler:
             else:
                 buffer.complete_next()
 
+        @kb.add("up", filter=has_completions)
+        def complete_previous(event: KeyPressEvent) -> None:
+            """Go to the previous completion."""
+            event.current_buffer.complete_previous(count=event.arg)
+
+        @kb.add("down", filter=has_completions)
+        def complete_next(event: KeyPressEvent) -> None:
+            """Go to the next completion."""
+            event.current_buffer.complete_next(count=event.arg)
+
         @kb.add("escape")
         async def _(event: KeyPressEvent) -> None:
             """Handle ESC - cancel current job if agent is processing."""
