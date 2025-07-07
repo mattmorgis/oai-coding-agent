@@ -109,14 +109,14 @@ jobs:
             TITLE=$(jq -r '.issue.title'  "$EVENT_PATH")
             BODY=$(jq -r '.issue.body'   "$EVENT_PATH")
 
-            cat > "$PROMPT_FILE" <<-EOF
-              Complete the following GitHub issue:
-              Repository: ${{ github.event.repository.html_url }}
-              Issue #${ISSUE_NUMBER}: ${TITLE}
+            cat > "$PROMPT_FILE" <<EOF
+          Complete the following GitHub issue:
+          Repository: ${{ github.event.repository.html_url }}
+          Issue #${ISSUE_NUMBER}: ${TITLE}
 
-              Body:
-              ${BODY}
-              EOF
+          Body:
+          ${BODY}
+          EOF
           elif [[ "$EVENT_NAME" == "issue_comment" ]]; then
             # If the comment is on a PR (issues event with pull_request field)
             if jq -e '.issue.pull_request' "$EVENT_PATH" >/dev/null; then
@@ -126,28 +126,28 @@ jobs:
                 -H "Accept: application/vnd.github+json" \
                 "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}" | jq -r '.head.ref')
 
-              cat > "$PROMPT_FILE" <<-EOF
-                A reviewer left the following comment on PR #${PR_NUMBER} and mentioned @oai:
+              cat > "$PROMPT_FILE" <<EOF
+            A reviewer left the following comment on PR #${PR_NUMBER} and mentioned @oai:
 
-                ---
-                ${COMMENT}
-                ---
+            ---
+            ${COMMENT}
+            ---
 
-                Please apply the requested changes on this PR branch.
-                EOF
+            Please apply the requested changes on this PR branch.
+            EOF
             else
               # Regular issue comment — build a prompt similar to issue flow
               ISSUE_NUMBER=$(jq -r '.issue.number' "$EVENT_PATH")
               COMMENT=$(jq -r '.comment.body' "$EVENT_PATH")
-              cat > "$PROMPT_FILE" <<-EOF
-                A new comment was left on Issue #${ISSUE_NUMBER} mentioning @oai:
+              cat > "$PROMPT_FILE" <<EOF
+            A new comment was left on Issue #${ISSUE_NUMBER} mentioning @oai:
 
-                ---
-                ${COMMENT}
-                ---
+            ---
+            ${COMMENT}
+            ---
 
-                Please take the appropriate action.
-                EOF
+            Please take the appropriate action.
+            EOF
               # We'll keep TARGET_BRANCH empty so the later "issue" branch logic handles it
             fi
           elif [[ "$EVENT_NAME" == "pull_request_review_comment" ]]; then
@@ -155,15 +155,15 @@ jobs:
             COMMENT=$(jq -r '.comment.body' "$EVENT_PATH")
             TARGET_BRANCH=$(jq -r '.pull_request.head.ref' "$EVENT_PATH")
 
-            cat > "$PROMPT_FILE" <<-EOF
-              An inline review comment on PR #${PR_NUMBER} mentioned @oai:
+            cat > "$PROMPT_FILE" <<EOF
+          An inline review comment on PR #${PR_NUMBER} mentioned @oai:
 
-              ---
-              ${COMMENT}
-              ---
+          ---
+          ${COMMENT}
+          ---
 
-              Please address it and push updates.
-              EOF
+          Please address it and push updates.
+          EOF
 
           elif [[ "$EVENT_NAME" == "pull_request_review" ]]; then
             if [[ "$(jq -r '.review.state' "$EVENT_PATH")" == "changes_requested" ]]; then
@@ -171,15 +171,15 @@ jobs:
               TARGET_BRANCH=$(jq -r '.pull_request.head.ref' "$EVENT_PATH")
               BODY=$(jq -r '.review.body' "$EVENT_PATH")
 
-              cat > "$PROMPT_FILE" <<-EOF
-                A *Changes Requested* review was submitted on PR #${PR_NUMBER}:
+              cat > "$PROMPT_FILE" <<EOF
+            A *Changes Requested* review was submitted on PR #${PR_NUMBER}:
 
-                ---
-                ${BODY}
-                ---
+            ---
+            ${BODY}
+            ---
 
-                You authored this PR. Address the feedback and push changes.
-                EOF
+            You authored this PR. Address the feedback and push changes.
+            EOF
             fi
           fi
 
