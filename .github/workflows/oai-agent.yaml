@@ -109,14 +109,12 @@ jobs:
             TITLE=$(jq -r '.issue.title'  "$EVENT_PATH")
             BODY=$(jq -r '.issue.body'   "$EVENT_PATH")
 
-            cat > "$PROMPT_FILE" << 'EOF'
-              Complete the following GitHub issue:
-              Repository: ${{ github.event.repository.html_url }}
-              Issue #${ISSUE_NUMBER}: ${TITLE}
+            printf "Complete the following GitHub issue:\nRepository: %s\nIssue #%s: %s\n\nBody:\n%s\n" \
+              "${{ github.event.repository.html_url }}" \
+              "${ISSUE_NUMBER}" \
+              "${TITLE}" \
+              "${BODY}" > "$PROMPT_FILE"
 
-              Body:
-              ${BODY}
-              EOF
           elif [[ "$EVENT_NAME" == "issue_comment" ]]; then
             # If the comment is on a PR (issues event with pull_request field)
             if jq -e '.issue.pull_request' "$EVENT_PATH" >/dev/null; then
@@ -126,44 +124,27 @@ jobs:
                 -H "Accept: application/vnd.github+json" \
                 "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}" | jq -r '.head.ref')
 
-              cat > "$PROMPT_FILE" << 'EOF'
-                A reviewer left the following comment on PR #${PR_NUMBER} and mentioned @oai:
+              printf "A reviewer left the following comment on PR #%s and mentioned @oai:\n\n---\n%s\n---\n\nPlease apply the requested changes on this PR branch.\n" \
+                "${PR_NUMBER}" \
+                "${COMMENT}" > "$PROMPT_FILE"
 
-                ---
-                ${COMMENT}
-                ---
-
-                Please apply the requested changes on this PR branch.
-                EOF
             else
-              # Regular issue comment — build a prompt similar to issue flow
+              # Regular issue comment
               ISSUE_NUMBER=$(jq -r '.issue.number' "$EVENT_PATH")
               COMMENT=$(jq -r '.comment.body' "$EVENT_PATH")
-              cat > "$PROMPT_FILE" << 'EOF'
-                A new comment was left on Issue #${ISSUE_NUMBER} mentioning @oai:
-
-                ---
-                ${COMMENT}
-                ---
-
-                Please take the appropriate action.
-                EOF
-              # We'll keep TARGET_BRANCH empty so the later "issue" branch logic handles it
+              printf "A new comment was left on Issue #%s mentioning @oai:\n\n---\n%s\n---\n\nPlease take the appropriate action.\n" \
+                "${ISSUE_NUMBER}" \
+                "${COMMENT}" > "$PROMPT_FILE"
             fi
+
           elif [[ "$EVENT_NAME" == "pull_request_review_comment" ]]; then
             PR_NUMBER=$(jq -r '.pull_request.number' "$EVENT_PATH")
             COMMENT=$(jq -r '.comment.body' "$EVENT_PATH")
             TARGET_BRANCH=$(jq -r '.pull_request.head.ref' "$EVENT_PATH")
 
-            cat > "$PROMPT_FILE" << 'EOF'
-              An inline review comment on PR #${PR_NUMBER} mentioned @oai:
-
-              ---
-              ${COMMENT}
-              ---
-
-              Please address it and push updates.
-              EOF
+            printf "An inline review comment on PR #%s mentioned @oai:\n\n---\n%s\n---\n\nPlease address it and push updates.\n" \
+              "${PR_NUMBER}" \
+              "${COMMENT}" > "$PROMPT_FILE"
 
           elif [[ "$EVENT_NAME" == "pull_request_review" ]]; then
             if [[ "$(jq -r '.review.state' "$EVENT_PATH")" == "changes_requested" ]]; then
@@ -171,15 +152,9 @@ jobs:
               TARGET_BRANCH=$(jq -r '.pull_request.head.ref' "$EVENT_PATH")
               BODY=$(jq -r '.review.body' "$EVENT_PATH")
 
-              cat > "$PROMPT_FILE" << 'EOF'
-                A *Changes Requested* review was submitted on PR #${PR_NUMBER}:
-
-                ---
-                ${BODY}
-                ---
-
-                You authored this PR. Address the feedback and push changes.
-                EOF
+              printf "A *Changes Requested* review was submitted on PR #%s:\n\n---\n%s\n---\n\nYou authored this PR. Address the feedback and push changes.\n" \
+                "${PR_NUMBER}" \
+                "${BODY}" > "$PROMPT_FILE"
             fi
           fi
 
