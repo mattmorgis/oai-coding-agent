@@ -133,7 +133,3 @@ class TokenAnimator:
         """
         if self._task and not self._task.done():
             self._task.cancel()
-
-
-# Alias for module-level import and backward compatibility
-format_count = TokenAnimator.format_count

@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 from oai_coding_agent.agent.events import UsageEvent
-from oai_coding_agent.console.token_animator import TokenAnimator, format_count
+from oai_coding_agent.console.token_animator import TokenAnimator
 
 
 def test_initial_state_before_update() -> None:
@@ -17,12 +17,12 @@ def test_initial_state_before_update() -> None:
 
 
 def test_format_count_small_and_large() -> None:
-    assert format_count(42) == "42"
-    assert format_count(999) == "999"
-    assert format_count(1000) == "1k"
-    assert format_count(1200) == "1.2k"
-    assert format_count(12000) == "12k"
-    assert format_count(12500) == "12.5k"
+    assert TokenAnimator.format_count(42) == "42"
+    assert TokenAnimator.format_count(999) == "999"
+    assert TokenAnimator.format_count(1000) == "1k"
+    assert TokenAnimator.format_count(1200) == "1.2k"
+    assert TokenAnimator.format_count(12000) == "12k"
+    assert TokenAnimator.format_count(12500) == "12.5k"
 
 
 def test_update_sets_last_delta_and_step_sizes() -> None:
