@@ -110,13 +110,13 @@ jobs:
             BODY=$(jq -r '.issue.body'   "$EVENT_PATH")
 
             cat > "$PROMPT_FILE" <<EOF
-            Complete the following GitHub issue:
-            Repository: ${{ github.event.repository.html_url }}
-            Issue #${ISSUE_NUMBER}: ${TITLE}
+          Complete the following GitHub issue:
+          Repository: ${{ github.event.repository.html_url }}
+          Issue #${ISSUE_NUMBER}: ${TITLE}
 
-            Body:
-            ${BODY}
-            EOF
+          Body:
+          ${BODY}
+          EOF
           elif [[ "$EVENT_NAME" == "issue_comment" ]]; then
             # If the comment is on a PR (issues event with pull_request field)
             if jq -e '.issue.pull_request' "$EVENT_PATH" >/dev/null; then
