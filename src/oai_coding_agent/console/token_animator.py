@@ -12,20 +12,6 @@ from typing import Optional
 from oai_coding_agent.agent.events import UsageEvent
 
 
-def format_count(v: int) -> str:
-    """
-    Abbreviate integer counts >= 1000 as '1.2k', otherwise return the integer string.
-    Drops any trailing '.0' for whole thousands (e.g., '12k' instead of '12.0k').
-    """
-    if v >= 1000:
-        value = v / 1000.0
-        s = f"{value:.1f}k"
-        if s.endswith(".0k"):
-            s = s.replace(".0k", "k")
-        return s
-    return str(v)
-
-
 class TokenAnimator:
     """
     Animate pure numeric token counts (input/output) over time.
@@ -34,6 +20,20 @@ class TokenAnimator:
         interval: Time between animation ticks in seconds.
         animation_duration: Approximate total time for any count change to complete.
     """
+
+    @staticmethod
+    def format_count(v: int) -> str:
+        """
+        Abbreviate integer counts >= 1000 as '1.2k', otherwise return the integer string.
+        Drops any trailing '.0' for whole thousands (e.g., '12k' instead of '12.0k').
+        """
+        if v >= 1000:
+            value = v / 1000.0
+            s = f"{value:.1f}k"
+            if s.endswith(".0k"):
+                s = s.replace(".0k", "k")
+            return s
+        return str(v)
 
     def __init__(
         self, *, interval: float = 0.1, animation_duration: float = 1.0
@@ -114,10 +114,7 @@ class TokenAnimator:
         Start the background animation task if not already running.
         """
         if not self._task or self._task.done():
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop()
             self._task = loop.create_task(self._run())
 
     async def _run(self) -> None:
@@ -136,3 +133,7 @@ class TokenAnimator:
         """
         if self._task and not self._task.done():
             self._task.cancel()
+
+
+# Alias for module-level import and backward compatibility
+format_count = TokenAnimator.format_count
