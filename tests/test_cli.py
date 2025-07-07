@@ -6,6 +6,7 @@ from conftest import MockAgent, MockConsole
 from typer.testing import CliRunner
 
 import oai_coding_agent.cli as cli_module
+from oai_coding_agent import __version__
 from oai_coding_agent.agent import AgentProtocol
 from oai_coding_agent.cli import create_app
 from oai_coding_agent.console.console import ConsoleInterface
@@ -252,7 +253,6 @@ def test_cli_version_option(
     mock_console_factory: Any,
 ) -> None:
     """Test that the --version option displays version and exits."""
-    from oai_coding_agent import __version__
 
     app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
     runner = CliRunner()
