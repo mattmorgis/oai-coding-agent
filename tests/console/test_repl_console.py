@@ -31,7 +31,7 @@ def test_prompt_fragments_full_list(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # Fix spinner and word cycler values for predictability
     monkeypatch.setattr(rc._spinner, "_current_frame", "X")
-    monkeypatch.setattr(rc._word_cycler, "current_word", "WORD")
+    monkeypatch.setattr(rc._word_cycler, "_current_word", "WORD")
 
     # Set token animator values
     rc._token_animator._current_input_val = 1500.0
