@@ -126,6 +126,8 @@ cd ../agent-2 && oai --mode async --prompt "Add API rate limiting"
 
 ### Common Options
 
+- `--version, -v` — Show the version and exit
+
 - `--model, -m <model>` — OpenAI model (default: `codex-mini-latest`)
 - `--repo-path <path>` — Target repository (default: current directory)
 - `--prompt, -p <text | ->` — Headless mode prompt (`-` for stdin)

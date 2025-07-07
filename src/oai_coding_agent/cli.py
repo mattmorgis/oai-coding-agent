@@ -7,6 +7,7 @@ from typing import Annotated, Callable, Optional
 
 import typer
 
+from oai_coding_agent import __version__
 from oai_coding_agent.agent import (
     AgentProtocol,
     AsyncAgent,
@@ -83,6 +84,15 @@ def github_logout() -> None:
 
 def main(
     ctx: typer.Context,
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            "-v",
+            help="Show the version and exit",
+            is_eager=True,
+        ),
+    ] = False,
     openai_api_key: Annotated[
         Optional[str],
         typer.Option(
@@ -140,6 +150,9 @@ def main(
     ] = False,
 ) -> None:
     """OAI CODING AGENT - starts an interactive session"""
+    if version:
+        typer.echo(__version__)
+        raise typer.Exit()
     # If no subcommand, run default action
     if ctx.invoked_subcommand is None:
         logger = logging.getLogger(__name__)
@@ -222,7 +235,7 @@ def create_app(
     setup_logging()
     logger = logging.getLogger(__name__)
     logger.info(
-        f"OAI v0.1.0 starting up (Python v{sys.version.split()[0]}, PID: {os.getpid()})"
+        f"OAI v{__version__} starting up (Python v{sys.version.split()[0]}, PID: {os.getpid()})"
     )
 
     # Load API keys and related settings from .env if not already set in the environment
