@@ -245,3 +245,18 @@ def test_cli_exits_on_preflight_error(
     # Agent and console should NOT be created
     assert mock_agent_factory.agent is None
     assert mock_console_factory.console is None
+
+
+def test_cli_version_option(
+    mock_agent_factory: Any,
+    mock_console_factory: Any,
+) -> None:
+    """Test that the --version option displays version and exits."""
+    from oai_coding_agent import __version__
+
+    app = create_app(mock_agent_factory.factory, mock_console_factory.factory)
+    runner = CliRunner()
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert __version__ in result.stdout
+    assert mock_console_factory.console is None
