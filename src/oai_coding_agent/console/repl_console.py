@@ -123,10 +123,6 @@ class WordCycler:
     def current_word(self) -> str:
         return self._current_word
 
-    @current_word.setter
-    def current_word(self, value: str) -> None:
-        self._current_word = value
-
     def start(self) -> None:
         if not self._task or self._task.done():
             self._task = asyncio.create_task(self._run())
