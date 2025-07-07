@@ -93,15 +93,14 @@ def test_start_and_stop_animation_task(event_loop: asyncio.AbstractEventLoop) ->
     anim = TokenAnimator(interval=0.01, animation_duration=0.02)
     usage = UsageEvent(1, 0, 1, 0, 2)
     anim.update(usage)
-    anim.start()
-    assert anim._task is not None
 
-    # Let the task run and then stop it
+    # Start the animation task within the event loop and then stop it
     async def stop_and_wait() -> None:
+        anim.start()
+        assert anim._task is not None
         await asyncio.sleep(0.02)
         anim.stop()
         # Await task completion; _run should catch CancelledError
-        assert anim._task is not None
         task = anim._task
         await task
         assert task.done()

@@ -114,8 +114,7 @@ class TokenAnimator:
         Start the background animation task if not already running.
         """
         if not self._task or self._task.done():
-            loop = asyncio.get_event_loop()
-            self._task = loop.create_task(self._run())
+            self._task = asyncio.create_task(self._run())
 
     async def _run(self) -> None:
         """Background task: call _tick every interval seconds."""
