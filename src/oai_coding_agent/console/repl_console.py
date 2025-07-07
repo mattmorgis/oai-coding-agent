@@ -17,7 +17,7 @@ from oai_coding_agent.agent import AsyncAgentProtocol
 from oai_coding_agent.agent.events import UsageEvent
 from oai_coding_agent.console.rendering import console, render_event
 from oai_coding_agent.console.slash_commands import SlashCommandHandler
-from oai_coding_agent.console.token_animator import TokenAnimator, format_count
+from oai_coding_agent.console.token_animator import TokenAnimator
 from oai_coding_agent.xdg import get_data_dir
 
 logger = logging.getLogger(__name__)
@@ -238,7 +238,9 @@ class ReplConsole:
         co = self._token_animator.current_output
         d = self._token_animator.last_delta
 
-        metrics = f"[{format_count(ci)}↑/{format_count(co)}↓]"
+        metrics = (
+            f"[{TokenAnimator.format_count(ci)}↑/{TokenAnimator.format_count(co)}↓]"
+        )
         delta_seg = f"[+{d}]" if d > 0 else ""
         spacer = " " * 28
 

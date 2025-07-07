@@ -1,5 +1,6 @@
-import pytest
 from pathlib import Path
+
+import pytest
 
 from oai_coding_agent.console.repl_console import ReplConsole
 from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConfig
@@ -8,7 +9,9 @@ from oai_coding_agent.runtime_config import ModeChoice, ModelChoice, RuntimeConf
 class DummyAgent:
     """Minimal agent stub for testing ReplConsole prompt_fragments."""
 
-    def __init__(self, is_processing: bool, config: RuntimeConfig | None = None) -> None:
+    def __init__(
+        self, is_processing: bool, config: RuntimeConfig | None = None
+    ) -> None:
         self.is_processing = is_processing
         self.config = config or RuntimeConfig(
             openai_api_key="test-key",

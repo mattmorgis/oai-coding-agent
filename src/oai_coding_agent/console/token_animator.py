@@ -132,6 +132,3 @@ class TokenAnimator:
         """
         if self._task and not self._task.done():
             self._task.cancel()
-
-# Expose helper function for formatting counts
-format_count = TokenAnimator.format_count
