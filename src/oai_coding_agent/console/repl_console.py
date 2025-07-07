@@ -17,6 +17,7 @@ from oai_coding_agent.agent import AsyncAgentProtocol
 from oai_coding_agent.agent.events import UsageEvent
 from oai_coding_agent.console.rendering import console, render_event
 from oai_coding_agent.console.slash_commands import SlashCommandHandler
+from oai_coding_agent.console.token_animator import TokenAnimator, format_count
 from oai_coding_agent.xdg import get_data_dir
 
 logger = logging.getLogger(__name__)
@@ -122,6 +123,10 @@ class WordCycler:
     def current_word(self) -> str:
         return self._current_word
 
+    @current_word.setter
+    def current_word(self, value: str) -> None:
+        self._current_word = value
+
     def start(self) -> None:
         if not self._task or self._task.done():
             self._task = asyncio.create_task(self._run())
@@ -216,7 +221,6 @@ class ReplConsole:
         )
         # Initialize cumulative usage state and token animator
         self._usage_state: UsageEvent = UsageEvent(0, 0, 0, 0, 0)
-        from oai_coding_agent.console.token_animator import TokenAnimator
 
         self._token_animator = TokenAnimator(
             interval=0.1,
@@ -228,29 +232,27 @@ class ReplConsole:
         if not self.agent.is_processing:
             return FormattedText([("ansicyan", "\n\n› ")])
 
-        from oai_coding_agent.console.token_animator import format_count
-
         sp = self._spinner.current_frame
         wd = self._word_cycler.current_word
         ci = self._token_animator.current_input
         co = self._token_animator.current_output
-        d  = self._token_animator.last_delta
+        d = self._token_animator.last_delta
 
-        metrics  = f"[{format_count(ci)}↑/{format_count(co)}↓]"
+        metrics = f"[{format_count(ci)}↑/{format_count(co)}↓]"
         delta_seg = f"[+{d}]" if d > 0 else ""
-        spacer   = " " * 28
+        spacer = " " * 28
 
         fragments = [
-            ("",       " "),
+            ("", " "),
             ("ansicyan", sp),
-            ("italic",   f" {wd}"),
-            ("",        spacer),
+            ("italic", f" {wd}"),
+            ("", spacer),
             ("ansiyellow", metrics),
-            ("",        " "),
+            ("", " "),
             ("ansiyellow", delta_seg),
-            ("dim",     "    ("),
-            ("dim bold","esc "),
-            ("dim",     "to interrupt)\n\n"),
+            ("dim", "    ("),
+            ("dim bold", "esc "),
+            ("dim", "to interrupt)\n\n"),
             ("ansicyan", "› "),
         ]
         return to_formatted_text(FormattedText(fragments))
