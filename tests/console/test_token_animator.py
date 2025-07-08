@@ -1,7 +1,5 @@
 import asyncio
 
-import pytest
-
 from oai_coding_agent.agent.events import UsageEvent
 from oai_coding_agent.console.token_animator import TokenAnimator
 
@@ -11,9 +9,6 @@ def test_initial_state_before_update() -> None:
     assert anim.current_input == 0
     assert anim.current_output == 0
     assert anim.total_tokens == 0
-    # Private step attributes should be zero
-    assert anim._step_input == pytest.approx(0.0)
-    assert anim._step_output == pytest.approx(0.0)
 
 
 def test_format_count_small_and_large() -> None:
@@ -25,7 +20,7 @@ def test_format_count_small_and_large() -> None:
     assert TokenAnimator.format_count(12500) == "12.5k"
 
 
-def test_update_sets_total_tokens_and_step_sizes() -> None:
+def test_update_sets_targets_and_total_tokens() -> None:
     anim = TokenAnimator(interval=0.2, animation_duration=1.0)
     # Create a UsageEvent with known tokens and total_tokens
     usage = UsageEvent(
@@ -38,54 +33,64 @@ def test_update_sets_total_tokens_and_step_sizes() -> None:
     anim.update(usage)
     # total_tokens should reflect total_tokens
     assert anim.total_tokens == 150
-    # Step sizes: delta_input=100, delta_output=50, factor=interval/animation_duration=0.2
-    assert anim._step_input == pytest.approx(100 * 0.2)
-    assert anim._step_output == pytest.approx(50 * 0.2)
+    # Target values should be set
+    assert anim._target_input == 100
+    assert anim._target_output == 50
 
 
-def test_synchronous_tick_advances_to_target() -> None:
+def test_ease_out_animation_advances_to_target() -> None:
     anim = TokenAnimator(interval=0.1, animation_duration=0.2)
     usage = UsageEvent(
-        input_tokens=10,
+        input_tokens=100,
         cached_input_tokens=0,
-        output_tokens=20,
+        output_tokens=200,
         reasoning_output_tokens=0,
-        total_tokens=30,
+        total_tokens=300,
     )
     anim.update(usage)
-    # Two ticks should complete the animation (interval/duration = 0.5 factor)
+
+    # First tick should move approximately 10% of the distance
     anim._tick()
-    assert anim.current_input == 5
-    assert anim.current_output == 10
+    assert 9 <= anim.current_input <= 11  # ~10% of 100
+    assert 19 <= anim.current_output <= 21  # ~10% of 200
+
+    # Second tick should move approximately 10% of remaining distance
     anim._tick()
-    assert anim.current_input == 10
-    assert anim.current_output == 20
-    # Further ticks do not overshoot
-    anim._tick()
-    assert anim.current_input == 10
-    assert anim.current_output == 20
+    assert 18 <= anim.current_input <= 20  # ~19
+    assert 36 <= anim.current_output <= 40  # ~38
+
+    # Eventually reaches target (or gets very close)
+    for _ in range(50):  # More than enough ticks to reach target
+        anim._tick()
+    assert abs(anim.current_input - 100) <= 1
+    assert abs(anim.current_output - 200) <= 1
 
 
-def test_decrement_animation() -> None:
+def test_ease_out_decrement_animation() -> None:
     anim = TokenAnimator(interval=0.1, animation_duration=0.2)
     # First update to a higher value
-    usage1 = UsageEvent(8, 0, 12, 0, 20)
+    usage1 = UsageEvent(80, 0, 120, 0, 200)
     anim.update(usage1)
     # Complete initial increase
-    anim._tick()
-    anim._tick()
-    assert anim.current_input == 8
-    assert anim.current_output == 12
+    for _ in range(50):
+        anim._tick()
+    assert abs(anim.current_input - 80) <= 1
+    assert abs(anim.current_output - 120) <= 1
+
     # Now update to lower values
-    usage2 = UsageEvent(2, 0, 4, 0, 26)
+    usage2 = UsageEvent(20, 0, 40, 0, 260)
     anim.update(usage2)
-    # step_input = (2 - 8) * 0.5 = -3; step_output = (4 - 12) * 0.5 = -4
+
+    # First tick moves approximately 10% of the distance down
     anim._tick()
-    assert anim.current_input == 5  # 8 + (-3)
-    assert anim.current_output == 8  # 12 + (-4)
-    anim._tick()
-    assert anim.current_input == 2
-    assert anim.current_output == 4
+    assert 73 <= anim.current_input <= 75  # ~74
+    assert 111 <= anim.current_output <= 113  # ~112
+
+    # Eventually reaches lower target (or gets very close)
+    for _ in range(50):
+        anim._tick()
+    assert abs(anim.current_input - 20) <= 1
+    assert abs(anim.current_output - 40) <= 1
 
 
 def test_start_and_stop_animation_task(event_loop: asyncio.AbstractEventLoop) -> None:
