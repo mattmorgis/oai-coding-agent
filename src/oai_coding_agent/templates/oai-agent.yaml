@@ -1,18 +1,25 @@
 # .github/workflows/oai-agent.yml
-name: OAI Coding Agenttttt
+name: OAI Coding Agent
 
 on:
   issues:
     types: [opened, labeled]
   issue_comment:
     types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
 
 jobs:
   run-agent:
     # Only proceed if:
-    #   - on opened: issue has @oai in body OR already labeled "oai"
-    #   - on labeled: the new label is exactly "oai"
-    #   - on comment: the comment body contains "@oai"
+    #   For issues:
+    #     - on opened: issue has @oai in body OR already labeled "oai"
+    #     - on labeled: the new label is exactly "oai"
+    #   For PR interactions:
+    #     - any PR comment (conversation or inline) that contains "@oai"
+    #     - a *changes requested* review on a PR authored by the agent
     if: >-
       (
         github.event_name == 'issues' &&
@@ -29,32 +36,36 @@ jobs:
       (
         github.event_name == 'issue_comment' &&
         contains(github.event.comment.body, '@oai')
+      ) ||
+      (
+        github.event_name == 'pull_request_review_comment' &&
+        contains(github.event.comment.body, '@oai')
+      ) ||
+      (
+        github.event_name == 'pull_request_review' &&
+        github.event.review.state == 'changes_requested' &&
+        github.event.pull_request.user.login == 'oai-coding-agent[bot]'
       )
 
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: write
-      issues: read
-      pull-requests: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          # allow pushing back
-          persist-credentials: true
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v6
-
-      - name: Sync dependencies with uv
-        run: |
-          uv sync
-
+      # Agent dependencies
       - name: Set up Node.js (latest LTS)
         uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          ignore-empty-workdir: true
+
+      - name: Install oai
+        shell: bash
+        run: |
+          uv tool install oai-coding-agent
 
       - name: Get GitHub App access token via token exchange
         id: get-token
@@ -74,29 +85,125 @@ jobs:
           echo "::add-mask::$GITHUB_ACCESS_TOKEN"
           echo "github_access_token=$GITHUB_ACCESS_TOKEN" >> $GITHUB_OUTPUT
 
-      - name: Create a fresh branch for the agent
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ steps.get-token.outputs.github_access_token }}
+
+      # Determine PR / issue context and build dynamic prompt.
+      - name: Determine context
+        id: context
+        env:
+          GH_TOKEN: ${{ steps.get-token.outputs.github_access_token }}
+        shell: bash
         run: |
-          git config user.name "oai-coding-agent[bot]"
+          set -e
+          EVENT_NAME="${{ github.event_name }}"
+          EVENT_PATH="$GITHUB_EVENT_PATH"
+          PROMPT_FILE=agent_prompt.txt
+          TARGET_BRANCH=""
+
+          if [[ "$EVENT_NAME" == "issues" ]]; then
+            ISSUE_NUMBER=$(jq -r '.issue.number' "$EVENT_PATH")
+            TITLE=$(jq -r '.issue.title'  "$EVENT_PATH")
+            BODY=$(jq -r '.issue.body'   "$EVENT_PATH")
+
+            printf "Complete the following GitHub issue:\nRepository: %s\nIssue #%s: %s\n\nBody:\n%s\n" \
+              "${{ github.event.repository.html_url }}" \
+              "${ISSUE_NUMBER}" \
+              "${TITLE}" \
+              "${BODY}" > "$PROMPT_FILE"
+
+          elif [[ "$EVENT_NAME" == "issue_comment" ]]; then
+            # If the comment is on a PR (issues event with pull_request field)
+            if jq -e '.issue.pull_request' "$EVENT_PATH" >/dev/null; then
+              PR_NUMBER=$(jq -r '.issue.number' "$EVENT_PATH")
+              COMMENT=$(jq -r '.comment.body' "$EVENT_PATH")
+              TARGET_BRANCH=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}" | jq -r '.head.ref')
+
+              printf "A reviewer left the following comment on PR #%s and mentioned @oai:\n\n---\n%s\n---\n\nPlease apply the requested changes on this PR branch.\n" \
+                "${PR_NUMBER}" \
+                "${COMMENT}" > "$PROMPT_FILE"
+
+            else
+              # Regular issue comment
+              ISSUE_NUMBER=$(jq -r '.issue.number' "$EVENT_PATH")
+              COMMENT=$(jq -r '.comment.body' "$EVENT_PATH")
+              printf "A new comment was left on Issue #%s mentioning @oai:\n\n---\n%s\n---\n\nPlease take the appropriate action.\n" \
+                "${ISSUE_NUMBER}" \
+                "${COMMENT}" > "$PROMPT_FILE"
+            fi
+
+          elif [[ "$EVENT_NAME" == "pull_request_review_comment" ]]; then
+            PR_NUMBER=$(jq -r '.pull_request.number' "$EVENT_PATH")
+            COMMENT=$(jq -r '.comment.body' "$EVENT_PATH")
+            TARGET_BRANCH=$(jq -r '.pull_request.head.ref' "$EVENT_PATH")
+
+            printf "An inline review comment on PR #%s mentioned @oai:\n\n---\n%s\n---\n\nPlease address it and push updates.\n" \
+              "${PR_NUMBER}" \
+              "${COMMENT}" > "$PROMPT_FILE"
+
+          elif [[ "$EVENT_NAME" == "pull_request_review" ]]; then
+            if [[ "$(jq -r '.review.state' "$EVENT_PATH")" == "changes_requested" ]]; then
+              PR_NUMBER=$(jq -r '.pull_request.number' "$EVENT_PATH")
+              TARGET_BRANCH=$(jq -r '.pull_request.head.ref' "$EVENT_PATH")
+              BODY=$(jq -r '.review.body' "$EVENT_PATH")
+
+              printf "A *Changes Requested* review was submitted on PR #%s:\n\n---\n%s\n---\n\nYou authored this PR. Address the feedback and push changes.\n" \
+                "${PR_NUMBER}" \
+                "${BODY}" > "$PROMPT_FILE"
+            fi
+          fi
+
+          echo "target_branch=${TARGET_BRANCH}" >> $GITHUB_OUTPUT
+          echo "prompt_file=${PROMPT_FILE}" >> $GITHUB_OUTPUT
+
+      - name: Create or checkout branch for issue
+        if: steps.context.outputs.target_branch == ''
+        shell: bash
+        run: |
+          set -e
+          git config user.name  "oai-coding-agent[bot]"
           git config user.email "214839426+oai-coding-agent[bot]@users.noreply.github.com"
           ISSUE_NUMBER="${{ github.event.issue.number }}"
           BRANCH="oai/issue-${ISSUE_NUMBER}"
-          git checkout -b "$BRANCH"
-          git push --set-upstream origin HEAD
 
-      - name: Run OAI coding agent in headless mode
+          if git ls-remote --heads origin "$BRANCH" | grep -q "$BRANCH"; then
+            echo "Branch $BRANCH already exists, checking it out"
+            git fetch origin "$BRANCH"
+            git checkout "$BRANCH"
+          else
+            echo "Creating new branch $BRANCH"
+            git checkout -b "$BRANCH"
+            git push --set-upstream origin HEAD
+          fi
+
+      - name: Checkout PR branch
+        if: steps.context.outputs.target_branch != ''
+        shell: bash
+        run: |
+          git config user.name  "oai-coding-agent[bot]"
+          git config user.email "214839426+oai-coding-agent[bot]@users.noreply.github.com"
+          BRANCH="${{ steps.context.outputs.target_branch }}"
+          echo "Fetching and checking out branch $BRANCH"
+          git fetch origin "$BRANCH"
+          git checkout "$BRANCH"
+
+      # Enter your own repo set up here
+      # - name: Install dependencies
+      #   run: |
+      #     uv sync
+      #     npm install
+
+      - name: Run oai coding agent
         env:
-          RICH_FORCE_TERMINAL: "1" # these provide pretty logs in GHA
+          RICH_FORCE_TERMINAL: "1"
           TTY_COMPATIBLE: "1"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         shell: bash
         run: |
-          uv sync
-          source .venv/bin/activate
-          oai --github-token ${{ steps.get-token.outputs.github_access_token }} --prompt - << 'PROMPT_END'
-          Complete the following GitHub issue:
-          Repository: ${{ github.event.repository.html_url }}
-          Issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
-
-          Body:
-          ${{ github.event.issue.body }}
-          PROMPT_END
+          PROMPT_CONTENT=$(cat "${{ steps.context.outputs.prompt_file }}")
+          oai --github-token ${{ steps.get-token.outputs.github_access_token }} --prompt "$PROMPT_CONTENT"

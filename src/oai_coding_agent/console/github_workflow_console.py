@@ -308,16 +308,16 @@ class GitHubWorkflowConsole:
         try:
             pr = repo.create_pull(
                 title="Add OAI Coding Agent GitHub Workflow",
-                body="""This PR adds a GitHub workflow that automatically responds to issues when:
+                body="""This PR adds a GitHub workflow that automatically responds to:
 
-    - An issue is opened with `@oai` in the body
     - An issue is labeled with `oai`
-    - A comment on an issue contains `@oai`
+    - A comment on an issue or PR that contains `@oai`
+    - A "changes requested" review on a PR authored by the agent
 
     The workflow will:
-    1. Create a new branch for the issue
-    2. Run the OAI coding agent to address the issue
-    3. Create a pull request with the solution
+    1. Set up the required environment for the agent (Node.js, uv, oai-coding-agent)
+    2. For issues: Create a new branch and PR with the solution
+    3. For PR comments/reviews: Update the existing PR branch with requested changes
 """,
                 head=branch_name,
                 base=repo.default_branch,
