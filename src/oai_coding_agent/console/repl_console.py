@@ -17,6 +17,7 @@ from oai_coding_agent.agent import AsyncAgentProtocol
 from oai_coding_agent.agent.events import UsageEvent
 from oai_coding_agent.console.rendering import console, render_event
 from oai_coding_agent.console.slash_commands import SlashCommandHandler
+from oai_coding_agent.console.token_animator import TokenAnimator
 from oai_coding_agent.xdg import get_data_dir
 
 logger = logging.getLogger(__name__)
@@ -214,26 +215,42 @@ class ReplConsole:
                 "reflecting",
             ],
         )
-        # Initialize cumulative usage state
+        # Initialize cumulative usage state and token animator
         self._usage_state: UsageEvent = UsageEvent(0, 0, 0, 0, 0)
+
+        self._token_animator = TokenAnimator(
+            interval=0.1,
+            animation_duration=1.0,
+        )
 
     def prompt_fragments(self) -> FormattedText:
         """Return the complete prompt: status + prompt symbol."""
         if not self.agent.is_processing:
             return FormattedText([("ansicyan", "\n\n› ")])
 
-        formatted_text = FormattedText(
-            [
-                ("", " "),
-                ("ansicyan", self._spinner.current_frame),
-                ("italic", f" {self._word_cycler.current_word}"),
-                ("dim", "     ("),
-                ("dim bold", "esc "),
-                ("dim", "to interrupt)\n\n"),
-                ("ansicyan", "› "),
-            ]
+        sp = self._spinner.current_frame
+        wd = self._word_cycler.current_word
+        ci = self._token_animator.current_input
+        co = self._token_animator.current_output
+
+        metrics = (
+            f"[{TokenAnimator.format_count(ci)}↑/{TokenAnimator.format_count(co)}↓]"
         )
-        return to_formatted_text(formatted_text)
+        spacer = " " * 28
+
+        fragments = [
+            ("", " "),
+            ("ansicyan", sp),
+            ("italic", f" {wd}"),
+            ("", spacer),
+            ("ansiyellow", metrics),
+            ("", " "),
+            ("dim", "    ("),
+            ("dim bold", "esc "),
+            ("dim", "to interrupt)\n\n"),
+            ("ansicyan", "› "),
+        ]
+        return to_formatted_text(FormattedText(fragments))
 
     async def _render_loop(self) -> None:
         """Main render loop - updates live area based on agent state."""
@@ -264,8 +281,9 @@ class ReplConsole:
         while True:
             agent_event = await self.agent.events.get()
             if isinstance(agent_event, UsageEvent):
-                # Update cumulative usage and skip rendering
+                # Update cumulative usage and animate tokens
                 self._usage_state = self._usage_state + agent_event
+                self._token_animator.update(self._usage_state)
                 continue
             await run_in_terminal(lambda: render_event(agent_event))
 
@@ -281,6 +299,7 @@ class ReplConsole:
         # Start spinner and render loop
         self._spinner.start()
         self._word_cycler.start()
+        self._token_animator.start()
         self._start_render_loop()
 
         console.print(
@@ -344,6 +363,7 @@ class ReplConsole:
             self._stop_render_loop()
             self._spinner.stop()
             self._word_cycler.stop()
+            self._token_animator.stop()
             try:
                 await event_consumer_task
             except asyncio.CancelledError:
