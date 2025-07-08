@@ -232,12 +232,10 @@ class ReplConsole:
         wd = self._word_cycler.current_word
         ci = self._token_animator.current_input
         co = self._token_animator.current_output
-        d = self._token_animator.last_delta
 
         metrics = (
             f"[{TokenAnimator.format_count(ci)}↑/{TokenAnimator.format_count(co)}↓]"
         )
-        delta_seg = f"[+{d}]" if d > 0 else ""
         spacer = " " * 28
 
         fragments = [
@@ -247,7 +245,6 @@ class ReplConsole:
             ("", spacer),
             ("ansiyellow", metrics),
             ("", " "),
-            ("ansiyellow", delta_seg),
             ("dim", "    ("),
             ("dim bold", "esc "),
             ("dim", "to interrupt)\n\n"),
@@ -286,7 +283,7 @@ class ReplConsole:
             if isinstance(agent_event, UsageEvent):
                 # Update cumulative usage and animate tokens
                 self._usage_state = self._usage_state + agent_event
-                self._token_animator.update(agent_event)
+                self._token_animator.update(self._usage_state)
                 continue
             await run_in_terminal(lambda: render_event(agent_event))
 

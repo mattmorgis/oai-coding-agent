@@ -36,7 +36,7 @@ class TokenAnimator:
         return str(v)
 
     def __init__(
-        self, *, interval: float = 0.1, animation_duration: float = 1.0
+        self, *, interval: float = 0.1, animation_duration: float = 3.0
     ) -> None:
         self._interval = interval
         self._animation_duration = animation_duration
@@ -44,7 +44,7 @@ class TokenAnimator:
         self._target_output: int = 0
         self._current_input_val: float = 0.0
         self._current_output_val: float = 0.0
-        self._last_delta: int = 0
+        self._total_token_val: int = 0
         self._step_input: float = 0.0
         self._step_output: float = 0.0
         self._task: Optional[asyncio.Task[None]] = None
@@ -60,9 +60,9 @@ class TokenAnimator:
         return int(self._current_output_val)
 
     @property
-    def last_delta(self) -> int:
+    def total_tokens(self) -> int:
         """Total tokens delta from the most recent UsageEvent."""
-        return self._last_delta
+        return self._total_token_val
 
     def update(self, usage_delta: UsageEvent) -> None:
         """
@@ -85,7 +85,7 @@ class TokenAnimator:
         self._step_output = delta_output * factor
         self._target_input = new_input
         self._target_output = new_output
-        self._last_delta = usage_delta.total_tokens
+        self._total_token_val = usage_delta.total_tokens
 
     def _tick(self) -> None:
         """

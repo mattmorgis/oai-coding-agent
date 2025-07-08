@@ -10,7 +10,7 @@ def test_initial_state_before_update() -> None:
     anim = TokenAnimator()
     assert anim.current_input == 0
     assert anim.current_output == 0
-    assert anim.last_delta == 0
+    assert anim.total_tokens == 0
     # Private step attributes should be zero
     assert anim._step_input == pytest.approx(0.0)
     assert anim._step_output == pytest.approx(0.0)
@@ -25,7 +25,7 @@ def test_format_count_small_and_large() -> None:
     assert TokenAnimator.format_count(12500) == "12.5k"
 
 
-def test_update_sets_last_delta_and_step_sizes() -> None:
+def test_update_sets_total_tokens_and_step_sizes() -> None:
     anim = TokenAnimator(interval=0.2, animation_duration=1.0)
     # Create a UsageEvent with known tokens and total_tokens
     usage = UsageEvent(
@@ -36,8 +36,8 @@ def test_update_sets_last_delta_and_step_sizes() -> None:
         total_tokens=150,
     )
     anim.update(usage)
-    # last_delta should reflect total_tokens
-    assert anim.last_delta == 150
+    # total_tokens should reflect total_tokens
+    assert anim.total_tokens == 150
     # Step sizes: delta_input=100, delta_output=50, factor=interval/animation_duration=0.2
     assert anim._step_input == pytest.approx(100 * 0.2)
     assert anim._step_output == pytest.approx(50 * 0.2)

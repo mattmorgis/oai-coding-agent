@@ -36,7 +36,6 @@ def test_prompt_fragments_full_list(monkeypatch: pytest.MonkeyPatch) -> None:
     # Set token animator values
     rc._token_animator._current_input_val = 1500.0
     rc._token_animator._current_output_val = 2500.0
-    rc._token_animator._last_delta = 100
 
     fragments = list(rc.prompt_fragments())
     assert fragments == [
@@ -46,7 +45,6 @@ def test_prompt_fragments_full_list(monkeypatch: pytest.MonkeyPatch) -> None:
         ("", " " * 28),
         ("ansiyellow", "[1.5k↑/2.5k↓]"),
         ("", " "),
-        ("ansiyellow", "[+100]"),
         ("dim", "    ("),
         ("dim bold", "esc "),
         ("dim", "to interrupt)\n\n"),
