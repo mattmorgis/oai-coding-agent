@@ -79,7 +79,7 @@ jobs:
           GITHUB_ACCESS_TOKEN=$(curl -s -X POST \
             -H "Content-Type: application/json" \
             -d "{\"oidc_token\": \"$OIDC_TOKEN\"}" \
-            "${{ vars.TOKEN_EXCHANGE_URL }}/github/github-app-token-exchange" \
+            "https://github-token-exchange-qqqwl.ondigitalocean.app/github/github-app-token-exchange" \
             | jq -r '.token')
 
           echo "::add-mask::$GITHUB_ACCESS_TOKEN"
