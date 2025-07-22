@@ -310,7 +310,7 @@ class GitHubWorkflowConsole:
                 title="Add OAI Coding Agent GitHub Workflow",
                 body="""This PR adds a GitHub workflow that automatically responds to:
 
-    - An issue is labeled with `oai`
+    - An issue is labeled with `oai` or assigned to the coding agent
     - A comment on an issue or PR that contains `@oai`
     - A "changes requested" review on a PR authored by the agent
 
