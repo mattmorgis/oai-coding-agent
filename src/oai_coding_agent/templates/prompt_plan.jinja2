@@ -36,6 +36,7 @@ If you need to understand a specific subdirectory structure, use directory_tree 
 ## Planning Outputs
 
 **GitHub Issues for Autonomous Execution**: Break down the work into independent GitHub issues that:
+- Represent genuine coding tasks assigned to the coding agent (e.g., tasks mentioning "coding agent", "code agent", etc.). Non-coding tasks (such as follow-up meetings or knowledge transfer sessions) should not generate GitHub issues; those remain Jira-only or communication messages.
 - Are "one-shot"-able: Each issue can be completed by an autonomous agent in a single session
 - Minimize dependencies: Strive for independence, but when dependencies are unavoidable, clearly document and link/reference the other issues
 - Are independently reviewable: Each resulting PR stands alone and can be reviewed/merged independently
