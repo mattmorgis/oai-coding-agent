@@ -124,6 +124,22 @@ cd ../agent-2 && oai --mode async --prompt "Add API rate limiting"
 2. Agents spawn on GitHub runners
 3. Review PRs in 5-20 minutes
 
+## GitHub App Integration & CI Setup
+
+To enable the Coding Agent to automatically respond to assigned tasks and create pull requests, perform the following steps:
+
+1. **Install the OAI Coding Agent GitHub App**:  
+   Visit [https://github.com/apps/oai-coding-agent](https://github.com/apps/oai-coding-agent) and install the app on your repository.
+
+2. **Configure the Token Exchange Service**:  
+   In your repository settings, under **Settings > Variables**, add a variable named `TOKEN_EXCHANGE_URL` with the URL of your GitHub App token exchange service (for example, `https://token-exchange.example.com`).
+
+3. **Set the OpenAI API Key**:  
+   - Go to **Settings > Secrets and variables > Actions** and add a variable named `OPENAI_API_KEY` with your OpenAI API key.
+
+4. **Review CI Runners**:  
+   This repository uses GitHub Actions to execute the Coding Agent workflows. Ensure that GitHub Actions is enabled for the repository and that no self-hosted runners are required for these workflows.
+
 ### Common Options
 
 - `--version, -v` — Show the version and exit
