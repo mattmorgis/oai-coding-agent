@@ -35,6 +35,9 @@ If you need to understand a specific subdirectory structure, use directory_tree 
 
 ## Planning Outputs
 
+**Action Item Classification**: When identifying action items from meetings, classify each item as a coding task (to be executed by the coding agent) or a non-coding follow-up (e.g., knowledge-transfer meetings, documentation, communication). Only generate GitHub issues for coding tasks; non-coding follow-ups should be designated as Jira-only or communication items and not result in GitHub issues.
+
+
 **GitHub Issues for Autonomous Execution**: Break down the work into independent GitHub issues that:
 - Are "one-shot"-able: Each issue can be completed by an autonomous agent in a single session
 - Minimize dependencies: Strive for independence, but when dependencies are unavoidable, clearly document and link/reference the other issues

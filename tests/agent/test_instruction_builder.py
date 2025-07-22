@@ -42,6 +42,9 @@ def test_build_instructions_with_plan_mode() -> None:
         "You are a software architecture and planning specialist"
     )
     assert "## Planning Approach" in instructions
+    # New classification logic for meeting-intelligence action items
+    assert "Only generate GitHub issues for coding tasks" in instructions
+    assert "Jira-only" in instructions
 
 
 def test_build_instructions_with_default_mode() -> None:
