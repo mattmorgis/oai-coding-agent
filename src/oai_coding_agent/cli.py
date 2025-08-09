@@ -110,7 +110,7 @@ def main(
     model: Annotated[
         ModelChoice,
         typer.Option("--model", "-m", help="OpenAI model to use"),
-    ] = ModelChoice.codex_mini_latest,
+    ] = ModelChoice.gpt_5,
     mode: Annotated[
         ModeChoice,
         typer.Option(

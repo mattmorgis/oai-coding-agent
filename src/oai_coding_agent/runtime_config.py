@@ -67,6 +67,8 @@ def load_envs(env_file: Optional[str] = None) -> None:
 class ModelChoice(str, Enum):
     """Supported OpenAI model choices."""
 
+    gpt_5 = "gpt-5"
+    gpt_5_mini = "gpt-5-mini"
     codex_mini_latest = "codex-mini-latest"
     o3 = "o3"
     o3_pro = "o3-pro"
