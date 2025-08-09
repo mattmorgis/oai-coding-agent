@@ -18,7 +18,10 @@ from oai_coding_agent.xdg import get_config_dir, get_data_dir
 @pytest.mark.parametrize(
     "enum_class,expected_values",
     [
-        (ModelChoice, {"codex-mini-latest", "o3", "o4-mini", "o3-pro"}),
+        (
+            ModelChoice,
+            {"codex-mini-latest", "o3", "o4-mini", "o3-pro", "gpt-5", "gpt-5-mini"},
+        ),
         (ModeChoice, {"default", "async", "plan"}),
     ],
 )

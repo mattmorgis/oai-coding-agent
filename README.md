@@ -26,7 +26,7 @@ oai -p "tell me what you can do in 2-3 sentences"
 
 ## Overview
 
-This agent is built on OpenAI's codex-mini model and supports three distinct modes that enable a progressive trust-building journey:
+This agent uses OpenAI models (default: gpt-5) and supports three distinct modes that enable a progressive trust-building journey:
 
 1. **Default Mode** - Interactive agent that checks in when decisions are needed
 2. **Async Mode** - Fully autonomous agent that completes tasks independently
@@ -128,7 +128,7 @@ cd ../agent-2 && oai --mode async --prompt "Add API rate limiting"
 
 - `--version, -v` — Show the version and exit
 
-- `--model, -m <model>` — OpenAI model (default: `codex-mini-latest`)
+- `--model, -m <model>` — OpenAI model (default: `gpt-5`)
 - `--repo-path <path>` — Target repository (default: current directory)
 - `--prompt, -p <text | ->` — Headless mode prompt (`-` for stdin)
 
