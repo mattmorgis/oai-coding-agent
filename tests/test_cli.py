@@ -127,7 +127,7 @@ def test_cli_uses_environment_defaults(
 
     agent = mock_agent_factory.agent
     assert agent.config.repo_path == tmp_path
-    assert agent.config.model == ModelChoice.codex_mini_latest
+    assert agent.config.model == ModelChoice.gpt_5
     assert agent.config.openai_api_key == "ENVKEY"
     assert agent.config.openai_base_url == "ENVURL"
     assert agent.config.mode == ModeChoice.default
@@ -153,7 +153,7 @@ def test_cli_uses_cwd_as_default_repo_path(
 
     agent = mock_agent_factory.agent
     assert agent.config.repo_path == expected_cwd
-    assert agent.config.model == ModelChoice.codex_mini_latest
+    assert agent.config.model == ModelChoice.gpt_5
     assert agent.config.openai_api_key == "ENVKEY"
     assert agent.config.openai_base_url is None
     assert agent.config.mode == ModeChoice.default
@@ -179,7 +179,7 @@ def test_cli_prompt_invokes_headless_main(
 
     agent = mock_agent_factory.agent
     assert agent.config.repo_path == tmp_path
-    assert agent.config.model == ModelChoice.codex_mini_latest
+    assert agent.config.model == ModelChoice.gpt_5
     assert agent.config.openai_api_key == "ENVKEY"
     assert agent.config.openai_base_url is None
     assert agent.config.mode == ModeChoice.async_
@@ -207,7 +207,7 @@ def test_cli_prompt_stdin_invokes_headless_main(
 
     agent = mock_agent_factory.agent
     assert agent.config.repo_path == tmp_path
-    assert agent.config.model == ModelChoice.codex_mini_latest
+    assert agent.config.model == ModelChoice.gpt_5
     assert agent.config.openai_api_key == "ENVKEY"
     assert agent.config.openai_base_url is None
     assert agent.config.mode == ModeChoice.async_
