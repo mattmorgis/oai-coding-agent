@@ -32,6 +32,7 @@ from oai_coding_agent.runtime_config import (
     RuntimeConfig,
     load_envs,
 )
+from oai_coding_agent.session import get_basic_stats, record_session
 
 # Global factory functions - set by create_app()
 _agent_factory: Optional[Callable[[RuntimeConfig], AgentProtocol]] = None
@@ -66,6 +67,16 @@ def create_github_cli_app() -> typer.Typer:
     github_app.command("login")(github_login)
     github_app.command("logout")(github_logout)
     return github_app
+
+
+def stats() -> None:
+    """Show basic usage analytics: total sessions and last session date."""
+    total, last_ts = get_basic_stats()
+    if total == 0:
+        typer.echo("No session data recorded yet.")
+        return
+    typer.echo(f"Total sessions: {total}")
+    typer.echo(f"Last session: {last_ts}")
 
 
 def github_login() -> None:
@@ -163,6 +174,18 @@ def main(
 
         assert openai_api_key is not None, "OpenAI API key is required"
 
+        # Record a session as early as possible with known context
+        try:
+            record_session(
+                repo_path=repo_path,
+                github_repo=None,
+                branch_name=None,
+                version=__version__,
+            )
+        except Exception:
+            # Never block startup on telemetry
+            pass
+
         # Run preflight checks and get git info
         try:
             github_repo, branch_name = run_preflight_checks(repo_path)
@@ -254,6 +277,9 @@ def create_app(
     app = typer.Typer(rich_markup_mode=None)
     github_cli_app = create_github_cli_app()
     app.add_typer(github_cli_app, name="github")
+
+    # Stats command
+    app.command("stats")(stats)
 
     app.callback(invoke_without_command=True)(main)
 
