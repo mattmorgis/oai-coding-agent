@@ -32,6 +32,7 @@ from oai_coding_agent.runtime_config import (
     RuntimeConfig,
     load_envs,
 )
+from oai_coding_agent.telemetry.session import end_session, start_session
 
 # Global factory functions - set by create_app()
 _agent_factory: Optional[Callable[[RuntimeConfig], AgentProtocol]] = None
@@ -201,6 +202,18 @@ def main(
             atlassian=atlassian,
         )
 
+        # Start a telemetry session for this launch
+        session_context = {
+            "model": cfg.model.value,
+            "mode": cfg.mode.value,
+            "repo_path": str(cfg.repo_path),
+            "github_repo": cfg.github_repo,
+            "branch_name": cfg.branch_name,
+            "headless": bool(cfg.prompt),
+            "atlassian": cfg.atlassian,
+        }
+        start_session(version=__version__, context=session_context)
+
         if not prompt:
             logger.info(
                 f"Starting chat with model {cfg.model.value} on repo {cfg.repo_path}"
@@ -216,6 +229,10 @@ def main(
             asyncio.run(agent_console.run())
         except KeyboardInterrupt:
             print("\nExiting...")
+            end_session("interrupt")
+        finally:
+            # Ensure we end the session on normal exit as well
+            end_session("exit")
 
 
 def create_app(
